@@ -12,7 +12,7 @@ export interface StorageDriver {
 
 /** Local disk, encrypted at rest with AES-256-GCM (key derived from APP_SECRET). */
 class LocalStorage implements StorageDriver {
-  private root = path.resolve(process.cwd(), env.storageDir);
+  private root = path.resolve(/*turbopackIgnore: true*/ process.cwd(), env.storageDir);
   private file(key: string) {
     const p = path.resolve(this.root, key);
     if (!p.startsWith(this.root + path.sep)) throw new Error("Invalid storage key");

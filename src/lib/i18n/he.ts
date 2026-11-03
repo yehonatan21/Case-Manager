@@ -718,6 +718,8 @@ export const he = {
     mockNotice: "מצב הדגמה: ללא מפתח API, ה-AI פועל במנוע מקומי פשוט.",
     failed: "פעולת ה-AI נכשלה. אפשר לנסות שוב או להמשיך ידנית.",
     disclaimer: "המלצות AI עשויות להכיל טעויות ומחייבות בדיקה אנושית.",
+    noConsent: "הלקוח לא אישר עיבוד באמצעות AI — כלי ה-AI מושבתים בתיק זה.",
+    noConsentShort: "ללא הסכמה ל-AI",
   },
   customersPage: {
     detailTitle: "כרטיס לקוח",

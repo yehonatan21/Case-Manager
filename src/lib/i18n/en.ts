@@ -723,6 +723,8 @@ export const en: typeof he = {
     mockNotice: "Demo mode: without an API key, AI runs on a simple local engine.",
     failed: "The AI action failed. You can try again or continue manually.",
     disclaimer: "AI recommendations may contain mistakes and require human review.",
+    noConsent: "The client did not consent to AI processing — AI tools are disabled for this case.",
+    noConsentShort: "No AI consent",
   },
   customersPage: {
     detailTitle: "Customer profile",

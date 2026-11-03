@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
-    "jobs:run": "tsx scripts/run-jobs.ts"
+    "jobs:run": "tsx scripts/run-jobs.ts",
+    "e2e": "node e2e/walkthrough.cjs"
   },
   "engines": {
     "node": ">=20.9.0"

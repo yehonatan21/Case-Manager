@@ -14,10 +14,22 @@ import { addDaysIso } from "../utils";
 import type { Locale } from "../i18n/config";
 import { isStaffRole } from "../domain";
 
+/** Whether the case's customer agreed to AI processing of their request. */
+export async function customerAiConsent(db: DbOrTx, caseId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ consent: users.aiConsentAt })
+    .from(cases)
+    .innerJoin(customers, eq(customers.id, cases.customerId))
+    .innerJoin(users, eq(users.id, customers.userId))
+    .where(eq(cases.id, caseId));
+  return !!row?.consent;
+}
+
 async function guard(db: DbOrTx, actor: User, caseId: string, need: "view" | "edit" | "manageQuotes" = "view") {
   if (!isStaffRole(actor.role)) throw new AppError("forbidden");
   const { access } = await caseWithAccess(db, actor, caseId);
   if (!access[need] || !access.internal) throw new AppError("forbidden");
+  if (!(await customerAiConsent(db, caseId))) throw new AppError("forbidden", "Customer did not consent to AI processing");
   await rateLimit(db, `ai:user:${actor.id}`, env.aiMaxRunsPerHour, 3600);
 }
 
@@ -83,6 +95,7 @@ function resolveSources(ctx: CaseContext, refs: string[]): CaseAiSummary["known_
 
 export async function generateCaseSummary(db: Database, actor: User | null, caseId: string, locale: Locale) {
   if (actor) await guard(db, actor, caseId);
+  else if (!(await customerAiConsent(db, caseId))) return null;
   const ctx = await buildCaseContext(db, caseId);
   const { output, provider } = await aiCaseSummary(db, { ctx, locale, userId: actor?.id ?? null });
   const summary: CaseAiSummary = {

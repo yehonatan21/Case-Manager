@@ -49,7 +49,7 @@ export async function createPgliteDatabase(dataDir?: string): Promise<Database> 
 async function init(): Promise<Database> {
   const db = env.databaseUrl
     ? await createPgDatabase(env.databaseUrl)
-    : await createPgliteDatabase(path.resolve(process.cwd(), env.pgliteDir));
+    : await createPgliteDatabase(path.resolve(/*turbopackIgnore: true*/ process.cwd(), env.pgliteDir));
   const { ensureSeed } = await import("./seed");
   await ensureSeed(db);
   return db;

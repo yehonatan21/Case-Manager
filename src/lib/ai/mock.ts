@@ -18,7 +18,7 @@ const pickArr = (l: L, pair?: [string[], string[]]) => (pair ? (l === "he" ? pai
 const KEYWORDS: [ServiceCategory, string[]][] = [
   ["citizenship", ["אזרחות", "דרכון", "citizenship", "passport", "naturaliz"]],
   ["immigration_visa", ["ויזה", "אשרה", "visa", "green card", "גרין קארד", "work permit", "אשרת עבודה", "residence permit"]],
-  ["relocation", ["לעבור", "מעבר ל", "רילוקיישן", "להגר", "הגירה", "relocat", "move to", "moving to", "emigrat", "immigrat"]],
+  ["relocation", ["לעבור", "מעבר ל", "רילוקיישן", "להגר", "הגירה", "לחו\"ל", "לחו״ל", "relocat", "move to", "moving to", "move abroad", "moving abroad", "live abroad", "emigrat", "immigrat"]],
   ["business_setup", ["עסק", "חברה", "סטארט", "עוסק", "business", "company", "startup", "incorporat", "subsidiary", "חברה בת"]],
   ["legal_consulting", ["עורך דין", "עו\"ד", "משפטי", "חוזה", "תביעה", "legal", "lawyer", "contract", "lawsuit"]],
   ["tax_finance", ["מס ", "מיסוי", "מס הכנסה", "דוח שנתי", "tax", "accounting", "פיננס", "finance"]],
@@ -189,10 +189,27 @@ function bankFor(cat: ServiceCategory): Q[] {
 
 type MockIntakeResult = IntakeTurn & { questionId?: string };
 
+/** Questions whose answer is usually already in the customer's own words. */
+const PREANSWERED: Record<string, RegExp> = {
+  visa_type: /work|study|student|tourist|business visa|עבודה|לימוד|סטודנט|תייר/i,
+  purpose: /for work|job offer|to study|quality of life|לצורך עבודה|ללימודים|איכות חיים/i,
+  taxpayer: /company|business|personal|individual|חברה|עסק|פרטי/i,
+  deal: /buy|sell|rent|purchase|לקנות|למכור|לשכור|רכישה|מכירה|השכרה/i,
+};
+
+/** Reply in the language the customer writes in (Hebrew vs. Latin script), defaulting to the UI locale. */
+export function detectLanguage(text: string, fallback: L): L {
+  const he = (text.match(/[\u0590-\u05FF]/g) ?? []).length;
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+  if (he === 0 && latin >= 3) return "en";
+  if (he > 0 && he >= latin / 2) return "he";
+  return fallback;
+}
+
 export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L; limit: number; forceReady?: boolean }): MockIntakeResult {
-  const l = opts.locale;
   const userMsgs = opts.messages.filter((m) => m.role === "user");
   const allText = userMsgs.map((m) => m.content).join(" \n ");
+  const l = detectLanguage(userMsgs[0]?.content ?? "", opts.locale);
   if (allText.includes("[simulate-ai-error]")) throw new Error("Simulated AI failure");
 
   const firstText = userMsgs[0]?.content ?? "";
@@ -216,7 +233,7 @@ export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L;
   const missing: string[] = [];
   const constraints: string[] = [];
   for (const { q, answer } of answers.values()) {
-    if (!answer) continue;
+    if (!answer || q.id === "extra") continue;
     if (isUnknown(answer, l)) missing.push(pick(l, q.label));
     else {
       facts.push({ label: pick(l, q.label), value: answer.content.trim().slice(0, 200) });
@@ -248,9 +265,11 @@ export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L;
     other: [firstText.slice(0, 60), firstText.slice(0, 60)],
   };
   const catLabel = dictionaries[l].categories[category];
+  const extra = answers.get("extra")?.answer;
+  const extraAnswer = extra && !isUnknown(extra, l) ? extra.content.trim() : "";
   const summary: IntakeSummary & { service_category: ServiceCategory } = {
     request_title: pick(l, titles[category]) || (l === "he" ? "בקשה חדשה" : "New request"),
-    request_description: [firstText.trim(), ...facts.map((f) => `${f.label}: ${f.value}`)].filter(Boolean).join("\n"),
+    request_description: [firstText.trim(), extraAnswer].filter(Boolean).join("\n"),
     service_category: category,
     customer_goal: answers.get("goal")?.answer && !isUnknown(answers.get("goal")!.answer!, l) ? answers.get("goal")!.answer!.content : firstText.slice(0, 240),
     known_facts: facts,
@@ -262,7 +281,10 @@ export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L;
     assumptions: [l === "he" ? `סוג השירות המוצע לבדיקה: ${catLabel}` : `Suggested service type to review: ${catLabel}`],
   };
 
-  const next = bank.find((q) => !answers.has(q.id) && !(q.id === "country" && countries.length));
+  const firstLower = firstText.toLowerCase();
+  const next = bank.find(
+    (q) => !answers.has(q.id) && !(q.id === "country" && countries.length) && !PREANSWERED[q.id]?.test(firstLower),
+  );
   const ready = opts.forceReady || !next || askedCount >= opts.limit;
   summary.suggested_next_questions = next ? [pick(l, next.text)] : [];
 

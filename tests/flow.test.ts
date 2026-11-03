@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { createPgliteDatabase, setDbOverride, type Database } from "@/lib/db";
+import { setDbOverride, type Database } from "@/lib/db";
+import { createTestDatabase } from "./db";
+import { dispatchPendingEmails } from "@/lib/services/notifications";
 import { seedBase } from "@/lib/db/seed";
 import * as s from "@/lib/db/schema";
 import { createIntake, finishIntake, getIntake, postIntakeMessage } from "@/lib/services/intake";
@@ -36,7 +38,7 @@ async function expectCode(p: Promise<unknown>, code: string) {
 }
 
 beforeAll(async () => {
-  db = await createPgliteDatabase();
+  db = await createTestDatabase();
   await seedBase(db);
   setDbOverride(db);
   [admin] = await db.select().from(s.users).where(eq(s.users.role, "admin"));
@@ -93,6 +95,15 @@ describe("end-to-end service flow", () => {
     expect(notes.some((n) => n.type === "new_request")).toBe(true);
   });
 
+  it("keeps the customer's words when the AI is unavailable (manual fallback)", async () => {
+    const s1 = await createIntake(db, { message: "Need help [simulate-ai-error]", locale: "en", user: null, ownerToken: "owner-2", ip: null, mode: "chat" });
+    expect(s1.aiFailed).toBe(true);
+    expect(s1.messages).toHaveLength(1);
+    expect(s1.messages[0]!.content).toContain("Need help");
+    const runs = await db.select().from(s.aiRuns).where(eq(s.aiRuns.intakeSessionId, s1.id));
+    expect(runs[0]?.status).toBe("error");
+  });
+
   it("requires signup details for unknown emails and rejects wrong codes", async () => {
     const { devCode } = await requestLoginCode(db, { email: "new@example.com", ip: null, locale: "en" });
     await expectCode(verifyLoginCode(db, { email: "new@example.com", code: "000000" === devCode ? "111111" : "000000", ip: null, locale: "en" }), "invalid_code");
@@ -126,7 +137,7 @@ describe("end-to-end service flow", () => {
     expect(custView.events.every((e) => e.visibility === "client")).toBe(true);
 
     const summary = await generateCaseSummary(db, admin, caseId, "he");
-    expect(summary.what_client_wants.length).toBeGreaterThan(0);
+    expect(summary!.what_client_wants.length).toBeGreaterThan(0);
 
     const ai = await copilotQuoteDraft(db, admin, caseId, "he");
     expect(ai.draft.items.length).toBeGreaterThan(0);
@@ -214,6 +225,11 @@ describe("end-to-end service flow", () => {
     const m = await dashboardMetrics(db, admin);
     expect(m.activeCases).toBe(1);
     await attentionItems(db, admin, 24);
+
+    // The email outbox delivers every queued notification exactly once.
+    const sent = await dispatchPendingEmails(db, 500);
+    expect(sent).toBeGreaterThan(0);
+    expect(await dispatchPendingEmails(db, 500)).toBe(0);
 
     await changeStatus(db, admin, caseId, "completed");
     b = await getCaseBundle(db, customer, caseId);

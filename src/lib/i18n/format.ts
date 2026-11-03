@@ -2,27 +2,35 @@ import type { Locale } from "./config";
 
 const intlLocale = (l: Locale) => (l === "he" ? "he-IL" : "en-GB");
 
+/**
+ * All dates are shown in the business's time zone so server-rendered and hydrated output match
+ * and every viewer sees the same dates. Override with NEXT_PUBLIC_TIME_ZONE.
+ */
+export const TIME_ZONE = process.env.NEXT_PUBLIC_TIME_ZONE || "Asia/Jerusalem";
+
+/** Date-only values (YYYY-MM-DD) are anchored at midday UTC so they never shift a day. */
+const toDate = (value: Date | string) => (typeof value === "string" ? new Date(value.length === 10 ? value + "T12:00:00Z" : value) : value);
+
 export function formatDate(value: Date | string | null | undefined, locale: Locale): string {
   if (!value) return "";
-  const d = typeof value === "string" ? new Date(value.length === 10 ? value + "T00:00:00" : value) : value;
-  return new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE }).format(toDate(value));
 }
 
 export function formatDateTime(value: Date | string | null | undefined, locale: Locale): string {
   if (!value) return "";
-  const d = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(d);
+    timeZone: TIME_ZONE,
+  }).format(toDate(value));
 }
 
 export function formatRelative(value: Date | string | null | undefined, locale: Locale, now = new Date()): string {
   if (!value) return "";
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = toDate(value);
   const diffSec = Math.round((d.getTime() - now.getTime()) / 1000);
   const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: "auto" });
   const abs = Math.abs(diffSec);
