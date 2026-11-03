@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (user) redirect(isStaffRole(user.role) ? "/admin" : "/portal");
   const { d } = await getDict();
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-  const demo = env.seedDemoData && !env.isProd;
+  const demo = env.seedDemoData && (!env.isProd || env.demoMode);
   return (
     <>
       <PublicHeader />

@@ -40,6 +40,34 @@ Open http://localhost:3000. That's it: with no configuration the app uses an emb
 
 To use Claude, set `ANTHROPIC_API_KEY` (see `.env.example`). To use real PostgreSQL, `docker compose up -d` and set `DATABASE_URL`.
 
+## Deploy
+
+**Recommended: Render (one click).** The app needs a long-running Node server (realtime updates, background email delivery), managed PostgreSQL, persistent encrypted file storage and HTTPS. The included [`render.yaml`](render.yaml) Blueprint provisions all of it from this repository: a Docker web service (Frankfurt, health-checked at `/api/health`), PostgreSQL 16 reachable only from your services, a 1 GB persistent disk for uploads, generated secrets, and auto-deploy on every push.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yehonatan21/Case-Manager)
+
+1. Click the button, sign in to Render and connect GitHub if asked.
+2. Fill the prompted values — `ADMIN_EMAIL` (your email, becomes an administrator), and optionally `ANTHROPIC_API_KEY` and `SMTP_URL`. Review and approve the plan — a paid Starter web service (required for the persistent disk) and a `basic-256mb` PostgreSQL; Render shows the monthly cost before you confirm.
+3. Wait for the first deploy, then open the `onrender.com` URL.
+
+The Blueprint starts in **demo mode** (`DEMO_MODE=true`): sign-in codes appear on screen, demo accounts are seeded, and a banner warns that the environment is shared. **Before real customers use it:** set `SMTP_URL` (any SMTP provider), set `DEMO_MODE=false`, and sign in with your `ADMIN_EMAIL` (setting `ADMIN_EMAIL` creates that admin on the next start even if the database already exists). For a clean production database, create the Blueprint with `DEMO_MODE=false` from the start. Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` switch payments to Stripe (webhook URL `https://<your-app>/api/webhooks/stripe`).
+
+> Keep `APP_SECRET` stable: it signs sessions and derives the key that encrypts stored files.
+
+**Anywhere else (Docker).** The [`Dockerfile`](Dockerfile) builds a small standalone image that runs as a non-root user and stores uploads (and the embedded database, if no `DATABASE_URL` is set) under `/var/data`:
+
+```bash
+docker build -t case-manager .
+```
+
+```bash
+docker run -p 3000:3000 -v case-data:/var/data -e APP_SECRET="$(openssl rand -hex 32)" -e DATABASE_URL=postgres://... -e APP_URL=https://cases.example.com -e JOBS_INTERVAL_MINUTES=5 case-manager
+```
+
+This works on Railway, Fly.io, Koyeb, Google Cloud Run (with an external database and S3 storage) or any VPS. The public URL is detected automatically on Render, Railway and Fly; elsewhere set `APP_URL`. Migrations run automatically on start (serialised with a database lock). Vercel is not recommended: serverless functions cut realtime streams short and have no persistent disk, so it would need external PostgreSQL plus S3 storage.
+
+**CI.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the type check, the test suite on PGlite and on PostgreSQL 16, the production build, and the Docker build on every push and pull request.
+
 ## What's in the MVP
 
 | Area | Implementation |
@@ -100,6 +128,8 @@ All settings are environment variables — see [`.env.example`](.env.example). K
 | `STORAGE_PROVIDER=s3`, `S3_*` | S3-compatible storage. |
 | `CLAMAV_HOST` | Malware scanning. |
 | `CRON_SECRET` | Enables `POST /api/jobs/run` (expire quotes, flush email outbox). |
+| `JOBS_INTERVAL_MINUTES` | Runs those jobs inside the server every N minutes instead of external cron. |
+| `DEMO_MODE` | Public demo: codes on screen, demo data, warning banner. Never with real data. |
 
 ## Scripts
 

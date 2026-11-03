@@ -23,9 +23,24 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */
 export async function ensureSeed(db: Database) {
   const existing = await db.select({ n: sql<number>`count(*)::int` }).from(s.users);
-  if ((existing[0]?.n ?? 0) > 0) return;
+  if ((existing[0]?.n ?? 0) > 0) {
+    await ensureAdmin(db);
+    return;
+  }
   await seedBase(db);
   if (env.seedDemoData) await seedDemo(db);
+}
+
+/**
+ * When ADMIN_EMAIL is set explicitly, make sure that account exists as an administrator.
+ * Lets operators add their own admin to an existing (e.g. demo-seeded) database by setting one variable.
+ */
+async function ensureAdmin(db: Database) {
+  if (!process.env.ADMIN_EMAIL) return;
+  await db
+    .insert(s.users)
+    .values({ email: env.adminEmail, name: env.adminEmail.split("@")[0]!, role: "admin", status: "invited", locale: "he" })
+    .onConflictDoNothing();
 }
 
 export async function seedBase(db: Database) {

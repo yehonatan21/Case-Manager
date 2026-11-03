@@ -66,6 +66,7 @@ export const en: typeof he = {
     aiSuggestion: "AI suggestion",
     internalOnly: "Internal — not visible to the client",
     poweredByAi: "AI-assisted",
+    demoBanner: "Demo environment — anyone can sign in with the demo accounts. Do not enter real information.",
   },
   lang: {
     label: "Language",

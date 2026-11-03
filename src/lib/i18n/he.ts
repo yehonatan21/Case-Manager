@@ -64,6 +64,7 @@ export const he = {
     aiSuggestion: "המלצת AI",
     internalOnly: "פנימי — לא גלוי ללקוח",
     poweredByAi: "מבוסס AI",
+    demoBanner: "סביבת הדגמה — כל אחד יכול להתחבר עם חשבונות ההדגמה. אין להזין מידע אמיתי.",
   },
   lang: {
     label: "שפה",

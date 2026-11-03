@@ -17,8 +17,9 @@ const MAX_ATTEMPTS = 5;
 
 const codeHash = (email: string, code: string) => hmac(`otp:${email}:${code}`);
 
+/** Sign-in codes are shown on screen only in local development or an explicit public demo. */
 export function devCodeVisible() {
-  return env.emailProvider === "console" && !env.isProd;
+  return env.demoMode || (env.emailProvider === "console" && !env.isProd);
 }
 
 /** Passwordless sign-in: emails a 6-digit one-time code. Rate limited per email and per IP. */

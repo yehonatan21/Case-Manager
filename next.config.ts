@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Self-contained server bundle (.next/standalone) for the Docker image.
+  output: "standalone",
   serverExternalPackages: ["@electric-sql/pglite", "pg", "nodemailer"],
   poweredByHeader: false,
   async headers() {
