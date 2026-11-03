@@ -1,0 +1,100 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
+import type { UserRole } from "@/lib/db/schema";
+
+type Item = { href: string; key: "dashboard" | "inbox" | "cases" | "quotes" | "tasks" | "customers" | "payments" | "settings" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
+
+const ITEMS: Item[] = [
+  { href: "/admin", key: "dashboard", icon: LayoutDashboard, roles: ["admin", "case_manager", "staff", "finance"], exact: true },
+  { href: "/admin/inbox", key: "inbox", icon: Inbox, roles: ["admin", "case_manager"] },
+  { href: "/admin/cases", key: "cases", icon: FolderKanban, roles: ["admin", "case_manager", "staff", "finance"] },
+  { href: "/admin/quotes", key: "quotes", icon: FileText, roles: ["admin", "case_manager", "finance"] },
+  { href: "/admin/tasks", key: "tasks", icon: ListChecks, roles: ["admin", "case_manager", "staff"] },
+  { href: "/admin/customers", key: "customers", icon: Users, roles: ["admin", "case_manager"] },
+  { href: "/admin/payments", key: "payments", icon: CreditCard, roles: ["admin", "finance"] },
+  { href: "/admin/settings", key: "settings", icon: Settings, roles: ["admin"] },
+  { href: "/admin/mailbox", key: "mailbox", icon: Mail, roles: ["admin"] },
+];
+
+function NavList({ role, inboxCount, devMailbox, onNavigate }: { role: UserRole; inboxCount: number; devMailbox: boolean; onNavigate?: () => void }) {
+  const { d } = useI18n();
+  const path = usePathname();
+  return (
+    <ul className="space-y-0.5">
+      {ITEMS.filter((i) => i.roles.includes(role) && (i.key !== "mailbox" || devMailbox)).map((it) => {
+        const active = it.exact ? path === it.href : path.startsWith(it.href);
+        return (
+          <li key={it.href}>
+            <Link
+              href={it.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active ? "bg-brand-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+              )}
+            >
+              <it.icon className="size-4.5 shrink-0" aria-hidden />
+              <span className="flex-1">{d.nav[it.key]}</span>
+              {it.key === "inbox" && inboxCount > 0 && (
+                <span className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>{inboxCount}</span>
+              )}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function AdminSidebar(props: { role: UserRole; inboxCount: number; devMailbox: boolean; header: React.ReactNode; footer: React.ReactNode }) {
+  return (
+    <aside className="fixed inset-y-0 start-0 z-30 hidden w-60 flex-col border-e border-slate-200 bg-white lg:flex">
+      <div className="flex h-16 items-center px-5">{props.header}</div>
+      <nav className="flex-1 overflow-y-auto px-3 py-2">
+        <NavList {...props} />
+      </nav>
+      <div className="border-t border-slate-100 p-3">{props.footer}</div>
+    </aside>
+  );
+}
+
+export function AdminMobileMenu(props: { role: UserRole; inboxCount: number; devMailbox: boolean; header: React.ReactNode; footer: React.ReactNode }) {
+  const { d } = useI18n();
+  const [open, setOpen] = useState(false);
+  const path = usePathname();
+  useEffect(() => setOpen(false), [path]);
+  return (
+    <div className="lg:hidden">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex size-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100" aria-label={d.nav.menu} aria-expanded={open}>
+        <Menu className="size-5" />
+      </button>
+      {open &&
+        createPortal(
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={d.nav.menu}>
+          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
+            <div className="flex h-16 items-center justify-between px-4">
+              {props.header}
+              <button onClick={() => setOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" aria-label={d.common.close}>
+                <X className="size-5" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto px-3 py-2">
+              <NavList {...props} onNavigate={() => setOpen(false)} />
+            </nav>
+            <div className="border-t border-slate-100 p-3">{props.footer}</div>
+          </div>
+        </div>,
+          document.body,
+        )}
+    </div>
+  );
+}

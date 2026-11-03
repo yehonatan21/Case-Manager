@@ -1,0 +1,13 @@
+node_modules
+.next
+.data
+.git
+.github
+coverage
+e2e/screenshots
+docs
+tests
+*.log
+.env
+.env.*
+!.env.example

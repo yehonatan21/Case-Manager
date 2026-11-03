@@ -1,0 +1,51 @@
+# Render Blueprint — one-click deploy: Docker web service + managed PostgreSQL + persistent disk.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# DEMO_MODE=true makes the new instance usable immediately (sign-in codes on screen, demo data,
+# warning banner). Before real use: set SMTP_URL, set DEMO_MODE=false — see README "Deploy".
+services:
+  - type: web
+    name: case-manager
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter # persistent disks need a paid instance type
+    region: frankfurt # closest Render region to Israel
+    healthCheckPath: /api/health
+    disk:
+      name: case-manager-data # encrypted uploads
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: case-manager-db
+          property: connectionString
+      - key: APP_SECRET # signs sessions/codes and derives the file-encryption key — keep it stable
+        generateValue: true
+      - key: PAYMENT_WEBHOOK_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: JOBS_INTERVAL_MINUTES # quote expiry + email outbox, run inside the server
+        value: "5"
+      - key: STORAGE_DIR
+        value: /var/data/uploads
+      - key: DEMO_MODE
+        value: "true"
+      - key: ADMIN_EMAIL # your email — becomes an administrator account
+        sync: false
+      - key: ANTHROPIC_API_KEY # optional: enables Claude (otherwise the offline AI engine is used)
+        sync: false
+      - key: SMTP_URL # optional until going live, e.g. smtps://user:pass@smtp.example.com:465
+        sync: false
+      - key: EMAIL_FROM
+        value: Case Manager <no-reply@example.com>
+
+databases:
+  - name: case-manager-db
+    plan: basic-256mb
+    region: frankfurt
+    databaseName: casemanager
+    user: casemanager
+    postgresMajorVersion: "16"
+    ipAllowList: [] # reachable only from Render services

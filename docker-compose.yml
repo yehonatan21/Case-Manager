@@ -1,0 +1,21 @@
+# Local infrastructure for running against real services:
+#   docker compose up -d            # PostgreSQL
+#   docker compose --profile scan up -d   # + ClamAV malware scanning
+# then set DATABASE_URL=postgres://postgres:postgres@localhost:5432/casemanager (and CLAMAV_HOST=localhost)
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: casemanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  clamav:
+    image: clamav/clamav:stable
+    profiles: ["scan"]
+    ports:
+      - "3310:3310"
+volumes:
+  pgdata:

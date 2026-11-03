@@ -1,0 +1,620 @@
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  timestamp,
+  integer,
+  boolean,
+  jsonb,
+  numeric,
+  date,
+  index,
+  uniqueIndex,
+  primaryKey,
+} from "drizzle-orm/pg-core";
+
+/*
+ * Data model for the MVP.
+ *
+ * Multi-tenancy: the MVP serves a single operator. Every business entity is keyed by
+ * its own id (never by "the admin user"), so a `tenant_id` column can be added to the
+ * top-level tables (users, customers, organizations, cases, settings, templates,
+ * price_list_items) later without restructuring relationships.
+ */
+
+// ---------- Enums ----------
+
+export const userRoleEnum = pgEnum("user_role", [
+  "customer",
+  "admin",
+  "case_manager",
+  "staff",
+  "finance",
+]);
+
+export const userStatusEnum = pgEnum("user_status", ["active", "invited", "disabled"]);
+
+export const customerTypeEnum = pgEnum("customer_type", ["private", "business", "company", "other"]);
+
+export const caseStatusEnum = pgEnum("case_status", [
+  "draft",
+  "submitted",
+  "under_review",
+  "awaiting_information",
+  "quote_preparation",
+  "quote_sent",
+  "awaiting_payment",
+  "active",
+  "awaiting_client",
+  "completed",
+  "closed",
+  "cancelled",
+  "declined",
+]);
+
+export const urgencyEnum = pgEnum("urgency", ["low", "normal", "high", "urgent"]);
+
+export const intakeStatusEnum = pgEnum("intake_status", ["active", "submitted", "abandoned"]);
+
+export const eventVisibilityEnum = pgEnum("event_visibility", ["client", "internal"]);
+
+export const actorKindEnum = pgEnum("actor_kind", ["customer", "staff", "system", "ai"]);
+
+export const messageKindEnum = pgEnum("message_kind", ["thread", "internal_note"]);
+
+export const documentStatusEnum = pgEnum("document_status", [
+  "requested",
+  "uploaded",
+  "in_review",
+  "approved",
+  "needs_new_version",
+]);
+
+export const scanStatusEnum = pgEnum("scan_status", ["pending", "clean", "infected", "skipped", "error"]);
+
+export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "waiting", "done", "cancelled"]);
+
+export const priorityEnum = pgEnum("priority", ["low", "normal", "high"]);
+
+export const quoteStatusEnum = pgEnum("quote_status", [
+  "draft",
+  "sent",
+  "clarification_requested",
+  "approved",
+  "declined",
+  "expired",
+  "superseded",
+]);
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "refunded",
+]);
+
+export const aiRunStatusEnum = pgEnum("ai_run_status", ["ok", "error", "fallback"]);
+
+export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email"]);
+
+export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "read"]);
+
+// ---------- Shared JSON types ----------
+
+export type Locale = "he" | "en";
+
+export type IntakeChatMessage = {
+  id: string;
+  role: "assistant" | "user";
+  content: string;
+  at: string;
+  quickReplies?: string[];
+  skipped?: boolean;
+  attachmentIds?: string[];
+  /** Question id (offline engine) — lets the engine pair questions with answers. */
+  qid?: string;
+};
+
+export type IntakeSummary = {
+  request_title: string;
+  request_description: string;
+  service_category: string;
+  customer_goal: string;
+  known_facts: { label: string; value: string }[];
+  constraints: string[];
+  missing_information: string[];
+  suggested_next_questions: string[];
+  urgency: "low" | "normal" | "high" | "urgent";
+  needs_human_review: boolean;
+  assumptions: string[];
+  additional_notes?: string;
+};
+
+export type CaseAiSummary = {
+  what_client_wants: string;
+  known_facts: { fact: string; sources: { kind: "intake" | "message" | "document"; id: string | null }[] }[];
+  missing_information: string[];
+  complexities: string[];
+  recommended_next_step: string;
+  generated_at: string;
+  provider: string;
+};
+
+export type EventData = Record<string, string | number | boolean | null | undefined>;
+
+export type ServiceTemplateTask = {
+  title: string;
+  description?: string;
+  dueInDays?: number;
+  requiresClientAction?: boolean;
+  priority?: "low" | "normal" | "high";
+};
+
+// ---------- Tables ----------
+
+export const organizations = pgTable("organizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  businessId: text("business_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    role: userRoleEnum("role").notNull().default("customer"),
+    status: userStatusEnum("status").notNull().default("active"),
+    locale: text("locale").$type<Locale>().notNull().default("he"),
+    emailNotifications: boolean("email_notifications").notNull().default(true),
+    termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
+    aiConsentAt: timestamp("ai_consent_at", { withTimezone: true }),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("users_email_idx").on(t.email)],
+);
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    type: customerTypeEnum("type").notNull().default("private"),
+    organizationId: uuid("organization_id").references(() => organizations.id),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("customers_user_idx").on(t.userId)],
+);
+
+export const authCodes = pgTable(
+  "auth_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    ip: text("ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_codes_email_idx").on(t.email, t.createdAt)],
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("sessions_token_idx").on(t.tokenHash)],
+);
+
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const intakeSessions = pgTable("intake_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerTokenHash: text("owner_token_hash"),
+  userId: uuid("user_id").references(() => users.id),
+  locale: text("locale").$type<Locale>().notNull().default("he"),
+  status: intakeStatusEnum("status").notNull().default("active"),
+  mode: text("mode").$type<"chat" | "manual">().notNull().default("chat"),
+  messages: jsonb("messages").$type<IntakeChatMessage[]>().notNull().default([]),
+  summary: jsonb("summary").$type<IntakeSummary | null>(),
+  summaryVersion: integer("summary_version").notNull().default(0),
+  questionCount: integer("question_count").notNull().default(0),
+  questionLimit: integer("question_limit").notNull().default(7),
+  readyForReview: boolean("ready_for_review").notNull().default(false),
+  aiFailed: boolean("ai_failed").notNull().default(false),
+  caseId: uuid("case_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const caseCounters = pgTable("case_counters", {
+  year: integer("year").primaryKey(),
+  value: integer("value").notNull().default(0),
+});
+
+export const cases = pgTable(
+  "cases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    number: text("number").notNull(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    goal: text("goal").notNull().default(""),
+    serviceCategory: text("service_category").notNull().default("other"),
+    status: caseStatusEnum("status").notNull().default("submitted"),
+    urgency: urgencyEnum("urgency").notNull().default("normal"),
+    assigneeId: uuid("assignee_id").references(() => users.id),
+    intakeSessionId: uuid("intake_session_id"),
+    intakeSummary: jsonb("intake_summary").$type<IntakeSummary | null>(),
+    aiSummary: jsonb("ai_summary").$type<CaseAiSummary | null>(),
+    locale: text("locale").$type<Locale>().notNull().default("he"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    lastClientActivityAt: timestamp("last_client_activity_at", { withTimezone: true }),
+    lastStaffActivityAt: timestamp("last_staff_activity_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("cases_number_idx").on(t.number),
+    index("cases_customer_idx").on(t.customerId),
+    index("cases_status_idx").on(t.status),
+    index("cases_assignee_idx").on(t.assigneeId),
+  ],
+);
+
+export const caseEvents = pgTable(
+  "case_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    actorId: uuid("actor_id").references(() => users.id),
+    actorKind: actorKindEnum("actor_kind").notNull().default("system"),
+    visibility: eventVisibilityEnum("visibility").notNull().default("internal"),
+    data: jsonb("data").$type<EventData>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("case_events_case_idx").on(t.caseId, t.createdAt)],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id").references(() => users.id),
+    kind: messageKindEnum("kind").notNull().default("thread"),
+    body: text("body").notNull(),
+    isInfoRequest: boolean("is_info_request").notNull().default(false),
+    aiRunId: uuid("ai_run_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("messages_case_idx").on(t.caseId, t.createdAt)],
+);
+
+export const caseReads = pgTable(
+  "case_reads",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.caseId] })],
+);
+
+/** A document "slot" — either requested by staff (no file yet) or created by an upload. */
+export const documents = pgTable(
+  "documents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id").references(() => cases.id, { onDelete: "cascade" }),
+    intakeSessionId: uuid("intake_session_id"),
+    messageId: uuid("message_id"),
+    title: text("title").notNull(),
+    status: documentStatusEnum("status").notNull().default("uploaded"),
+    visibility: eventVisibilityEnum("visibility").notNull().default("client"),
+    requestNote: text("request_note"),
+    reviewNote: text("review_note"),
+    requestedById: uuid("requested_by_id").references(() => users.id),
+    createdById: uuid("created_by_id").references(() => users.id),
+    currentVersion: integer("current_version").notNull().default(0),
+    aiAnalysis: jsonb("ai_analysis").$type<Record<string, unknown> | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("documents_case_idx").on(t.caseId)],
+);
+
+export const documentFiles = pgTable(
+  "document_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    storageKey: text("storage_key").notNull(),
+    scanStatus: scanStatusEnum("scan_status").notNull().default("pending"),
+    uploadedById: uuid("uploaded_by_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("document_files_doc_idx").on(t.documentId)],
+);
+
+export const tasks = pgTable(
+  "tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull().default(""),
+    assigneeId: uuid("assignee_id").references(() => users.id),
+    dueDate: date("due_date", { mode: "string" }),
+    status: taskStatusEnum("status").notNull().default("todo"),
+    priority: priorityEnum("priority").notNull().default("normal"),
+    requiresClientAction: boolean("requires_client_action").notNull().default(false),
+    relatedMessageId: uuid("related_message_id"),
+    relatedDocumentId: uuid("related_document_id"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    aiRunId: uuid("ai_run_id"),
+    createdById: uuid("created_by_id").references(() => users.id),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("tasks_case_idx").on(t.caseId), index("tasks_assignee_idx").on(t.assigneeId)],
+);
+
+export const quotes = pgTable(
+  "quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    version: integer("version").notNull().default(1),
+    status: quoteStatusEnum("status").notNull().default("draft"),
+    serviceName: text("service_name").notNull().default(""),
+    scope: text("scope").notNull().default(""),
+    included: text("included").notNull().default(""),
+    excluded: text("excluded").notNull().default(""),
+    currency: text("currency").notNull().default("ILS"),
+    taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("18"),
+    pricesIncludeTax: boolean("prices_include_tax").notNull().default(false),
+    subtotalCents: integer("subtotal_cents").notNull().default(0),
+    taxCents: integer("tax_cents").notNull().default(0),
+    totalCents: integer("total_cents").notNull().default(0),
+    paymentTerms: text("payment_terms").notNull().default(""),
+    timeline: text("timeline").notNull().default(""),
+    terms: text("terms").notNull().default(""),
+    validUntil: date("valid_until", { mode: "string" }),
+    aiRunId: uuid("ai_run_id"),
+    sentSnapshot: jsonb("sent_snapshot").$type<Record<string, unknown> | null>(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    sentById: uuid("sent_by_id").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedById: uuid("approved_by_id").references(() => users.id),
+    approvalIp: text("approval_ip"),
+    approvalSnapshotHash: text("approval_snapshot_hash"),
+    declinedAt: timestamp("declined_at", { withTimezone: true }),
+    declineReason: text("decline_reason"),
+    createdById: uuid("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("quotes_case_idx").on(t.caseId)],
+);
+
+export const quoteItems = pgTable("quote_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  quoteId: uuid("quote_id")
+    .notNull()
+    .references(() => quotes.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  quantity: numeric("quantity", { precision: 10, scale: 2 }).notNull().default("1"),
+  unitPriceCents: integer("unit_price_cents").notNull().default(0),
+  priceListItemId: uuid("price_list_item_id"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => quotes.id),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id),
+    provider: text("provider").notNull(),
+    providerSessionId: text("provider_session_id"),
+    providerPaymentId: text("provider_payment_id"),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    failureReason: text("failure_reason"),
+    createdById: uuid("created_by_id").references(() => users.id),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("payments_case_idx").on(t.caseId), index("payments_session_idx").on(t.providerSessionId)],
+);
+
+/** Idempotency ledger for payment provider webhooks. */
+export const paymentEvents = pgTable(
+  "payment_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    type: text("type").notNull(),
+    paymentId: uuid("payment_id"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    result: text("result"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("payment_events_provider_event_idx").on(t.provider, t.providerEventId)],
+);
+
+export const aiRuns = pgTable(
+  "ai_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    action: text("action").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    caseId: uuid("case_id"),
+    intakeSessionId: uuid("intake_session_id"),
+    userId: uuid("user_id"),
+    status: aiRunStatusEnum("status").notNull().default("ok"),
+    output: jsonb("output").$type<unknown>(),
+    error: text("error"),
+    latencyMs: integer("latency_ms"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    approvedById: uuid("approved_by_id"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_runs_case_idx").on(t.caseId)],
+);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id"),
+    type: text("type").notNull(),
+    channel: notificationChannelEnum("channel").notNull(),
+    toEmail: text("to_email"),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    link: text("link"),
+    status: notificationStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt), index("notifications_status_idx").on(t.status)],
+);
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    actorId: uuid("actor_id"),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    ip: text("ip"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("audit_logs_entity_idx").on(t.entityType, t.entityId)],
+);
+
+export const serviceTemplates = pgTable("service_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("other"),
+  description: text("description").notNull().default(""),
+  tasks: jsonb("tasks").$type<ServiceTemplateTask[]>().notNull().default([]),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const priceListItems = pgTable(
+  "price_list_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    category: text("category").notNull().default("other"),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    currency: text("currency").notNull().default("ILS"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("price_list_code_idx").on(t.code)],
+);
+
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type User = typeof users.$inferSelect;
+export type Customer = typeof customers.$inferSelect;
+export type Case = typeof cases.$inferSelect;
+export type CaseEvent = typeof caseEvents.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type DocumentRow = typeof documents.$inferSelect;
+export type DocumentFile = typeof documentFiles.$inferSelect;
+export type Task = typeof tasks.$inferSelect;
+export type Quote = typeof quotes.$inferSelect;
+export type QuoteItem = typeof quoteItems.$inferSelect;
+export type Payment = typeof payments.$inferSelect;
+export type IntakeSession = typeof intakeSessions.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type ServiceTemplate = typeof serviceTemplates.$inferSelect;
+export type PriceListItem = typeof priceListItems.$inferSelect;
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
+export type CaseStatus = (typeof caseStatusEnum.enumValues)[number];
+export type Urgency = (typeof urgencyEnum.enumValues)[number];
+export type DocumentStatus = (typeof documentStatusEnum.enumValues)[number];
+export type TaskStatus = (typeof taskStatusEnum.enumValues)[number];
+export type QuoteStatus = (typeof quoteStatusEnum.enumValues)[number];
+export type CustomerType = (typeof customerTypeEnum.enumValues)[number];
