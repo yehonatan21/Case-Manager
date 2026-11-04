@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { listNotifications } from "@/lib/services/notifications";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { MarkAllRead } from "@/components/app/mark-all-read";
+import { PushToggle } from "@/components/app/push-toggle";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ export default async function NotificationsPage() {
   return (
     <>
       <PageHeader title={d.notificationsUi.title} actions={items.some((n) => !n.readAt) ? <MarkAllRead /> : null} />
+      <PushToggle className="mb-4 rounded-xl border border-slate-200 bg-white p-4" />
       {items.length === 0 ? (
         <EmptyState icon={<Bell className="size-10" />} title={d.notificationsUi.empty} />
       ) : (

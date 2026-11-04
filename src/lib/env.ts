@@ -119,6 +119,16 @@ export const env = {
   // Trimmed (and stripped of wrapping quotes): pasted dashboard values often carry stray whitespace.
   googleClientId: str("GOOGLE_CLIENT_ID").trim().replace(/^["']|["']$/g, ""),
   googleClientSecret: str("GOOGLE_CLIENT_SECRET").trim().replace(/^["']|["']$/g, ""),
+  /** Web Push keys. Optional: without them the app generates a key pair once and stores it encrypted. */
+  vapidPublicKey: str("VAPID_PUBLIC_KEY"),
+  vapidPrivateKey: str("VAPID_PRIVATE_KEY"),
+  /** Contact for push services: mailto:you@example.com or https://your-site. Defaults to the app URL. */
+  vapidSubject: str("VAPID_SUBJECT"),
+  /** Extra push endpoint hosts (host:port) beyond the browser push services — for tests only. */
+  pushExtraHosts: str("PUSH_EXTRA_HOSTS")
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean),
   /** Run maintenance jobs (quote expiry, email outbox) inside the server every N minutes; 0 = off. */
   jobsIntervalMinutes: Number(str("JOBS_INTERVAL_MINUTES", "0")),
 };

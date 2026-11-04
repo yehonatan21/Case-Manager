@@ -9,7 +9,13 @@ import { WebAnalytics } from "@/components/app/web-analytics";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { d } = await getDict();
-  return { title: { default: d.meta.title, template: `%s · ${d.common.appName}` }, description: d.meta.description };
+  return {
+    title: { default: d.meta.title, template: `%s · ${d.common.appName}` },
+    description: d.meta.description,
+    // Home-screen app on iPhone (required there for push notifications).
+    appleWebApp: { capable: true, title: d.common.appName, statusBarStyle: "default" },
+    icons: { apple: "/icons/apple-touch-icon.png" },
+  };
 }
 
 export const viewport: Viewport = { themeColor: "#4338ca", width: "device-width", initialScale: 1 };

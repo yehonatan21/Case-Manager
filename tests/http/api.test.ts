@@ -306,6 +306,47 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("push notifications", () => {
+    const sub = () => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${Date.now()}${Math.random().toString(36).slice(2)}`, keys: { p256dh: "B".repeat(87), auth: "A".repeat(22) } });
+
+    it("serves the service worker, manifest, icons and public key", async () => {
+      const sw = await fetch(BASE + "/sw.js");
+      expect(sw.status).toBe(200);
+      expect(sw.headers.get("content-type")).toContain("javascript");
+      expect(sw.headers.get("cache-control")).toContain("no-cache");
+      expect(sw.headers.get("content-security-policy")).toContain("script-src 'self'");
+      expect(await sw.text()).toContain("showNotification");
+      const m = await (await fetch(BASE + "/manifest.webmanifest")).json();
+      expect(m).toMatchObject({ display: "standalone", start_url: "/portal" });
+      for (const icon of m.icons as { src: string }[]) expect((await fetch(BASE + icon.src)).status, icon.src).toBe(200);
+      expect(await (await fetch(BASE + "/")).text()).toContain("apple-touch-icon");
+      const key = (await call("/api/push/key")).json!.data.publicKey;
+      expect(key).toMatch(/^[A-Za-z0-9_-]{80,90}$/);
+      expect((await call("/api/push/key")).json!.data.publicKey).toBe(key); // stable
+    });
+
+    it("subscribing needs a session and a valid subscription", async () => {
+      expect((await call("/api/push/subscription", { body: sub() })).status).toBe(401);
+      expect((await call("/api/push/test", { body: {} })).status).toBe(401);
+      const client = await session("biz@example.com");
+      for (const bad of [{}, { endpoint: "not a url", keys: sub().keys }, { endpoint: sub().endpoint, keys: { p256dh: "x", auth: "y" } }, { endpoint: "https://169.254.169.254/latest", keys: sub().keys }]) {
+        expect((await call("/api/push/subscription", { body: bad, cookie: client.cookie })).status, JSON.stringify(bad)).toBe(400);
+      }
+      expect((await call("/api/push/subscription", { body: sub(), cookie: client.cookie, origin: "https://evil.example" })).status).toBe(403);
+    });
+
+    it("turns a device on and off; the test needs a device", async () => {
+      const client = await session("biz@example.com");
+      expect((await call("/api/push/test", { body: {}, cookie: client.cookie })).status).toBe(400);
+      const s1 = sub();
+      const on = await call("/api/push/subscription", { body: s1, cookie: client.cookie });
+      expect(on.status).toBe(200);
+      expect(on.json!.data.devices).toBeGreaterThanOrEqual(1);
+      const off = await call("/api/push/subscription", { method: "DELETE", body: { endpoint: s1.endpoint }, cookie: client.cookie });
+      expect(off.json!.data.devices).toBe(on.json!.data.devices - 1);
+    });
+  });
+
   it("finance can't read case messages or documents", async () => {
     const fin = await session("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];
