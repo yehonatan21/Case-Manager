@@ -121,6 +121,7 @@ export const stripeProvider: PaymentProvider = {
   },
 };
 
+/** Mock or Stripe. Grow is handled separately (services/payments.ts), since its identifiers can live in the database. */
 export function paymentProvider(name?: string): PaymentProvider {
   const n = name ?? env.paymentProvider;
   return n === "stripe" ? stripeProvider : mockProvider;

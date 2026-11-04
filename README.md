@@ -119,7 +119,7 @@ If you use this workflow for deployments, turn off Vercel's own Git deployments 
 | **Case workspace** | Three panes — details / work area / AI copilot (tabs on small screens): assign, status changes (validated state machine), urgency, category, client messages, internal notes, info requests, tasks, quotes, documents, history, client-timeline updates, complete/close. |
 | **AI copilot** | Case summary (what the client wants, known facts **with links to their source**, missing info, complexities, next step), max 3 recommended actions, clarifying-question drafts, rewrite/shorten/translate, thread summary, status-update drafts, task plans, quote drafts, document analysis. Every customer-facing output is a draft a person must send. |
 | **Quotes** | Editor with line items, VAT on top or included, currency, payment terms, timeline, disclaimers, validity, live preview of the customer view, AI draft (prices **only** from the price list — missing prices are flagged, never invented). Sent quotes are immutable; revisions create new versions. |
-| **Approval & payment** | Customer approves a specific version (identity, time, IP and a hash of the approved content are recorded), asks for clarification or declines. One payment per quote via hosted checkout (built-in test checkout or Stripe). Only a verified webhook moves the case to active; duplicate events are no-ops. |
+| **Approval & payment** | Customer approves a specific version (identity, time, IP and a hash of the approved content are recorded), asks for clarification or declines. One payment per quote via hosted checkout (Grow, Stripe, or the built-in test checkout). Only a verified webhook moves the case to active; duplicate events are no-ops. |
 | **Documents** | Staff request documents; customers upload (versioned); statuses requested → uploaded → in review → approved / new version needed with a note. Extension + magic-byte validation, size limit, ClamAV scanning, AES-256-GCM encryption at rest (or S3 SSE), permission-checked audited downloads (S3 presigned 60-second links). |
 | **Tasks** | Title, description, owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks"/overdue views. |
 | **Notifications** | In-app (bell + page) and email for every event in the spec, localized per recipient, via a retrying outbox. |
@@ -165,6 +165,7 @@ All settings are environment variables — see [`.env.example`](.env.example). K
 | `EMAIL_PROVIDER=smtp`, `SMTP_URL` | Real email delivery. |
 | `EMAIL_FROM`, `EMAIL_FROM_NAME` | Sender address, and the sender name recipients see (e.g. your business name). Note: Gmail shows "me" / "אני" instead of any name when you email yourself. |
 | `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout; point the webhook at `/api/webhooks/stripe`. |
+| `GROW_USER_ID`, `GROW_PAGE_CODE` (+ `GROW_API_KEY`, `GROW_SANDBOX`) | Grow (Meshulam): card, Bit, Apple Pay, Google Pay. Or connect it in the app: **Payments → Connect Grow**. See [Grow payments](#grow-payments). |
 | `STORAGE_PROVIDER=s3`, `S3_*` | S3-compatible storage. |
 | `CLAMAV_HOST` | Malware scanning. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google" sign-in and registration (see below). |
@@ -202,3 +203,22 @@ The integration suite (`tests/flow.test.ts`) and the browser walkthrough (`e2e/w
 ## Out of scope (per the MVP definition)
 
 Marketplace, native apps, subcontractors, accounting (receipts come from an external system), milestone payments, government integrations, advanced e-signatures, a no-code workflow designer, and AI that makes legal or financial decisions.
+
+
+## Grow payments
+
+[Grow](https://grow.business) (formerly Meshulam) takes payments by credit card, Bit, Apple Pay and Google Pay.
+
+**Connect:** as an admin, open **Payments → Connect Grow** and enter the `userId` and `pageCode` Grow gave you (and `apiKey` only if they gave you one). Keep **Test mode** on for Grow's sandbox. The identifiers are stored encrypted with `APP_SECRET`; the page shows only their last 4 characters. Alternatively set `GROW_USER_ID` / `GROW_PAGE_CODE` / `GROW_SANDBOX`. While Grow is connected, every checkout uses it; disconnecting switches back to `PAYMENT_PROVIDER`.
+
+**How a payment works:**
+1. On the quote, the customer clicks **Continue to secure payment** and confirms their full name (two words), Israeli mobile number and the terms. Grow requires these.
+2. The app calls `createPaymentProcess` (amount in ILS) and sends the customer to Grow's page.
+3. Grow posts a server update to `/api/webhooks/grow/<payment id>/<token>`. Grow doesn't sign these, so the token is an HMAC of the payment id, and the app re-reads the transaction from Grow (`getTransactionInfo`) before it counts. The amount must match the quote. Then it acknowledges with `approveTransaction`, as Grow requires. Repeated updates are no-ops.
+4. The customer returns to `/pay/return/<payment id>/success` and lands on the case, which is now active.
+
+**Going live:**
+- Ask Grow support (support@grow.business) for a production review. They check the logs for the calls above, so run a few sandbox payments first.
+- Ask them to enable server updates for your page.
+- Once approved, enter the production identifiers with **Test mode** off.
+- Online payment through Grow is in shekels only.

@@ -257,6 +257,55 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("Grow payments", () => {
+    const id = "00000000-0000-0000-0000-000000000000";
+
+    it("server updates need the right token for the payment", async () => {
+      const body = new URLSearchParams({ "data[transactionId]": "1", "data[transactionToken]": "abcdefgh12" });
+      const forged = await fetch(`${BASE}/api/webhooks/grow/${id}/${"0".repeat(64)}`, { method: "POST", body });
+      expect(forged.status).toBe(403);
+      const notUuid = await fetch(`${BASE}/api/webhooks/grow/nope/${"0".repeat(64)}`, { method: "POST", body });
+      expect(notUuid.status).toBe(403);
+    });
+
+    it("the return address only redirects into the portal", async () => {
+      const r = await fetch(`${BASE}/pay/return/${id}/success`, { redirect: "manual" });
+      expect(r.status).toBe(303);
+      expect(new URL(r.headers.get("location")!, BASE).pathname).toBe("/portal");
+      const evil = await fetch(`${BASE}/pay/return/not-a-uuid/https%3A%2F%2Fevil.example`, { redirect: "manual" });
+      expect(new URL(evil.headers.get("location")!, BASE).origin).toBe(new URL(BASE!).origin);
+    });
+
+    it("only admins can connect Grow; identifiers are validated", async () => {
+      const body = { userId: "4ec1d595ae764243", pageCode: "0b7a16e03b25", sandbox: true };
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body })).status).toBe(401);
+      for (const email of ["manager@example.com", "finance@example.com", "client@example.com"]) {
+        expect((await call("/api/admin/payments/grow", { method: "PUT", body, cookie: (await session(email)).cookie })).status, email).toBe(403);
+      }
+      const admin = await session("admin@example.com");
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body: { ...body, pageCode: "bad code!" }, cookie: admin.cookie })).status).toBe(400);
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body: { ...body, sandbox: "yes" }, cookie: admin.cookie })).status).toBe(400);
+    });
+
+    it("connecting switches checkout to Grow and disconnecting switches back; identifiers are never returned", async () => {
+      const admin = await session("admin@example.com");
+      try {
+        const r = await call("/api/admin/payments/grow", { method: "PUT", body: { userId: "4ec1d595ae764243", pageCode: "0b7a16e03b25", sandbox: true }, cookie: admin.cookie });
+        expect(r.status).toBe(200);
+        expect(r.json!.data).toMatchObject({ active: "grow", grow: { connected: true, sandbox: true, userIdHint: "••••4243" } });
+        expect(JSON.stringify(r.json)).not.toContain("4ec1d595ae764243");
+        expect(((await call("/api/health")).json as unknown as { payments: string }).payments).toBe("grow");
+        const page = await (await fetch(BASE + "/admin/payments", { headers: { Cookie: admin.cookie } })).text();
+        expect(page).not.toContain("4ec1d595ae764243");
+        expect(page).not.toContain("0b7a16e03b25");
+      } finally {
+        const d = await call("/api/admin/payments/grow", { method: "DELETE", cookie: admin.cookie });
+        expect(d.status).toBe(200);
+      }
+      expect(((await call("/api/health")).json as unknown as { payments: string }).payments).not.toBe("grow");
+    });
+  });
+
   it("finance can't read case messages or documents", async () => {
     const fin = await session("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];
