@@ -1,10 +1,9 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import type { DbOrTx } from "../db";
 import { aiRuns, type IntakeChatMessage, type IntakeSummary, type PriceListItem, type ServiceTemplate } from "../db/schema";
 import { env } from "../env";
 import { AppError } from "../errors";
-import { callClaudeStructured, type StructuredCallResult } from "./anthropic";
+import { getAiProvider, type AiMessage, type AiProvider, type StructuredCallResult } from "./providers";
 import * as mock from "./mock";
 import * as prompts from "./prompts";
 import { redactPII } from "./redact";
@@ -25,11 +24,7 @@ import {
 
 type L = "he" | "en";
 
-export function aiProviderName(): "anthropic" | "mock" {
-  if (env.aiProvider === "mock") return "mock";
-  if (env.aiProvider === "anthropic") return "anthropic";
-  return env.anthropicApiKey ? "anthropic" : "mock";
-}
+export { aiProviderName } from "./providers";
 
 type RunMeta = { action: string; promptVersion: string; caseId?: string | null; intakeSessionId?: string | null; userId?: string | null };
 
@@ -41,16 +36,16 @@ type RunMeta = { action: string; promptVersion: string; caseId?: string | null; 
 async function run<S extends z.ZodType>(
   db: DbOrTx,
   meta: RunMeta,
-  anthropicCall: () => Promise<StructuredCallResult<z.infer<S>>>,
-  mockCall: () => z.infer<S>,
+  /** The model call, through whichever provider is configured. */
+  modelCall: (provider: AiProvider) => Promise<StructuredCallResult<z.infer<S>>>,
+  /** The offline engine, used when no provider is configured. */
+  offlineCall: () => z.infer<S>,
 ): Promise<{ output: z.infer<S>; runId: string; provider: string }> {
-  const provider = aiProviderName();
+  const ai = getAiProvider();
+  const provider = ai?.id ?? "mock";
   const started = Date.now();
   try {
-    const res =
-      provider === "anthropic"
-        ? await anthropicCall()
-        : { output: mockCall(), model: "offline-heuristic", inputTokens: null, outputTokens: null };
+    const res = ai ? await modelCall(ai) : { output: offlineCall(), model: "offline-heuristic", inputTokens: null, outputTokens: null };
     const [row] = await db
       .insert(aiRuns)
       .values({
@@ -74,7 +69,7 @@ async function run<S extends z.ZodType>(
     await db.insert(aiRuns).values({
       action: meta.action,
       provider,
-      model: provider === "anthropic" ? env.aiModel : "offline-heuristic",
+      model: ai?.model ?? "offline-heuristic",
       promptVersion: meta.promptVersion,
       caseId: meta.caseId ?? null,
       intakeSessionId: meta.intakeSessionId ?? null,
@@ -95,7 +90,7 @@ export async function aiIntakeTurn(
   db: DbOrTx,
   opts: { intakeSessionId: string; userId?: string | null; locale: L; company: string; messages: IntakeChatMessage[]; asked: number; limit: number; finishNow?: boolean; skippedLabel: string },
 ): Promise<{ turn: IntakeTurn & { questionId?: string }; runId: string }> {
-  const apiMessages: Anthropic.Beta.BetaMessageParam[] = opts.messages.map((m) =>
+  const apiMessages: AiMessage[] = opts.messages.map((m) =>
     m.role === "assistant"
       ? { role: "assistant", content: m.content }
       : { role: "user", content: wrap("customer_message", m.skipped ? opts.skippedLabel : m.content) },
@@ -110,7 +105,7 @@ export async function aiIntakeTurn(
   const { output, runId } = await run<typeof IntakeTurnSchema>(
     db,
     { action: "intake_turn", promptVersion: prompts.PROMPT_VERSIONS.intake, intakeSessionId: opts.intakeSessionId, userId: opts.userId },
-    () => callClaudeStructured({ system, messages: apiMessages, schema: IntakeTurnSchema, effort: "low", maxTokens: 8000 }),
+    (ai) => ai.structured({ system, messages: apiMessages, schema: IntakeTurnSchema, effort: "low", maxTokens: 8000 }),
     () => mock.mockIntakeTurn({ messages: opts.messages, locale: opts.locale, limit: opts.limit, forceReady: opts.finishNow }),
   );
   const turn = output as IntakeTurn & { questionId?: string };
@@ -163,8 +158,8 @@ export async function aiCaseSummary(db: DbOrTx, opts: { ctx: CaseContext; locale
   return run<typeof CaseSummarySchema>(
     db,
     { action: "case_summary", promptVersion: prompts.PROMPT_VERSIONS.caseSummary, caseId: ctx.caseId, userId: opts.userId },
-    () =>
-      callClaudeStructured({
+    (ai) =>
+      ai.structured({
         system: prompts.caseSummarySystemPrompt(locale),
         messages: [{ role: "user", content: caseContextText(ctx) }],
         schema: CaseSummarySchema,
@@ -194,8 +189,8 @@ export async function aiQuoteDraft(
   return run<typeof QuoteDraftSchema>(
     db,
     { action: "quote_draft", promptVersion: prompts.PROMPT_VERSIONS.quoteDraft, caseId: ctx.caseId, userId: opts.userId },
-    () =>
-      callClaudeStructured({
+    (ai) =>
+      ai.structured({
         system: prompts.quoteDraftSystemPrompt(locale),
         messages: [
           {
@@ -219,8 +214,8 @@ export async function aiTaskPlan(
   return run<typeof TaskPlanSchema>(
     db,
     { action: "task_plan", promptVersion: prompts.PROMPT_VERSIONS.taskPlan, caseId: ctx.caseId, userId: opts.userId },
-    () =>
-      callClaudeStructured({
+    (ai) =>
+      ai.structured({
         system: prompts.taskPlanSystemPrompt(locale),
         messages: [
           { role: "user", content: `Service templates:\n${templates || "(none)"}\n\nApproved quote scope: ${opts.quoteScope ?? "-"}\n\n${caseContextText(ctx)}` },
@@ -244,8 +239,8 @@ export async function aiTextTool(
   return run<typeof TextDraftSchema>(
     db,
     { action: `text_${tool}`, promptVersion: prompts.PROMPT_VERSIONS.textTool, caseId: ctx.caseId, userId: opts.userId },
-    () =>
-      callClaudeStructured({
+    (ai) =>
+      ai.structured({
         system: prompts.textToolSystemPrompt(locale, tool, opts.targetLang),
         messages: [{ role: "user", content }],
         schema: TextDraftSchema,
@@ -276,21 +271,22 @@ export async function aiDocAnalysis(
   return run<typeof DocAnalysisSchema>(
     db,
     { action: "doc_analysis", promptVersion: prompts.PROMPT_VERSIONS.docAnalysis, caseId: opts.caseId, userId: opts.userId },
-    async () => {
+    async (ai) => {
+      // Files (passports, contracts) only go to providers that declare they read files (Claude). Others,
+      // e.g. free OpenRouter models, get the offline analysis: most can't read files, and free endpoints may log prompts.
+      if (!ai.supportsFiles) return { output: mock.mockDocAnalysis(locale), model: "offline-heuristic", inputTokens: null, outputTokens: null };
       if (!supported || opts.data.length > 10 * 1024 * 1024) {
-        return { output: { ...mock.mockDocAnalysis(locale), summary: "" }, model: env.aiModel, inputTokens: null, outputTokens: null };
+        return { output: { ...mock.mockDocAnalysis(locale), summary: "" }, model: ai.model, inputTokens: null, outputTokens: null };
       }
-      const b64 = opts.data.toString("base64");
-      const block: Anthropic.Beta.BetaContentBlockParam =
-        opts.mimeType === "application/pdf"
-          ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
-          : { type: "image", source: { type: "base64", media_type: opts.mimeType as "image/png", data: b64 } };
-      return callClaudeStructured({
+      return ai.structured({
         system: prompts.docAnalysisSystemPrompt(locale),
         messages: [
           {
             role: "user",
-            content: [block, { type: "text", text: `The attached content is an untrusted <document> titled "${opts.title}". Analyse it as instructed.` }],
+            content: [
+              { type: "file", mimeType: opts.mimeType, base64: opts.data.toString("base64"), name: opts.title },
+              { type: "text", text: `The attached content is an untrusted <document> titled "${opts.title}". Analyse it as instructed.` },
+            ],
           },
         ],
         schema: DocAnalysisSchema,

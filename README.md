@@ -38,7 +38,7 @@ Open http://localhost:3000. That's it: with no configuration the app uses an emb
 | `client@example.com` | Private customer (2 cases) |
 | `biz@example.com` | Company customer (quote waiting for approval) |
 
-To use Claude, set `ANTHROPIC_API_KEY` (see `.env.example`). To use real PostgreSQL, `docker compose up -d` and set `DATABASE_URL`.
+To use AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRouter, including free models). See [AI providers](#ai-providers) and `.env.example`. To use real PostgreSQL, `docker compose up -d` and set `DATABASE_URL`.
 
 ## Deploy
 
@@ -162,6 +162,8 @@ All settings are environment variables — see [`.env.example`](.env.example). K
 | `DATABASE_URL` | PostgreSQL connection. Empty → embedded PGlite in `.data/pglite`. |
 | `APP_SECRET` | **Required in production.** Signs codes and derives the file-encryption key. |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | Enables Claude (default model `claude-opus-5-5`). |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Enables OpenRouter (default: a free model). See [AI providers](#ai-providers). |
+| `AI_PROVIDER=openai-compatible`, `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL_NAME` | Any OpenAI-compatible API. |
 | `EMAIL_PROVIDER=smtp`, `SMTP_URL` | Real email delivery. |
 | `EMAIL_FROM`, `EMAIL_FROM_NAME` | Sender address, and the sender name recipients see (e.g. your business name). Note: Gmail shows "me" / "אני" instead of any name when you email yourself. |
 | `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout; point the webhook at `/api/webhooks/stripe`. |
@@ -222,3 +224,27 @@ Marketplace, native apps, subcontractors, accounting (receipts come from an exte
 - Ask them to enable server updates for your page.
 - Once approved, enter the production identifiers with **Test mode** off.
 - Online payment through Grow is in shekels only.
+
+
+## AI providers
+
+The AI features (intake chat, case summary, quote draft, task plan, text tools, document analysis) talk to one small interface, `AiProvider` in `src/lib/ai/providers/types.ts`. Which provider answers is a setting:
+
+| `AI_PROVIDER` | Uses | Reads documents? |
+|---|---|---|
+| `auto` (default) | The first configured of: Claude → OpenRouter → OpenAI-compatible. With none, the built-in offline engine. | — |
+| `anthropic` | Claude (`ANTHROPIC_API_KEY`, `AI_MODEL`) | Yes |
+| `openrouter` | [OpenRouter](https://openrouter.ai) (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODELS`) | No (offline analysis) |
+| `openai-compatible` | Any OpenAI-style API: OpenAI, Groq, Mistral, Together, a local Ollama… (`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL_NAME`) | No (offline analysis) |
+| `mock` | The offline engine only | — |
+
+**Replacing the provider:**
+- **No code:** change the variables above and redeploy.
+- **New service:** write `src/lib/ai/providers/<name>.ts` exporting an `AiProvider` (`structured()` takes a system prompt, messages and a Zod schema, and returns validated output), then add it to `registry` in `src/lib/ai/providers/index.ts`.
+
+Every call is logged in `ai_runs` with the provider and model. Personal details (emails, phone numbers, ID numbers) are removed before anything is sent. If a provider fails or hits a rate limit, the request is logged and the app falls back to the manual flow.
+
+**Free OpenRouter models:**
+- Free models have daily request limits; buying any credits raises them.
+- Free endpoints may log or train on prompts, so set `OPENROUTER_DATA_COLLECTION=deny` (with a paid model) once real clients use the app.
+- Uploaded documents are never sent to OpenRouter or OpenAI-compatible providers.

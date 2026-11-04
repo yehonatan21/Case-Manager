@@ -60,9 +60,27 @@ export const env = {
   seedDemoData: bool("SEED_DEMO_DATA", !isProd || demoMode),
   adminEmail: str("ADMIN_EMAIL", "admin@example.com").toLowerCase(),
 
-  aiProvider: str("AI_PROVIDER", "auto") as "auto" | "anthropic" | "mock",
+  /** auto | mock | anthropic | openrouter | openai-compatible (see src/lib/ai/providers/index.ts). */
+  aiProvider: str("AI_PROVIDER", "auto").trim().toLowerCase(),
   anthropicApiKey: str("ANTHROPIC_API_KEY"),
   aiModel: str("AI_MODEL", "claude-opus-5-5"),
+  /** OpenRouter (openrouter.ai): one API for many models, including free ones. */
+  openrouterApiKey: str("OPENROUTER_API_KEY"),
+  openrouterModel: str("OPENROUTER_MODEL", "nvidia/nemotron-3.5-super-vl:free"),
+  /** Comma-separated models to try if the first is down or rate-limited. */
+  openrouterFallbackModels: str("OPENROUTER_FALLBACK_MODELS", "google/gemma-4-31b-it:free")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean),
+  /** "deny" routes only to providers that don't store or train on prompts (most free models are then unavailable). */
+  openrouterDataCollection: (str("OPENROUTER_DATA_COLLECTION", "allow") === "deny" ? "deny" : "allow") as "allow" | "deny",
+  openrouterBaseUrl: str("OPENROUTER_BASE_URL"),
+  /** Any OpenAI-compatible API (OpenAI, Groq, Mistral, Together, a local Ollama...): AI_PROVIDER=openai-compatible. */
+  aiBaseUrl: str("AI_BASE_URL"),
+  aiApiKey: str("AI_API_KEY"),
+  aiModelName: str("AI_MODEL_NAME"),
+  /** Set to false for services that only support JSON mode, not JSON schemas. */
+  aiJsonSchema: bool("AI_JSON_SCHEMA", true),
   aiMaxRunsPerHour: Number(str("AI_MAX_RUNS_PER_HOUR", "120")),
 
   emailProvider: str("EMAIL_PROVIDER", smtpUrl ? "smtp" : "console") as "console" | "smtp",
