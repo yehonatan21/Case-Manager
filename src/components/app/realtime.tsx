@@ -22,6 +22,35 @@ export function RealtimeRefresher({ caseId }: { caseId?: string }) {
       lastRefresh.current = now;
       router.refresh();
     };
+
+    if (process.env.NEXT_PUBLIC_REALTIME === "poll") {
+      // Lightweight polling: compare an activity stamp and refresh only when something changed.
+      let last: string | null = null;
+      let failures = 0;
+      const check = async () => {
+        if (document.visibilityState !== "visible") return;
+        try {
+          const res = await fetch(`/api/realtime?mode=stamp${caseId ? `&case=${caseId}` : ""}`, { cache: "no-store" });
+          if (!res.ok) throw new Error(String(res.status));
+          const { stamp } = (await res.json()) as { stamp: string };
+          if (last !== null && stamp !== last) refresh();
+          last = stamp;
+          failures = 0;
+          setOffline(false);
+        } catch {
+          if (++failures >= 2) setOffline(true);
+        }
+      };
+      void check();
+      const timer = setInterval(check, 8000);
+      const onFocus = () => void check();
+      window.addEventListener("focus", onFocus);
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener("focus", onFocus);
+      };
+    }
+
     const es = new EventSource(`/api/realtime${caseId ? `?case=${caseId}` : ""}`);
     let fallback: ReturnType<typeof setInterval> | undefined;
     es.addEventListener("ready", () => {

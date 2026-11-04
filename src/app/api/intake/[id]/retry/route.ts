@@ -10,3 +10,6 @@ export const POST = route<{ id: string }>(async (_req, { id }) => {
   const s = await getIntake(db, id, await getCurrentUser(), await readOwnerToken());
   return ok(publicIntake(await retryIntake(db, s)));
 });
+
+/** AI calls can take a while; allow up to a minute on serverless hosts. */
+export const maxDuration = 60;

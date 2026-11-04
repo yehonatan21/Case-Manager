@@ -42,7 +42,33 @@ To use Claude, set `ANTHROPIC_API_KEY` (see `.env.example`). To use real Postgre
 
 ## Deploy
 
-**Recommended: Render (one click).** The app needs a long-running Node server (realtime updates, background email delivery), managed PostgreSQL, persistent encrypted file storage and HTTPS. The included [`render.yaml`](render.yaml) Blueprint provisions all of it from this repository: a Docker web service (Frankfurt, health-checked at `/api/health`), PostgreSQL 16 reachable only from your services, a 1 GB persistent disk for uploads, generated secrets, and auto-deploy on every push.
+### Free: Vercel + Neon
+
+Runs on free tiers: **Vercel Hobby** hosts the app (serverless) and **Neon** provides PostgreSQL. Uploaded files are stored encrypted in the database, or in **Vercel Blob** if you connect it. Vercel's Hobby plan is for personal, non-commercial use; for commercial use upgrade to Pro or use the Render/Docker options below.
+
+1. **Import the project:** go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import `yehonatan21/Case-Manager`. Keep the detected Next.js settings. Vercel runs `npm run vercel-build`, which applies database migrations and then builds.
+2. **Before the first deploy, add environment variables:**
+   - `APP_SECRET`: a long random string. Generate one with `openssl rand -hex 32`, and never change it afterwards.
+   - `DEMO_MODE`: `true` to try it right away (sign-in codes on screen, demo accounts).
+   - `CRON_SECRET`: any random string. It protects the daily maintenance job.
+   - Optional: `ADMIN_EMAIL`, `ANTHROPIC_API_KEY`, `SMTP_URL`.
+3. **Add the database:** in the project's **Storage** tab, choose **Neon → Create** (free plan, region close to Frankfurt) and connect it to the project. This sets `DATABASE_URL` and `DATABASE_URL_UNPOOLED` automatically.
+4. **Optional:** in Storage, create a **Blob** store (private) to keep files outside the database.
+5. **Redeploy** from the Deployments tab, so the build runs the migrations against Neon.
+
+On Vercel the app adapts automatically:
+- Migrations run once per build instead of on every cold start, over the direct connection.
+- Live updates poll every 8 seconds instead of holding a streaming connection open.
+- Quote expiry runs from the daily cron in [`vercel.json`](vercel.json). Notification emails are still sent immediately.
+- Files go to Vercel Blob if a store is connected, and to the database otherwise.
+
+Free-tier limits that apply: Neon's free compute pauses when idle, so the first request after a pause is slower, and storage is limited. Vercel Hobby limits function usage and allows only daily crons.
+
+The same demo-mode and go-live notes apply as below: set `SMTP_URL` and `DEMO_MODE=false` before real use.
+
+### Render (paid, long-running server)
+
+**Render (one click).** The app needs a long-running Node server (realtime updates, background email delivery), managed PostgreSQL, persistent encrypted file storage and HTTPS. The included [`render.yaml`](render.yaml) Blueprint provisions all of it from this repository: a Docker web service (Frankfurt, health-checked at `/api/health`), PostgreSQL 16 reachable only from your services, a 1 GB persistent disk for uploads, generated secrets, and auto-deploy on every push.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yehonatan21/Case-Manager)
 
@@ -54,7 +80,9 @@ The Blueprint starts in **demo mode** (`DEMO_MODE=true`): sign-in codes appear o
 
 > Keep `APP_SECRET` stable: it signs sessions and derives the key that encrypts stored files.
 
-**Anywhere else (Docker).** The [`Dockerfile`](Dockerfile) builds a small standalone image that runs as a non-root user and stores uploads (and the embedded database, if no `DATABASE_URL` is set) under `/var/data`:
+### Anywhere else (Docker)
+
+ The [`Dockerfile`](Dockerfile) builds a small standalone image that runs as a non-root user and stores uploads (and the embedded database, if no `DATABASE_URL` is set) under `/var/data`:
 
 ```bash
 docker build -t case-manager .
@@ -64,9 +92,11 @@ docker build -t case-manager .
 docker run -p 3000:3000 -v case-data:/var/data -e APP_SECRET="$(openssl rand -hex 32)" -e DATABASE_URL=postgres://... -e APP_URL=https://cases.example.com -e JOBS_INTERVAL_MINUTES=5 case-manager
 ```
 
-This works on Railway, Fly.io, Koyeb, Google Cloud Run (with an external database and S3 storage) or any VPS. The public URL is detected automatically on Render, Railway and Fly; elsewhere set `APP_URL`. Migrations run automatically on start (serialised with a database lock). Vercel is not recommended: serverless functions cut realtime streams short and have no persistent disk, so it would need external PostgreSQL plus S3 storage.
+This works on Railway, Fly.io, Koyeb, Google Cloud Run (with an external database and S3 storage) or any VPS. The public URL is detected automatically on Render, Railway and Fly; elsewhere set `APP_URL`. Migrations run automatically on start (serialised with a database lock). On serverless hosts other than Vercel, set `NEXT_PUBLIC_REALTIME=poll` at build time and `STORAGE_PROVIDER=database` (or S3).
 
-**CI.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the type check, the test suite on PGlite and on PostgreSQL 16, the production build, and the Docker build on every push and pull request.
+### CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the type check, the test suite on PGlite and on PostgreSQL 16, the production build, and the Docker build on every push and pull request.
 
 ## What's in the MVP
 

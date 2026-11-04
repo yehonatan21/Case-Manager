@@ -17,7 +17,7 @@ const g = globalThis as unknown as GlobalDb;
 async function createPgDatabase(url: string): Promise<Database> {
   const { Pool } = await import("pg");
   const { drizzle } = await import("drizzle-orm/node-postgres");
-  const pool = new Pool({ connectionString: url, max: Number(process.env.DATABASE_POOL_SIZE || 10) });
+  const pool = new Pool({ connectionString: url, max: Number(process.env.DATABASE_POOL_SIZE || (env.isVercel ? 3 : 10)) });
   const db = drizzle({ client: pool, schema }) as unknown as Database;
   if (env.autoMigrate) {
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
@@ -47,6 +47,9 @@ export async function createPgliteDatabase(dataDir?: string): Promise<Database> 
 }
 
 async function init(): Promise<Database> {
+  if (env.isVercel && !env.databaseUrl) {
+    throw new Error("DATABASE_URL is not set. Add a Neon database under Storage in your Vercel project and redeploy.");
+  }
   const db = env.databaseUrl
     ? await createPgDatabase(env.databaseUrl)
     : await createPgliteDatabase(path.resolve(/*turbopackIgnore: true*/ process.cwd(), env.pgliteDir));
