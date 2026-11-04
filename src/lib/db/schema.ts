@@ -1,4 +1,5 @@
 import {
+  customType,
   pgTable,
   pgEnum,
   uuid,
@@ -594,6 +595,18 @@ export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => "bytea",
+  fromDriver: (v) => (Buffer.isBuffer(v) ? v : Buffer.from(v)),
+});
+
+/** Encrypted file contents for STORAGE_PROVIDER=database (hosting without a persistent disk). */
+export const fileBlobs = pgTable("file_blobs", {
+  key: text("key").primaryKey(),
+  data: bytea("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type User = typeof users.$inferSelect;

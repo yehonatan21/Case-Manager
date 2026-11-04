@@ -10,3 +10,6 @@ export const POST = route(async (req) => {
   const { caseId } = await readJson(req, z.object({ caseId: z.uuid() }));
   return ok(await copilotTaskPlan(await getDb(), user, caseId, await getLocale()));
 });
+
+/** AI calls can take a while; allow up to a minute on serverless hosts. */
+export const maxDuration = 60;

@@ -51,3 +51,6 @@ export const GET = route(async (req) => {
     }),
   );
 });
+
+/** AI calls can take a while; allow up to a minute on serverless hosts. */
+export const maxDuration = 60;

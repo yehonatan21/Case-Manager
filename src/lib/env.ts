@@ -23,29 +23,40 @@ const isProd = process.env.NODE_ENV === "production";
  */
 const demoMode = bool("DEMO_MODE", false);
 
+const isVercel = !!process.env.VERCEL;
+
 /** Public base URL: explicit APP_URL, else what the hosting platform provides. */
 function publicUrl(): string {
   const explicit = str("APP_URL") || str("RENDER_EXTERNAL_URL");
   if (explicit) return explicit;
+  const vercelHost = str("VERCEL_PROJECT_PRODUCTION_URL") || str("VERCEL_URL");
+  if (vercelHost) return `https://${vercelHost}`;
   if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
   if (process.env.FLY_APP_NAME) return `https://${process.env.FLY_APP_NAME}.fly.dev`;
   return "http://localhost:3000";
 }
 
 const smtpUrl = str("SMTP_URL");
+// Neon / Vercel Postgres integrations use these names.
+const databaseUrl = str("DATABASE_URL") || str("POSTGRES_URL");
+const blobToken = str("BLOB_READ_WRITE_TOKEN");
 const stripeSecretKey = str("STRIPE_SECRET_KEY");
 
 export const env = {
   isProd,
+  isVercel,
   demoMode,
   isTest: process.env.NODE_ENV === "test" || !!process.env.VITEST,
   appUrl: publicUrl().replace(/\/$/, ""),
   appName: str("APP_NAME", "Case Manager"),
   appSecret: str("APP_SECRET", "dev-insecure-secret-change-me-0123456789abcdef"),
 
-  databaseUrl: str("DATABASE_URL"),
+  databaseUrl,
+  /** Direct (non-pooled) connection for migrations; poolers in transaction mode break advisory locks. */
+  databaseUrlUnpooled: str("DATABASE_URL_UNPOOLED") || str("POSTGRES_URL_NON_POOLING") || databaseUrl,
   pgliteDir: str("PGLITE_DIR", ".data/pglite"),
-  autoMigrate: bool("AUTO_MIGRATE", true),
+  // Serverless: migrations run once in the build step (npm run vercel-build), not on every cold start.
+  autoMigrate: bool("AUTO_MIGRATE", !isVercel),
   seedDemoData: bool("SEED_DEMO_DATA", !isProd || demoMode),
   adminEmail: str("ADMIN_EMAIL", "admin@example.com").toLowerCase(),
 
@@ -64,7 +75,8 @@ export const env = {
   stripeWebhookSecret: str("STRIPE_WEBHOOK_SECRET"),
   paymentWebhookSecret: str("PAYMENT_WEBHOOK_SECRET", "dev-payment-webhook-secret"),
 
-  storageProvider: str("STORAGE_PROVIDER", "local") as "local" | "s3",
+  // local disk by default; Vercel Blob when connected; the database when the host has no persistent disk.
+  storageProvider: str("STORAGE_PROVIDER", blobToken ? "vercel-blob" : isVercel ? "database" : "local") as "local" | "s3" | "vercel-blob" | "database",
   storageDir: str("STORAGE_DIR", ".data/uploads"),
   s3Bucket: str("S3_BUCKET"),
   s3Region: str("S3_REGION", "us-east-1"),
@@ -92,6 +104,9 @@ export function assertProductionConfig() {
   }
   if (env.emailProvider === "console" && !env.demoMode) {
     console.warn("[config] No SMTP_URL configured and DEMO_MODE is off: sign-in codes are only written to the server log.");
+  }
+  if (env.isVercel && !env.databaseUrl) {
+    console.warn("[config] No DATABASE_URL: add a Neon database under Storage in the Vercel project, then redeploy.");
   }
   if (env.demoMode) {
     console.warn("[config] DEMO_MODE is on: sign-in codes are shown on screen. Do not use with real customer data.");

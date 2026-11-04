@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { caseEvents } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * Server-Sent Events: pushes an "update" whenever something the viewer can see changes
@@ -41,6 +42,11 @@ export async function GET(req: Request) {
     }
     return String(n);
   };
+
+  // Polling mode (serverless hosts): return the current activity stamp; the client refreshes when it changes.
+  if (new URL(req.url).searchParams.get("mode") === "stamp") {
+    return Response.json({ stamp: await stamp() }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   const encoder = new TextEncoder();
   let timer: ReturnType<typeof setInterval> | undefined;

@@ -70,8 +70,56 @@ class S3Storage implements StorageDriver {
   }
 }
 
+/** Vercel Blob (private store). Contents are additionally encrypted by the app and served through it. */
+class VercelBlobStorage implements StorageDriver {
+  async put(key: string, data: Buffer) {
+    const { put } = await import("@vercel/blob");
+    await put(key, encryptBuffer(data), { access: "private", addRandomSuffix: false, contentType: "application/octet-stream" });
+  }
+  async get(key: string) {
+    const { get } = await import("@vercel/blob");
+    const res = await get(key, { access: "private", useCache: false });
+    if (!res || res.statusCode !== 200) throw new Error("Blob not found");
+    return decryptBuffer(Buffer.from(await new Response(res.stream).arrayBuffer()));
+  }
+  async signedUrl() {
+    return null;
+  }
+}
+
+/** Encrypted contents in PostgreSQL — for hosts without a persistent disk (fine for MVP-scale volumes). */
+class DatabaseStorage implements StorageDriver {
+  private async db() {
+    const { getDb } = await import("../db");
+    return getDb();
+  }
+  async put(key: string, data: Buffer) {
+    const { fileBlobs } = await import("../db/schema");
+    await (await this.db()).insert(fileBlobs).values({ key, data: encryptBuffer(data) });
+  }
+  async get(key: string) {
+    const { fileBlobs } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await (await this.db()).select().from(fileBlobs).where(eq(fileBlobs.key, key));
+    if (!row) throw new Error("File not found");
+    return decryptBuffer(row.data);
+  }
+  async signedUrl() {
+    return null;
+  }
+}
+
 let driver: StorageDriver | null = null;
 export function storage(): StorageDriver {
-  if (!driver) driver = env.storageProvider === "s3" ? new S3Storage() : new LocalStorage();
+  if (!driver) {
+    driver =
+      env.storageProvider === "s3"
+        ? new S3Storage()
+        : env.storageProvider === "vercel-blob"
+          ? new VercelBlobStorage()
+          : env.storageProvider === "database"
+            ? new DatabaseStorage()
+            : new LocalStorage();
+  }
   return driver;
 }

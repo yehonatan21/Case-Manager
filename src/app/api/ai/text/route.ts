@@ -18,3 +18,6 @@ export const POST = route(async (req) => {
   );
   return ok(await copilotText(await getDb(), user, body.caseId, body.tool, body.input, await getLocale(), body.targetLang));
 });
+
+/** AI calls can take a while; allow up to a minute on serverless hosts. */
+export const maxDuration = 60;
