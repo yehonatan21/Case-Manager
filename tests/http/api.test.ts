@@ -42,6 +42,13 @@ async function signIn(email: string): Promise<{ cookie: string; setCookie: strin
   return { cookie: cookie!, setCookie };
 }
 
+/** One session per account for the whole file, so the suite stays under the per-email sign-in code limit (5 per 15 min). */
+const sessions = new Map<string, Promise<{ cookie: string; setCookie: string }>>();
+function session(email: string) {
+  if (!sessions.has(email)) sessions.set(email, signIn(email));
+  return sessions.get(email)!;
+}
+
 describe.skipIf(!BASE)("HTTP API", () => {
   it("health check and security headers", async () => {
     const h = await call("/api/health");
@@ -103,8 +110,8 @@ describe.skipIf(!BASE)("HTTP API", () => {
   });
 
   it("customers see only their own cases and can't use staff endpoints", async () => {
-    const client = await signIn("client@example.com");
-    const biz = await signIn("biz@example.com");
+    const client = await session("client@example.com");
+    const biz = await session("biz@example.com");
     const mine = (await call("/api/cases", { cookie: client.cookie })).json!.data as { id: string }[];
     const theirs = (await call("/api/cases", { cookie: biz.cookie })).json!.data as { id: string }[];
     expect(mine.length).toBeGreaterThan(0);
@@ -120,7 +127,7 @@ describe.skipIf(!BASE)("HTTP API", () => {
   });
 
   it("the admin sees every case and the staff area", async () => {
-    const admin = await signIn("admin@example.com");
+    const admin = await session("admin@example.com");
     const all = (await call("/api/cases?status=all", { cookie: admin.cookie })).json!.data as unknown[];
     expect(all.length).toBeGreaterThanOrEqual(4);
     expect((await fetch(BASE + "/admin", { headers: { Cookie: admin.cookie } })).status).toBe(200);
@@ -132,14 +139,14 @@ describe.skipIf(!BASE)("HTTP API", () => {
     const request = { title: "From a call", description: "Details", serviceCategory: "other", urgency: "normal" };
     let manager: { cookie: string };
     beforeAll(async () => {
-      manager = await signIn("manager@example.com");
+      manager = await session("manager@example.com");
     });
 
     it("requires a session and a manager or admin role", async () => {
       const body = { customer: newClient(), ...request };
       expect((await call("/api/admin/cases", { body })).status).toBe(401);
       for (const email of ["client@example.com", "staff@example.com", "finance@example.com"]) {
-        expect((await call("/api/admin/cases", { body, cookie: (await signIn(email)).cookie })).status, email).toBe(403);
+        expect((await call("/api/admin/cases", { body, cookie: (await session(email)).cookie })).status, email).toBe(403);
       }
     });
 
@@ -172,7 +179,7 @@ describe.skipIf(!BASE)("HTTP API", () => {
       expect(r.status).toBe(200);
       expect(r.json!.data).toMatchObject({ customerCreated: true, number: expect.stringMatching(/^CASE-/) });
       expect((await call(`/api/cases/${r.json!.data.id}`, { cookie: manager.cookie })).status).toBe(200);
-      const signedIn = await signIn(client.email);
+      const signedIn = await session(client.email);
       const mine = (await call("/api/cases", { cookie: signedIn.cookie })).json!.data as { id: string }[];
       expect(mine.map((c) => c.id)).toEqual([r.json!.data.id]);
       // The same email again is attached to the same client.
@@ -181,7 +188,7 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
 
     it("creates a request for an existing client by id; unknown ids and staff emails are refused", async () => {
-      const admin = await signIn("admin@example.com");
+      const admin = await session("admin@example.com");
       const r = await call("/api/admin/cases", { body: { customer: newClient(), ...request }, cookie: admin.cookie });
       const created = (await call(`/api/cases/${r.json!.data.id}`, { cookie: admin.cookie })).json!.data;
       const customerId = created.case.customerId as string;
@@ -196,9 +203,9 @@ describe.skipIf(!BASE)("HTTP API", () => {
       expect((await fetch(BASE + "/admin/cases/new", { headers: { Cookie: manager.cookie } })).status).toBe(200);
       const anon = await fetch(BASE + "/admin/cases/new", { redirect: "manual" });
       expect(anon.headers.get("location") ?? "").toContain("/login");
-      const client = await fetch(BASE + "/admin/cases/new", { headers: { Cookie: (await signIn("client@example.com")).cookie }, redirect: "manual" });
+      const client = await fetch(BASE + "/admin/cases/new", { headers: { Cookie: (await session("client@example.com")).cookie }, redirect: "manual" });
       expect(client.headers.get("location") ?? "").toContain("/portal");
-      const finance = (await signIn("finance@example.com")).cookie;
+      const finance = (await session("finance@example.com")).cookie;
       const fin = await fetch(BASE + "/admin/cases/new", { headers: { Cookie: finance }, redirect: "manual" });
       expect(fin.headers.get("location") ?? "").toContain("/admin/cases");
       // The "New request" button is shown to managers, not to finance.
@@ -207,8 +214,100 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("adding team members (POST /api/admin/users)", () => {
+    const unique = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
+    let admin: { cookie: string };
+    beforeAll(async () => {
+      admin = await session("admin@example.com");
+    });
+
+    it("admins only", async () => {
+      const body = { email: unique("t"), name: "T", role: "staff" };
+      expect((await call("/api/admin/users", { body })).status).toBe(401);
+      expect((await call("/api/admin/users", { body, cookie: (await session("manager@example.com")).cookie })).status).toBe(403);
+      expect((await call("/api/admin/users", { body: { ...body, role: "customer" }, cookie: admin.cookie })).status).toBe(400);
+    });
+
+    it("invites a new email, then refuses it the second time with a clear reason", async () => {
+      const body = { email: unique("new"), name: "New Member", role: "case_manager" };
+      const r = await call("/api/admin/users", { body, cookie: admin.cookie });
+      expect(r.status).toBe(200);
+      expect(r.json!.data.outcome).toBe("invited");
+      const again = await call("/api/admin/users", { body, cookie: admin.cookie });
+      expect(again.status).toBe(409);
+      expect(again.json?.error?.code).toBe("already_team_member");
+    });
+
+    it("someone who registered as a client (no requests) can be added to the team and reach the staff area", async () => {
+      const e = unique("registered");
+      const code = (await call("/api/auth/request-code", { body: { email: e, purpose: "signup" } })).json!.data.devCode;
+      const reg = await call("/api/auth/verify", { body: { email: e, code, signup: { name: "Shilo", customerType: "private", acceptTerms: true, aiConsent: true } } });
+      expect(reg.status).toBe(200);
+      const r = await call("/api/admin/users", { body: { email: e, name: "Shilo", role: "case_manager" }, cookie: admin.cookie });
+      expect(r.status).toBe(200);
+      expect(r.json!.data.outcome).toBe("converted");
+      const member = await signIn(e);
+      expect((await fetch(BASE + "/admin", { headers: { Cookie: member.cookie } })).status).toBe(200);
+    });
+
+    it("a client with requests is refused", async () => {
+      const r = await call("/api/admin/users", { body: { email: "client@example.com", name: "x", role: "staff" }, cookie: admin.cookie });
+      expect(r.status).toBe(409);
+      expect(r.json?.error?.code).toBe("email_is_client");
+    });
+  });
+
+  describe("Grow payments", () => {
+    const id = "00000000-0000-0000-0000-000000000000";
+
+    it("server updates need the right token for the payment", async () => {
+      const body = new URLSearchParams({ "data[transactionId]": "1", "data[transactionToken]": "abcdefgh12" });
+      const forged = await fetch(`${BASE}/api/webhooks/grow/${id}/${"0".repeat(64)}`, { method: "POST", body });
+      expect(forged.status).toBe(403);
+      const notUuid = await fetch(`${BASE}/api/webhooks/grow/nope/${"0".repeat(64)}`, { method: "POST", body });
+      expect(notUuid.status).toBe(403);
+    });
+
+    it("the return address only redirects into the portal", async () => {
+      const r = await fetch(`${BASE}/pay/return/${id}/success`, { redirect: "manual" });
+      expect(r.status).toBe(303);
+      expect(new URL(r.headers.get("location")!, BASE).pathname).toBe("/portal");
+      const evil = await fetch(`${BASE}/pay/return/not-a-uuid/https%3A%2F%2Fevil.example`, { redirect: "manual" });
+      expect(new URL(evil.headers.get("location")!, BASE).origin).toBe(new URL(BASE!).origin);
+    });
+
+    it("only admins can connect Grow; identifiers are validated", async () => {
+      const body = { userId: "4ec1d595ae764243", pageCode: "0b7a16e03b25", sandbox: true };
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body })).status).toBe(401);
+      for (const email of ["manager@example.com", "finance@example.com", "client@example.com"]) {
+        expect((await call("/api/admin/payments/grow", { method: "PUT", body, cookie: (await session(email)).cookie })).status, email).toBe(403);
+      }
+      const admin = await session("admin@example.com");
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body: { ...body, pageCode: "bad code!" }, cookie: admin.cookie })).status).toBe(400);
+      expect((await call("/api/admin/payments/grow", { method: "PUT", body: { ...body, sandbox: "yes" }, cookie: admin.cookie })).status).toBe(400);
+    });
+
+    it("connecting switches checkout to Grow and disconnecting switches back; identifiers are never returned", async () => {
+      const admin = await session("admin@example.com");
+      try {
+        const r = await call("/api/admin/payments/grow", { method: "PUT", body: { userId: "4ec1d595ae764243", pageCode: "0b7a16e03b25", sandbox: true }, cookie: admin.cookie });
+        expect(r.status).toBe(200);
+        expect(r.json!.data).toMatchObject({ active: "grow", grow: { connected: true, sandbox: true, userIdHint: "••••4243" } });
+        expect(JSON.stringify(r.json)).not.toContain("4ec1d595ae764243");
+        expect(((await call("/api/health")).json as unknown as { payments: string }).payments).toBe("grow");
+        const page = await (await fetch(BASE + "/admin/payments", { headers: { Cookie: admin.cookie } })).text();
+        expect(page).not.toContain("4ec1d595ae764243");
+        expect(page).not.toContain("0b7a16e03b25");
+      } finally {
+        const d = await call("/api/admin/payments/grow", { method: "DELETE", cookie: admin.cookie });
+        expect(d.status).toBe(200);
+      }
+      expect(((await call("/api/health")).json as unknown as { payments: string }).payments).not.toBe("grow");
+    });
+  });
+
   it("finance can't read case messages or documents", async () => {
-    const fin = await signIn("finance@example.com");
+    const fin = await session("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];
     const b = (await call(`/api/cases/${cases[0]!.id}`, { cookie: fin.cookie })).json!.data;
     expect(b.messages).toHaveLength(0);

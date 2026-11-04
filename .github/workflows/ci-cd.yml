@@ -78,6 +78,8 @@ jobs:
           APP_SECRET: ci-only-secret-0123456789abcdef0123456789
           DEMO_MODE: "true"
           PGLITE_DIR: .data/ci
+          # e2e/grow.cjs runs a stand-in for Grow's API here.
+          GROW_API_URL: http://localhost:4010
       - name: HTTP API tests (auth, permissions, CSRF, headers)
         run: npm run test:api
         env:

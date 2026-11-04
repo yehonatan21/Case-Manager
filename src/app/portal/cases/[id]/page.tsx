@@ -7,15 +7,17 @@ import { EmptyState } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { RealtimeRefresher } from "@/components/app/realtime";
 import { env } from "@/lib/env";
+import { activePaymentProvider } from "@/lib/services/payment-settings";
 
 export default async function CustomerCasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; submitted?: string; payment?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const user = await requirePageCustomer(`/portal/cases/${id}`);
   const { d } = await getDict();
+  const db = await getDb();
   let b;
   try {
-    b = await getCaseBundle(await getDb(), user, id);
+    b = await getCaseBundle(db, user, id);
   } catch {
     return <EmptyState title={d.caseView.notFound} text={d.states.notFoundText} action={<ButtonLink href="/portal/cases">{d.portal.casesTitle}</ButtonLink>} />;
   }
@@ -39,6 +41,7 @@ export default async function CustomerCasePage({ params, searchParams }: { param
           updatedAt: b.case.updatedAt,
           assignee: b.assignee ? { name: b.assignee.name } : null,
           customerName: b.customer?.user.name ?? "",
+          checkout: { provider: await activePaymentProvider(db), payerName: user.name, payerPhone: user.phone ?? "" },
           actions: b.actions,
           events: b.events.map((e) => ({ id: e.id, type: e.type, visibility: e.visibility, actorKind: e.actorKind, actorName: e.actorName, data: e.data, createdAt: e.createdAt })),
           messages: b.messages.map((m) => ({ id: m.id, senderId: m.senderId, senderName: m.senderName, senderRole: m.senderRole, kind: m.kind, body: m.body, isInfoRequest: m.isInfoRequest, aiRunId: null, createdAt: m.createdAt })),

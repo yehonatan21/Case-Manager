@@ -12,6 +12,8 @@ export type ErrorCode =
   | "signup_required"
   | "no_account"
   | "staff_email"
+  | "already_team_member"
+  | "email_is_client"
   | "terms_required"
   | "invalid_transition"
   | "quote_not_editable"
@@ -20,6 +22,10 @@ export type ErrorCode =
   | "quote_expired"
   | "payment_not_allowed"
   | "already_paid"
+  | "payment_provider_error"
+  | "currency_not_supported"
+  | "payer_name_invalid"
+  | "payer_phone_invalid"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -40,6 +46,8 @@ const STATUS: Record<ErrorCode, number> = {
   signup_required: 400,
   no_account: 404,
   staff_email: 409,
+  already_team_member: 409,
+  email_is_client: 409,
   terms_required: 400,
   invalid_transition: 409,
   quote_not_editable: 409,
@@ -48,6 +56,10 @@ const STATUS: Record<ErrorCode, number> = {
   quote_expired: 409,
   payment_not_allowed: 409,
   already_paid: 409,
+  payment_provider_error: 502,
+  currency_not_supported: 400,
+  payer_name_invalid: 400,
+  payer_phone_invalid: 400,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,

@@ -17,7 +17,8 @@ export type AppSettings = {
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {
   const rows = await db.select().from(settings);
   const merged: Record<string, unknown> = { ...DEFAULT_SETTINGS };
-  for (const r of rows) merged[r.key] = r.value;
+  // Only the general settings; other keys (e.g. the encrypted payment connection) are never sent to the page.
+  for (const r of rows) if (r.key in DEFAULT_SETTINGS) merged[r.key] = r.value;
   return merged as AppSettings;
 }
 

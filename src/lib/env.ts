@@ -76,6 +76,12 @@ export const env = {
   stripeSecretKey,
   stripeWebhookSecret: str("STRIPE_WEBHOOK_SECRET"),
   paymentWebhookSecret: str("PAYMENT_WEBHOOK_SECRET", "dev-payment-webhook-secret"),
+  /** Grow (Meshulam) identifiers. Can also be entered by an admin under Payments → Connect Grow. */
+  growUserId: str("GROW_USER_ID"),
+  growPageCode: str("GROW_PAGE_CODE"),
+  growApiKey: str("GROW_API_KEY"),
+  growSandbox: bool("GROW_SANDBOX", true),
+  growApiUrl: str("GROW_API_URL"),
 
   // local disk by default; Vercel Blob when connected; the database when the host has no persistent disk.
   storageProvider: str("STORAGE_PROVIDER", blobToken ? "vercel-blob" : isVercel ? "database" : "local") as "local" | "s3" | "vercel-blob" | "database",
