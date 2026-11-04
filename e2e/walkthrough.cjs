@@ -214,14 +214,14 @@ async function logout(ctx) {
 
   // 12. Language switch → English (LTR) on the customer's case
   await mob.goto(caseUrl); await mob.waitForTimeout(1200);
-  await mob.click("button[aria-label*='English']");
+  await mob.getByRole("button", { name: /^(English|EN)\b/ }).first().click();
   await mob.waitForFunction(() => document.documentElement.dir === "ltr", null, { timeout: 15000 });
   await mob.locator("text=/The whole process is complete|What needs to be done now/").first().waitFor({ timeout: 15000 });
   await mob.screenshot({ path: `${OUT}/17-mobile-case-completed-en.png`, fullPage: true });
   log("switched to English, dir =", await mob.getAttribute("html", "dir"));
 
   // 13. Staff area in English
-  await page.click("button[aria-label*='English']");
+  await page.getByRole("button", { name: /^(English|EN)\b/ }).first().click();
   await page.waitForFunction(() => document.documentElement.dir === "ltr", null, { timeout: 15000 });
   await page.goto(BASE + "/admin"); await page.waitForTimeout(1200);
   await page.screenshot({ path: `${OUT}/18-admin-dashboard-en.png`, fullPage: true });

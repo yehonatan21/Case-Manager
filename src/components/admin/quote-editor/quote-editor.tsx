@@ -282,7 +282,7 @@ export function QuoteEditor({ q, priceList, canManage, autoDraft }: { q: EditorQ
                           )}
                         </Field>
                         <Button variant="ghost" size="icon" aria-label={d.common.remove} onClick={() => mark(setItems)(items.filter((_, j) => j !== idx))}>
-                          <Trash2 className="size-4 text-slate-400" />
+                          <Trash2 className="size-4 text-slate-500" />
                         </Button>
                       </div>
                       {it.needsPrice && toCents(it.price) === 0 && (

@@ -30,9 +30,12 @@ export default async function NotificationsPage() {
           {items.map((n) => (
             <li key={n.id} className={cn(!n.readAt && "bg-brand-50/50")}>
               <Link href={n.link ?? "#"} className="block px-5 py-4 hover:bg-slate-50">
-                <p className="bidi-auto font-medium text-slate-900">{n.title}</p>
+                <p className="bidi-auto font-medium text-slate-900">
+                  {!n.readAt && <span className="sr-only">{d.notificationsUi.unread}: </span>}
+                  {n.title}
+                </p>
                 {n.body && <p className="bidi-auto mt-0.5 text-sm text-slate-600">{n.body}</p>}
-                <p className="mt-1 text-xs text-slate-400">{formatDateTime(n.createdAt, locale)}</p>
+                <p className="mt-1 text-xs text-slate-500">{formatDateTime(n.createdAt, locale)}</p>
               </Link>
             </li>
           ))}

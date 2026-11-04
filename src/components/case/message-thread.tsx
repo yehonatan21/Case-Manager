@@ -115,7 +115,7 @@ export function MessageThread({
                   {m.body}
                 </div>
                 {m.aiRunId && staffComposer && (
-                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-slate-400">
+                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-slate-500">
                     <Bot className="size-3" aria-hidden />
                     {fmt(d.messages.aiDrafted, { name: m.senderName ?? "" })}
                   </p>

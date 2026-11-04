@@ -36,7 +36,7 @@ export function StartRequest() {
           e.preventDefault();
           void start(text);
         }}
-        className="rounded-2xl border border-slate-200 bg-white p-2 shadow-lg shadow-brand-900/5 focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-100"
+        className="rounded-2xl border border-slate-200 bg-white p-2 shadow-lg shadow-brand-900/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500"
       >
         <label htmlFor="start-text" className="sr-only">
           {d.home.title}
@@ -52,10 +52,10 @@ export function StartRequest() {
           rows={4}
           maxLength={4000}
           placeholder={d.home.placeholder}
-          className="bidi-auto w-full resize-none rounded-xl border-0 bg-transparent px-3 py-3 text-base leading-relaxed text-slate-900 placeholder:text-slate-400 focus:outline-none"
+          className="bidi-auto w-full resize-none rounded-xl border-0 bg-transparent px-3 py-3 text-base leading-relaxed text-slate-900 placeholder:text-slate-500 focus:outline-none"
         />
         <div className="flex items-center justify-between gap-2 px-2 pb-1">
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-400">
+          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
             <Sparkles className="size-3.5" aria-hidden />
             {d.common.poweredByAi}
           </span>

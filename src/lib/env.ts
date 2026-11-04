@@ -119,6 +119,10 @@ export const env = {
   // Trimmed (and stripped of wrapping quotes): pasted dashboard values often carry stray whitespace.
   googleClientId: str("GOOGLE_CLIENT_ID").trim().replace(/^["']|["']$/g, ""),
   googleClientSecret: str("GOOGLE_CLIENT_SECRET").trim().replace(/^["']|["']$/g, ""),
+  /** Sign-in codes per email address per 15 minutes (abuse protection). Raise only for test servers. */
+  otpMaxPerEmail: Math.max(1, Number(str("OTP_MAX_PER_EMAIL", "5")) || 5),
+  /** Sign-in codes per IP address per 15 minutes. Raise only for test servers. */
+  otpMaxPerIp: Math.max(1, Number(str("OTP_MAX_PER_IP", "30")) || 30),
   /** Web Push keys. Optional: without them the app generates a key pair once and stores it encrypted. */
   vapidPublicKey: str("VAPID_PUBLIC_KEY"),
   vapidPrivateKey: str("VAPID_PRIVATE_KEY"),

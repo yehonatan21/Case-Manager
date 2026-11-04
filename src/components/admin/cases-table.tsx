@@ -66,9 +66,9 @@ export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant:
                 <UrgencyBadge urgency={r.urgency} />
               </td>
               {variant === "inbox" && (
-                <td className="px-4 py-3">{r.missingCount > 0 ? <Badge tone="warning">{fmt(d.admin.missingCount, { n: r.missingCount })}</Badge> : <span className="text-slate-400">—</span>}</td>
+                <td className="px-4 py-3">{r.missingCount > 0 ? <Badge tone="warning">{fmt(d.admin.missingCount, { n: r.missingCount })}</Badge> : <span className="text-slate-500">—</span>}</td>
               )}
-              <td className="px-4 py-3 text-slate-600">{r.assigneeName ?? <span className="text-slate-400">{d.common.unassigned}</span>}</td>
+              <td className="px-4 py-3 text-slate-600">{r.assigneeName ?? <span className="text-slate-500">{d.common.unassigned}</span>}</td>
               <td className="px-4 py-3">
                 <CaseStatusBadge status={r.status} />
               </td>

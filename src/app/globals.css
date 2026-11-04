@@ -13,6 +13,9 @@
   --color-brand-800: #3730a3;
   --color-brand-900: #312e81;
   --color-surface: #f6f7fb;
+  /* Secondary text: a slightly darker slate-500 (default #62748e) so it meets 4.5:1 on the page background
+     and the light grey surfaces too (WCAG 1.4.3). */
+  --color-slate-500: #58687f;
   --animate-dot: dot 1.2s infinite ease-in-out both;
   @keyframes dot {
     0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }

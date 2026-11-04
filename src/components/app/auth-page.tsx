@@ -4,7 +4,7 @@ import { getDict } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isStaffRole } from "@/lib/domain";
 import { env } from "@/lib/env";
-import { PublicHeader } from "@/components/app/public-header";
+import { PublicFooter, PublicHeader } from "@/components/app/public-header";
 import { LoginForm } from "@/components/app/login-form";
 import { RegisterForm } from "@/components/app/register-form";
 import { GoogleButton } from "@/components/app/google-button";
@@ -54,7 +54,7 @@ export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: Aut
               {google && !pending && (
                 <div className="mx-auto mt-6 max-w-md">
                   <GoogleButton next={next ?? undefined} />
-                  <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
+                  <div className="mt-6 flex items-center gap-3 text-xs text-slate-500">
                     <span className="h-px flex-1 bg-slate-200" />
                     {d.register.orEmail}
                     <span className="h-px flex-1 bg-slate-200" />
@@ -100,6 +100,7 @@ export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: Aut
           register={<RegisterForm next={next} google={false} googleProfile={pending ?? undefined} initialEmail={sp.email?.slice(0, 200)} />}
         />
       </main>
+      <PublicFooter />
     </>
   );
 }

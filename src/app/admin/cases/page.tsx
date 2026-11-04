@@ -36,7 +36,7 @@ export default async function CasesPage({
         title={d.admin.casesTitle}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <nav className="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
+            <nav aria-label={d.nav.filterMenu} className="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
               {[
                 ["open", d.admin.openOnly],
                 ["all", d.admin.allRequests],

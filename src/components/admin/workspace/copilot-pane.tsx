@@ -194,7 +194,7 @@ export function CopilotPane({
                   <dt className="text-xs font-semibold text-brand-800">{d.copilot.next}</dt>
                   <dd className="bidi-auto mt-0.5 font-medium text-brand-900">{summary.recommended_next_step}</dd>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   <Badge tone="brand" className="me-1">{d.common.aiSuggestion}</Badge>
                   <RelativeTime value={summary.generated_at} />
                 </p>
@@ -339,7 +339,7 @@ export function CopilotPane({
               </div>
             )}
           </section>
-          <p className="text-[11px] text-slate-400">{d.copilot.disclaimer}</p>
+          <p className="text-[11px] text-slate-500">{d.copilot.disclaimer}</p>
         </CardContent>
       </Card>
     </div>

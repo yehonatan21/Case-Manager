@@ -107,7 +107,7 @@ export function TasksPanel({ caseId, tasks, staff, templates, canEdit }: { caseI
                   aria-label={d.tasks.markDone}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className={cn("bidi-auto text-sm font-medium", t.status === "done" ? "text-slate-400 line-through" : "text-slate-900")}>{t.title}</p>
+                  <p className={cn("bidi-auto text-sm font-medium", t.status === "done" ? "text-slate-500 line-through" : "text-slate-900")}>{t.title}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                     {t.dueDate && <span className={cn(overdue && "font-semibold text-red-600")}>{formatDate(t.dueDate, locale)}{overdue && ` · ${d.tasks.overdue}`}</span>}
                     {t.requiresClientAction && (
@@ -141,7 +141,7 @@ export function TasksPanel({ caseId, tasks, staff, templates, canEdit }: { caseI
                       aria-label={d.common.delete}
                       onClick={() => confirm(d.tasks.deleteConfirm) && call(t.id, () => api(`/api/tasks/${t.id}`, { method: "DELETE" }))}
                     >
-                      <Trash2 className="size-4 text-slate-400" />
+                      <Trash2 className="size-4 text-slate-500" />
                     </Button>
                   </>
                 ) : (

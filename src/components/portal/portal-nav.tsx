@@ -23,7 +23,7 @@ function useItems(unreadMessages: number) {
 export function PortalNav({ unreadMessages }: { unreadMessages: number }) {
   const { d, items, active } = useItems(unreadMessages);
   return (
-    <nav aria-label={d.nav.menu} className="hidden items-center gap-1 md:flex">
+    <nav aria-label={d.nav.mainMenu} className="hidden items-center gap-1 md:flex">
         {items.map((it) =>
           it.primary ? (
             <Link key={it.href} href={it.href} className="ms-2 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-sm font-medium text-white hover:bg-brand-800">
@@ -53,7 +53,7 @@ export function PortalNav({ unreadMessages }: { unreadMessages: number }) {
 export function PortalBottomNav({ unreadMessages }: { unreadMessages: number }) {
   const { d, items, active } = useItems(unreadMessages);
   return (
-      <nav aria-label={d.nav.menu} className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav aria-label={d.nav.bottomMenu} className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <ul className="grid grid-cols-5">
           {items.map((it) => (
             <li key={it.href}>
