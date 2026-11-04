@@ -25,6 +25,8 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL(`/register?google=1${next ? `&next=${encodeURIComponent(next)}` : ""}`, env.appUrl));
   } catch (err) {
     console.error("[google] sign-in failed", err instanceof Error ? err.message : err);
-    return fail(err instanceof AppError && err.code === "account_disabled" ? "account_disabled" : "google_failed");
+    const reason = err instanceof AppError ? (err.details as { reason?: string } | undefined)?.reason : undefined;
+    if (err instanceof AppError && err.code === "account_disabled") return fail("account_disabled");
+    return fail(reason ? `google_${reason}` : "google_failed");
   }
 }

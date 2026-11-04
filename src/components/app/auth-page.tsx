@@ -30,36 +30,44 @@ export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: Aut
     <>
       <PublicHeader />
       <main id="main" className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-bold">{d.login.authTitle}</h1>
-        <p className="mt-1 text-slate-600">{d.login.authSubtitle}</p>
-
-        {sp.error && (
-          <Notice tone="danger" className="mt-4">
-            {sp.error === "account_disabled" ? d.errors.account_disabled : sp.error === "google_cancelled" ? d.register.googleCancelled : d.register.googleFailed}
-          </Notice>
-        )}
-        {sp.google && !pending && (
-          <Notice tone="warning" className="mt-4">
-            {d.register.googleExpired}
-          </Notice>
-        )}
-
-        {google && !pending && (
-          <div className="mx-auto mt-6 max-w-md">
-            <GoogleButton next={next ?? undefined} />
-            <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" />
-              {d.register.orEmail}
-              <span className="h-px flex-1 bg-slate-200" />
-            </div>
-          </div>
-        )}
-
         <AuthTabs
-          initialTab={initialTab}
-          login={
+          top={
             <>
-              <LoginForm key={sp.as ?? ""} next={next} initialEmail={demo && sp.as ? sp.as : undefined} />
+
+              {sp.error && (
+                <Notice tone="danger" className="mt-4">
+                  {{
+                    account_disabled: d.errors.account_disabled,
+                    google_cancelled: d.register.googleCancelled,
+                    google_state: d.register.googleState,
+                    google_token: d.register.googleToken,
+                    google_unverified: d.register.googleUnverified,
+                  }[sp.error] ?? d.register.googleFailed}
+                </Notice>
+              )}
+              {sp.google && !pending && (
+                <Notice tone="warning" className="mt-4">
+                  {d.register.googleExpired}
+                </Notice>
+              )}
+
+              {google && !pending && (
+                <div className="mx-auto mt-6 max-w-md">
+                  <GoogleButton next={next ?? undefined} />
+                  <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
+                    <span className="h-px flex-1 bg-slate-200" />
+                    {d.register.orEmail}
+                    <span className="h-px flex-1 bg-slate-200" />
+                  </div>
+                </div>
+              )}
+
+            </>
+          }
+          initialTab={initialTab}
+          login={<LoginForm key={sp.as ?? ""} next={next} initialEmail={demo && sp.as ? sp.as : undefined} />}
+          loginExtras={
+            <>
               <p className="mt-4 text-sm text-slate-500">{d.login.staffHint}</p>
               {demo && (
                 <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm">
