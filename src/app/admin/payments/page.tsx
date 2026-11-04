@@ -8,6 +8,8 @@ import { listPayments } from "@/lib/services/payments";
 import { canSeePayments } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
+import { GrowConnect } from "@/components/admin/grow-connect";
+import { getPaymentProviderStatus } from "@/lib/services/payment-settings";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -18,10 +20,12 @@ export default async function PaymentsPage() {
   const user = await requirePageStaff("/admin/payments");
   if (!canSeePayments(user.role)) redirect("/admin");
   const { d, locale } = await getDict();
-  const rows = await listPayments(await getDb(), user);
+  const db = await getDb();
+  const [rows, providerStatus] = await Promise.all([listPayments(db, user), getPaymentProviderStatus(db)]);
   return (
     <>
       <PageHeader title={d.admin.paymentsTitle} subtitle={d.quote.receiptsNote} />
+      <GrowConnect status={providerStatus} canEdit={user.role === "admin"} />
       {rows.length === 0 ? (
         <EmptyState title={d.admin.paymentsEmpty} />
       ) : (

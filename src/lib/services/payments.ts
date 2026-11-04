@@ -4,14 +4,31 @@ import { cases, customers, paymentEvents, payments, quotes, users, type User } f
 import { AppError } from "../errors";
 import { env } from "../env";
 import { paymentProvider, mockProvider, signMockEvent, type NormalizedPaymentEvent } from "../payments";
+import {
+  GROW_PAID,
+  growApproveTransaction,
+  growCallbackToken,
+  growCreatePaymentProcess,
+  growGetTransactionInfo,
+  isValidGrowFullName,
+  normalizeIsraeliMobile,
+  verifyGrowCallbackToken,
+} from "../payments/grow";
+import { activePaymentProvider, getGrowConfig } from "./payment-settings";
 import { applyStatus, adminCaseLink, caseWithAccess, portalCaseLink, staffCaseScope } from "./cases";
 import { addEvent } from "./events";
 import { audit } from "./audit";
 import { notify, staffRecipients } from "./notifications";
 import { customerUserIdOf } from "./cases";
 
-/** Starts a hosted checkout for an approved quote (one payment per quote in the MVP). */
-export async function createCheckout(db: Database, actor: User, quoteId: string) {
+export type PayerDetails = { fullName: string; phone: string; acceptTerms: boolean };
+
+/**
+ * Starts a hosted checkout for an approved quote (one payment per quote in the MVP).
+ * Grow needs the payer's full name and Israeli mobile number up front, and its production review requires
+ * the customer to accept the terms on the payment step, so `payer` is mandatory when Grow is connected.
+ */
+export async function createCheckout(db: Database, actor: User, quoteId: string, payer?: PayerDetails) {
   const [q] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
   if (!q) throw new AppError("not_found");
   const { c, access } = await caseWithAccess(db, actor, q.caseId);
@@ -20,7 +37,10 @@ export async function createCheckout(db: Database, actor: User, quoteId: string)
   const [paid] = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.quoteId, q.id), eq(payments.status, "succeeded")));
   if (paid) throw new AppError("already_paid");
 
-  const provider = paymentProvider();
+  const providerName = await activePaymentProvider(db);
+  if (providerName === "grow") return createGrowCheckout(db, actor, q, c, payer);
+
+  const provider = paymentProvider(providerName);
   const [p] = await db
     .insert(payments)
     .values({ quoteId: q.id, caseId: c.id, provider: provider.name, amountCents: q.totalCents, currency: q.currency, status: "pending", createdById: actor.id })
@@ -38,6 +58,90 @@ export async function createCheckout(db: Database, actor: User, quoteId: string)
   await db.update(payments).set({ providerSessionId: session.sessionId, updatedAt: new Date() }).where(eq(payments.id, p!.id));
   await audit(db, { actorId: actor.id, action: "payment.checkout", entityType: "payment", entityId: p!.id, details: { provider: provider.name, amountCents: q.totalCents } });
   return { paymentId: p!.id, url: session.url };
+}
+
+/** Where Grow sends the customer back. A plain path, because Grow rejects special characters such as ? and &. */
+export const growReturnUrl = (paymentId: string, result: "success" | "cancelled") => `${env.appUrl}/pay/return/${paymentId}/${result}`;
+export const growNotifyUrl = (paymentId: string) => `${env.appUrl}/api/webhooks/grow/${paymentId}/${growCallbackToken(paymentId)}`;
+
+async function createGrowCheckout(db: Database, actor: User, q: typeof quotes.$inferSelect, c: { id: string; number: string }, payer?: PayerDetails) {
+  const cfg = await getGrowConfig(db);
+  if (!cfg) throw new AppError("payment_not_allowed");
+  if (q.currency.toUpperCase() !== "ILS") throw new AppError("currency_not_supported");
+  if (!payer?.acceptTerms) throw new AppError("terms_required");
+  if (!isValidGrowFullName(payer.fullName)) throw new AppError("payer_name_invalid");
+  const phone = normalizeIsraeliMobile(payer.phone);
+  if (!phone) throw new AppError("payer_phone_invalid");
+
+  const [p] = await db
+    .insert(payments)
+    .values({ quoteId: q.id, caseId: c.id, provider: "grow", amountCents: q.totalCents, currency: "ILS", status: "pending", createdById: actor.id })
+    .returning();
+  let session: { url: string; processId: string };
+  try {
+    session = await growCreatePaymentProcess(cfg, {
+      sum: q.totalCents / 100,
+      description: `${c.number} ${q.serviceName}`,
+      fullName: payer.fullName,
+      phone,
+      email: actor.email,
+      successUrl: growReturnUrl(p!.id, "success"),
+      cancelUrl: growReturnUrl(p!.id, "cancelled"),
+      notifyUrl: growNotifyUrl(p!.id),
+      paymentId: p!.id,
+    });
+  } catch (err) {
+    // Don't leave a pending payment behind when Grow refused to open the page.
+    await db.update(payments).set({ status: "cancelled", failureReason: "provider_error", updatedAt: new Date() }).where(eq(payments.id, p!.id));
+    throw err;
+  }
+  // Keep the phone for next time if the profile has none.
+  if (!actor.phone) await db.update(users).set({ phone }).where(eq(users.id, actor.id));
+  await db.update(payments).set({ providerSessionId: session.processId || null, updatedAt: new Date() }).where(eq(payments.id, p!.id));
+  await audit(db, { actorId: actor.id, action: "payment.checkout", entityType: "payment", entityId: p!.id, details: { provider: "grow", sandbox: cfg.sandbox, amountCents: q.totalCents } });
+  return { paymentId: p!.id, url: session.url };
+}
+
+/**
+ * Grow server update. Grow doesn't sign these, so: the URL must carry the HMAC token for this payment, and
+ * the transaction is then re-read from Grow (getTransactionInfo) — only Grow's own answer moves the payment.
+ * Successful updates are acknowledged with approveTransaction, as Grow requires.
+ */
+export async function handleGrowCallback(db: Database, paymentId: string, token: string, fields: Record<string, unknown>) {
+  if (!/^[0-9a-f-]{36}$/i.test(paymentId) || !verifyGrowCallbackToken(paymentId, token)) throw new AppError("forbidden");
+  const [p] = await db.select().from(payments).where(eq(payments.id, paymentId));
+  if (!p || p.provider !== "grow") throw new AppError("not_found");
+  const transactionId = String(fields.transactionId ?? "");
+  const transactionToken = String(fields.transactionToken ?? "");
+  if (!/^\d{1,20}$/.test(transactionId) || !/^[A-Za-z0-9]{8,128}$/.test(transactionToken)) throw new AppError("validation");
+  const custom = fields.customFields as Record<string, string> | undefined;
+  if (custom?.cField1 && custom.cField1 !== paymentId.replace(/-/g, "")) throw new AppError("forbidden");
+  const cfg = await getGrowConfig(db);
+  if (!cfg) throw new AppError("payment_provider_error", "Grow is not connected");
+
+  const info = await growGetTransactionInfo(cfg, { transactionId, transactionToken });
+  const paid = String(info.statusCode) === GROW_PAID;
+  const sum = Number(String(info.sum).replace(/,/g, ""));
+  const evt: NormalizedPaymentEvent = {
+    provider: "grow",
+    eventId: `grow_tx_${info.transactionId ?? transactionId}`,
+    kind: paid ? "succeeded" : "ignored",
+    paymentId: p.id,
+    providerPaymentId: String(info.transactionId ?? transactionId),
+    amountCents: Number.isFinite(sum) ? Math.round(sum * 100) : null,
+    currency: "ILS",
+    raw: { callback: fields, transaction: info } as Record<string, unknown>,
+  };
+  const res = await applyPaymentEvent(db, evt);
+  if (paid) {
+    try {
+      await growApproveTransaction(cfg, { ...fields, ...info });
+    } catch (err) {
+      // Not fatal: the payment stands, and Grow resends the update (up to 5 times) until it's acknowledged.
+      console.error("[grow] approveTransaction failed", err);
+    }
+  }
+  return res;
 }
 
 /**

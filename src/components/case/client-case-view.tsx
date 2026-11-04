@@ -16,7 +16,7 @@ import { api } from "@/lib/client-api";
 import { ProgressTrack } from "./progress-track";
 import { MessageThread, type ThreadMessage } from "./message-thread";
 import { DocumentsPanel, type Doc } from "./documents-panel";
-import { ClientQuotePanel, type ClientQuote, type ClientPayment } from "./client-quote-panel";
+import { ClientQuotePanel, type ClientQuote, type ClientPayment, type CheckoutInfo } from "./client-quote-panel";
 import { useActionText } from "./client-actions";
 import type { ClientAction } from "@/lib/services/cases";
 import type { CaseStatus } from "@/lib/db/schema";
@@ -32,6 +32,7 @@ export type ClientCaseData = {
   updatedAt: Date | string;
   assignee: { name: string } | null;
   customerName: string;
+  checkout: CheckoutInfo;
   actions: ClientAction[];
   events: TimelineEvent[];
   messages: ThreadMessage[];
@@ -209,7 +210,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                 <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} />
               </TabPanel>
               <TabPanel id="quote" active={tab === "quote"}>
-                <ClientQuotePanel caseId={c.id} caseStatus={c.status} quotes={c.quotes} payments={c.payments} customerName={c.customerName} />
+                <ClientQuotePanel caseId={c.id} caseStatus={c.status} quotes={c.quotes} payments={c.payments} customerName={c.customerName} checkout={c.checkout} />
               </TabPanel>
             </div>
           </div>

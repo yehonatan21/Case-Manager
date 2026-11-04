@@ -8,7 +8,7 @@ import { fmt } from "@/lib/i18n/config";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/i18n/format";
 import { api, errorText } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Field, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Textarea } from "@/components/ui/form";
 import { Notice, EmptyState } from "@/components/ui/misc";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import { QuoteView, type QuoteViewData } from "./quote-view";
 import type { CaseStatus, PaymentStatusT } from "./types-quote";
 
 export type ClientQuote = QuoteViewData & { id: string; approvedAt: Date | string | null; declinedAt: Date | string | null };
+/** How the customer pays: Grow needs name, mobile number and terms approval before opening its page. */
+export type CheckoutInfo = { provider: "mock" | "stripe" | "grow"; payerName: string; payerPhone: string };
 export type ClientPayment = { id: string; amountCents: number; currency: string; status: PaymentStatusT; createdAt: Date | string; paidAt: Date | string | null };
 
 export function ClientQuotePanel({
@@ -25,12 +27,14 @@ export function ClientQuotePanel({
   quotes,
   payments,
   customerName,
+  checkout,
 }: {
   caseId: string;
   caseStatus: CaseStatus;
   quotes: ClientQuote[];
   payments: ClientPayment[];
   customerName: string;
+  checkout: CheckoutInfo;
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -39,6 +43,8 @@ export function ClientQuotePanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"clarify" | "decline" | null>(null);
   const [text, setText] = useState("");
+  const [payerOpen, setPayerOpen] = useState(false);
+  const [payer, setPayer] = useState({ fullName: checkout.payerName, phone: checkout.payerPhone, acceptTerms: false });
 
   const current = quotes.find((q) => q.status !== "superseded") ?? quotes[0];
   const previous = quotes.filter((q) => q !== current);
@@ -61,9 +67,14 @@ export function ClientQuotePanel({
   };
 
   const pay = async () => {
+    if (checkout.provider === "grow" && !payerOpen) {
+      setPayerOpen(true);
+      return;
+    }
     setBusy("pay");
     try {
-      const r = await api<{ url: string }>("/api/payments/checkout", { body: { quoteId: current.id } });
+      const body = checkout.provider === "grow" ? { quoteId: current.id, payer } : { quoteId: current.id };
+      const r = await api<{ url: string }>("/api/payments/checkout", { body });
       window.location.href = r.url;
     } catch (e) {
       toast("error", errorText(e, d));
@@ -150,6 +161,49 @@ export function ClientQuotePanel({
           </div>
         </details>
       )}
+
+      <Dialog
+        open={payerOpen}
+        onClose={() => setPayerOpen(false)}
+        title={d.quote.payerTitle}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setPayerOpen(false)}>
+              {d.common.cancel}
+            </Button>
+            <Button loading={busy === "pay"} disabled={!payer.acceptTerms || !payer.fullName.trim() || !payer.phone.trim()} onClick={pay}>
+              <Lock className="size-4" aria-hidden />
+              {busy === "pay" ? d.quote.redirecting : d.quote.payerContinue}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <p className="text-sm text-slate-600">{d.quote.payerIntro}</p>
+          <Field label={d.quote.payerFullName} required hint={d.quote.payerFullNameHint}>
+            {(p) => <Input {...p} autoComplete="name" value={payer.fullName} maxLength={100} onChange={(e) => setPayer({ ...payer, fullName: e.target.value })} />}
+          </Field>
+          <Field label={d.quote.payerPhone} required hint={d.quote.payerPhoneHint}>
+            {(p) => <Input {...p} type="tel" dir="ltr" autoComplete="tel" inputMode="tel" value={payer.phone} maxLength={30} onChange={(e) => setPayer({ ...payer, phone: e.target.value })} />}
+          </Field>
+          <Checkbox
+            checked={payer.acceptTerms}
+            onChange={(e) => setPayer({ ...payer, acceptTerms: e.target.checked })}
+            label={
+              <>
+                {d.quote.payerTermsBefore}{" "}
+                <a href="/terms" target="_blank" rel="noopener" className="font-medium text-brand-700 underline">
+                  {d.quote.payerTermsLink}
+                </a>
+              </>
+            }
+          />
+          <p className="flex items-center gap-1.5 text-xs text-slate-500">
+            <Lock className="size-3.5" aria-hidden />
+            {d.quote.payerSecure}
+          </p>
+        </div>
+      </Dialog>
 
       <Dialog
         open={dialog !== null}
