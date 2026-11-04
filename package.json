@@ -16,7 +16,8 @@
     "jobs:run": "tsx scripts/run-jobs.ts",
     "e2e": "node e2e/walkthrough.cjs && node e2e/accounts.cjs",
     "vercel-build": "tsx scripts/migrate.ts && next build",
-    "test:api": "vitest run tests/http"
+    "test:api": "vitest run tests/http",
+    "db:remove-demo": "tsx scripts/remove-demo-data.ts"
   },
   "engines": {
     "node": ">=20.9.0"
