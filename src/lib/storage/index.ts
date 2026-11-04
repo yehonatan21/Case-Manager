@@ -11,7 +11,7 @@ export interface StorageDriver {
 }
 
 /** Local disk, encrypted at rest with AES-256-GCM (key derived from APP_SECRET). */
-class LocalStorage implements StorageDriver {
+export class LocalStorage implements StorageDriver {
   private root = path.resolve(/*turbopackIgnore: true*/ process.cwd(), env.storageDir);
   private file(key: string) {
     const p = path.resolve(this.root, key);
@@ -32,7 +32,7 @@ class LocalStorage implements StorageDriver {
 }
 
 /** S3-compatible object storage with server-side encryption and short-lived presigned downloads. */
-class S3Storage implements StorageDriver {
+export class S3Storage implements StorageDriver {
   private clientPromise = (async () => {
     const { S3Client } = await import("@aws-sdk/client-s3");
     return new S3Client({
@@ -71,7 +71,7 @@ class S3Storage implements StorageDriver {
 }
 
 /** Vercel Blob (private store). Contents are additionally encrypted by the app and served through it. */
-class VercelBlobStorage implements StorageDriver {
+export class VercelBlobStorage implements StorageDriver {
   async put(key: string, data: Buffer) {
     const { put } = await import("@vercel/blob");
     await put(key, encryptBuffer(data), { access: "private", addRandomSuffix: false, contentType: "application/octet-stream" });
@@ -88,7 +88,7 @@ class VercelBlobStorage implements StorageDriver {
 }
 
 /** Encrypted contents in PostgreSQL — for hosts without a persistent disk (fine for MVP-scale volumes). */
-class DatabaseStorage implements StorageDriver {
+export class DatabaseStorage implements StorageDriver {
   private async db() {
     const { getDb } = await import("../db");
     return getDb();

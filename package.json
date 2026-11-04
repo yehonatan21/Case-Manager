@@ -8,14 +8,15 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --exclude \"tests/http/**\"",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "jobs:run": "tsx scripts/run-jobs.ts",
-    "e2e": "node e2e/walkthrough.cjs",
-    "vercel-build": "tsx scripts/migrate.ts && next build"
+    "e2e": "node e2e/walkthrough.cjs && node e2e/accounts.cjs",
+    "vercel-build": "tsx scripts/migrate.ts && next build",
+    "test:api": "vitest run tests/http"
   },
   "engines": {
     "node": ">=20.9.0"

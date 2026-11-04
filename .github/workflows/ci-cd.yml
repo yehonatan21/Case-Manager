@@ -78,7 +78,11 @@ jobs:
           APP_SECRET: ci-only-secret-0123456789abcdef0123456789
           DEMO_MODE: "true"
           PGLITE_DIR: .data/ci
-      - name: Customer + staff journey (Hebrew & English, desktop & mobile)
+      - name: HTTP API tests (auth, permissions, CSRF, headers)
+        run: npm run test:api
+        env:
+          API_BASE: http://localhost:3000
+      - name: Browser flows (journey, accounts; Hebrew & English, desktop & mobile)
         run: npm run e2e
         env:
           BASE: http://localhost:3000
