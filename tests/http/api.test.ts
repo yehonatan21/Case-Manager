@@ -127,6 +127,19 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect((await fetch(BASE + "/admin/cases?status=all", { headers: { Cookie: admin.cookie } })).status).toBe(200);
   });
 
+  it("a case manager can open a request for a client; customers can't", async () => {
+    const client = await signIn("client@example.com");
+    const body = { customer: { email: `phone-${Date.now()}@example.com`, name: "Phone Client", customerType: "private", locale: "he" }, title: "From a call", description: "Details", serviceCategory: "other", urgency: "normal" };
+    expect((await call("/api/admin/cases", { body, cookie: client.cookie })).status).toBe(403);
+    expect((await call("/api/admin/cases", { body: { ...body, title: "" }, cookie: (await signIn("manager@example.com")).cookie })).status).toBe(400);
+    const manager = await signIn("manager@example.com");
+    const r = await call("/api/admin/cases", { body, cookie: manager.cookie });
+    expect(r.status).toBe(200);
+    expect(r.json!.data.customerCreated).toBe(true);
+    expect((await call(`/api/cases/${r.json!.data.id}`, { cookie: manager.cookie })).status).toBe(200);
+    expect((await fetch(BASE + "/admin/cases/new", { headers: { Cookie: manager.cookie } })).status).toBe(200);
+  });
+
   it("finance can't read case messages or documents", async () => {
     const fin = await signIn("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];

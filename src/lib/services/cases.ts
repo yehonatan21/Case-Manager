@@ -17,6 +17,7 @@ import {
   tasks,
   users,
   type Case,
+  type CustomerType,
   type CaseStatus,
   type IntakeSession,
   type IntakeSummary,
@@ -24,7 +25,7 @@ import {
   type User,
 } from "../db/schema";
 import { AppError } from "../errors";
-import { caseAccess, type CaseAccess } from "../auth/permissions";
+import { canCreateCasesForClients, caseAccess, type CaseAccess } from "../auth/permissions";
 import { CLIENT_STATUS, OPEN_STATUSES, canTransition, isStaffRole, normalizeCategory } from "../domain";
 import { addEvent } from "./events";
 import { audit } from "./audit";
@@ -526,3 +527,92 @@ export async function caseActivityStamp(db: DbOrTx, caseIds: string[], includeIn
 }
 
 export type { Tx };
+
+export type StaffCaseInput = {
+  customer: { id: string } | { email: string; name: string; phone?: string | null; customerType: CustomerType; organizationName?: string | null; locale: Locale };
+  title: string;
+  description: string;
+  goal?: string;
+  serviceCategory: string;
+  urgency: Urgency;
+  /** Assign the new case to the person creating it (default). Otherwise it goes to the inbox. */
+  assignToMe?: boolean;
+};
+
+/**
+ * Opens a case on behalf of a client (e.g. after a phone call), for an existing customer or a new one.
+ * Admins and case managers only. A new client gets an account they can sign in to with their email;
+ * they have not accepted the terms or AI processing, so AI tools stay off for them until they do.
+ */
+export async function createCaseForCustomer(db: Database, actor: User, input: StaffCaseInput): Promise<{ case: Case; customerCreated: boolean }> {
+  if (!canCreateCasesForClients(actor.role)) throw new AppError("forbidden");
+  const assignToMe = input.assignToMe ?? true;
+
+  return db.transaction(async (tx) => {
+    let customerId: string;
+    let customerUser: User;
+    let customerCreated = false;
+    if ("id" in input.customer) {
+      if (!isUuid(input.customer.id)) throw new AppError("not_found");
+      const [row] = await tx.select({ c: customers, u: users }).from(customers).innerJoin(users, eq(users.id, customers.userId)).where(eq(customers.id, input.customer.id));
+      if (!row) throw new AppError("not_found");
+      if (row.u.status === "disabled") throw new AppError("account_disabled");
+      customerId = row.c.id;
+      customerUser = row.u;
+    } else {
+      const email = input.customer.email.trim().toLowerCase();
+      const [existing] = await tx.select().from(users).where(eq(users.email, email));
+      if (existing) {
+        // Same email typed again: reuse the client's account rather than failing.
+        if (existing.role !== "customer") throw new AppError("conflict", "This email belongs to a staff account");
+        const [c] = await tx.select().from(customers).where(eq(customers.userId, existing.id));
+        if (!c) throw new AppError("conflict");
+        customerId = c.id;
+        customerUser = existing;
+      } else {
+        const [u] = await tx
+          .insert(users)
+          .values({ email, name: input.customer.name.trim(), phone: input.customer.phone?.trim() || null, role: "customer", status: "active", locale: input.customer.locale })
+          .returning();
+        let organizationId: string | null = null;
+        if (input.customer.customerType !== "private" && input.customer.organizationName?.trim()) {
+          const [org] = await tx.insert(organizations).values({ name: input.customer.organizationName.trim() }).returning();
+          organizationId = org!.id;
+        }
+        const [c] = await tx.insert(customers).values({ userId: u!.id, type: input.customer.customerType, organizationId }).returning();
+        await audit(tx, { actorId: actor.id, action: "customer.create", entityType: "user", entityId: u!.id });
+        customerId = c!.id;
+        customerUser = u!;
+        customerCreated = true;
+      }
+    }
+
+    const number = await nextCaseNumber(tx);
+    const [c] = await tx
+      .insert(cases)
+      .values({
+        number,
+        customerId,
+        title: input.title.trim(),
+        description: input.description.trim(),
+        goal: input.goal?.trim() ?? "",
+        serviceCategory: normalizeCategory(input.serviceCategory),
+        urgency: input.urgency,
+        // Assigned straight away means the manager is already handling it, as after a normal assignment.
+        status: assignToMe ? "under_review" : "submitted",
+        assigneeId: assignToMe ? actor.id : null,
+        reviewedAt: assignToMe ? new Date() : null,
+        locale: customerUser.locale as Locale,
+        lastStaffActivityAt: new Date(),
+      })
+      .returning();
+    await addEvent(tx, { caseId: c!.id, type: "case_opened_by_staff", actor, visibility: "client" });
+    if (assignToMe) await addEvent(tx, { caseId: c!.id, type: "assigned", actor, visibility: "internal", data: { assignee: actor.name } });
+    await audit(tx, { actorId: actor.id, action: "case.create_for_customer", entityType: "case", entityId: c!.id });
+    await notify(tx, { userIds: [customerUser.id], type: "case_opened_for_you", caseId: c!.id, vars: { number, title: c!.title }, link: portalCaseLink(c!.id) });
+    if (!assignToMe) {
+      await notify(tx, { userIds: await staffRecipients(tx, { assigneeId: null }), type: "new_request", caseId: c!.id, vars: { number, title: c!.title }, link: adminCaseLink(c!.id), excludeUserId: actor.id });
+    }
+    return { case: c!, customerCreated };
+  });
+}
