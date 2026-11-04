@@ -789,6 +789,9 @@ export const en: typeof he = {
     since: "Customer since {date}",
   },
   settingsPage: {
+    inviteDone: "{email} was added. They can sign in with this email address.",
+    inviteConverted: "{email} had a client account with no requests. It is now a team account.",
+    inviteReactivated: "{email} was disabled and is now active again with the chosen role.",
     title: "Settings",
     tabs: { general: "General", users: "Users & permissions", templates: "Service templates", priceList: "Price list" },
     companyName: "Business name",
@@ -859,6 +862,8 @@ export const en: typeof he = {
     too_many_attempts: "Too many wrong attempts. Please request a new code.",
     account_disabled: "This account is disabled. Please contact the team.",
     signup_required: "Please fill in your details to create an account.",
+    already_team_member: "This email already belongs to a team member. Change their role in the list below.",
+    email_is_client: "This email belongs to a client who has requests, so it can't become a team account. Use a different email address for the team member.",
     staff_email: "This email belongs to a team member, not a client. Use the client's own email address.",
     no_account: "There's no account with this email address.",
     terms_required: "Please accept the terms of use.",
