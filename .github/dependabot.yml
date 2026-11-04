@@ -8,6 +8,13 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 (native compiler) is not supported by Next.js type checking yet.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Type definitions must match the Node.js runtime major version (22).
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:

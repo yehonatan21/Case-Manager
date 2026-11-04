@@ -52,7 +52,7 @@ export type GoogleProfile = { email: string; emailVerified: boolean; name: strin
 export async function finishGoogleSignIn(params: { code: string | null; state: string | null; cookie: string | undefined }) {
   const raw = params.cookie ? verifyToken(params.cookie) : null;
   const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null }) : null;
-  if (!saved || !params.state || saved.state !== params.state || !params.code) throw new AppError("forbidden", "Invalid OAuth state");
+  if (!saved || !params.state || saved.state !== params.state || !params.code) throw new AppError("forbidden", "Invalid OAuth state", { reason: "state" });
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -65,10 +65,14 @@ export async function finishGoogleSignIn(params: { code: string | null; state: s
       code_verifier: saved.verifier,
     }),
   });
-  if (!tokenRes.ok) throw new AppError("unauthorized", `Google token exchange failed (${tokenRes.status})`);
+  if (!tokenRes.ok) {
+    // Google's error code/description (e.g. invalid_client, redirect_uri_mismatch) — contains no secrets.
+    const detail = await tokenRes.text().catch(() => "");
+    throw new AppError("unauthorized", `Google token exchange failed (${tokenRes.status}): ${detail.slice(0, 300)}`, { reason: "token" });
+  }
   const token = (await tokenRes.json()) as { access_token?: string };
   const infoRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${token.access_token}` } });
-  if (!infoRes.ok) throw new AppError("unauthorized", "Google profile request failed");
+  if (!infoRes.ok) throw new AppError("unauthorized", "Google profile request failed", { reason: "profile" });
   const info = (await infoRes.json()) as { sub: string; email?: string; email_verified?: boolean; name?: string };
   if (!info.email) throw new AppError("unauthorized", "Google account has no email");
   return { profile: { email: normalizeEmail(info.email), emailVerified: !!info.email_verified, name: info.name ?? "", sub: info.sub } as GoogleProfile, next: saved.next };
@@ -79,7 +83,7 @@ export async function finishGoogleSignIn(params: { code: string | null; state: s
  * accept the terms and choose a customer type before the account is created.
  */
 export async function resolveGoogleUser(db: Database, profile: GoogleProfile): Promise<{ user: User } | { pendingToken: string }> {
-  if (!profile.emailVerified) throw new AppError("unauthorized", "Google email is not verified");
+  if (!profile.emailVerified) throw new AppError("unauthorized", "Google email is not verified", { reason: "unverified" });
   const user = await findUserByEmail(db, profile.email);
   if (user) {
     if (user.status === "disabled") throw new AppError("account_disabled");
