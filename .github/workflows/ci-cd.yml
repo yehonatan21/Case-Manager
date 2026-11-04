@@ -1,0 +1,172 @@
+# CI/CD
+#   Every push / PR: type check, tests (PGlite + PostgreSQL 16), production build, browser walkthrough,
+#   Docker image build. Deploys only after all checks pass:
+#   - Docker image  → GitHub Container Registry (ghcr.io/<owner>/<repo>) on pushes to main.
+#   - Vercel        → preview for pull requests, production for main. Runs only when the
+#                     VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID repository secrets are set.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 22
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  check:
+    name: Type check, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Tests (in-memory PGlite)
+        run: npm test
+      - name: Tests (PostgreSQL 16)
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/cm_test
+      - run: npm run build
+
+  e2e:
+    name: Browser walkthrough
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright + Chromium
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Start the production server (demo mode, embedded database)
+        run: |
+          npm start > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/api/health && break; sleep 2; done
+        env:
+          APP_SECRET: ci-only-secret-0123456789abcdef0123456789
+          DEMO_MODE: "true"
+          PGLITE_DIR: .data/ci
+      - name: Customer + staff journey (Hebrew & English, desktop & mobile)
+        run: npm run e2e
+        env:
+          BASE: http://localhost:3000
+      - name: Upload screenshots and server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: |
+            e2e/screenshots/
+            server.log
+          retention-days: 7
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [check]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: [check, e2e]
+    # Same-repository changes only: secrets are not available to pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 20
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      TARGET: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+    steps:
+      - name: Skip when Vercel secrets are not configured
+        if: env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == ''
+        run: echo "::notice::Vercel deployment skipped — add VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID repository secrets to enable it."
+      - uses: actions/checkout@v4
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+      - uses: actions/setup-node@v4
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Pull Vercel project settings and environment variables
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: npx --yes vercel@latest pull --yes --environment=$TARGET --token=$VERCEL_TOKEN
+      - name: Build (runs database migrations, then next build)
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: npx --yes vercel@latest build $([ "$TARGET" = production ] && echo --prod) --token=$VERCEL_TOKEN
+      - name: Deploy
+        id: deploy
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          url=$(npx --yes vercel@latest deploy --prebuilt $([ "$TARGET" = production ] && echo --prod) --token=$VERCEL_TOKEN)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Deployed ($TARGET): $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test
+        if: env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != ''
+        run: |
+          for i in $(seq 1 10); do curl -sf "${{ steps.deploy.outputs.url }}/api/health" && exit 0; sleep 6; done
+          echo "Health check failed"; exit 1
