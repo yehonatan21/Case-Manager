@@ -11,6 +11,7 @@ export type ErrorCode =
   | "account_disabled"
   | "signup_required"
   | "no_account"
+  | "staff_email"
   | "terms_required"
   | "invalid_transition"
   | "quote_not_editable"
@@ -38,6 +39,7 @@ const STATUS: Record<ErrorCode, number> = {
   account_disabled: 403,
   signup_required: 400,
   no_account: 404,
+  staff_email: 409,
   terms_required: 400,
   invalid_transition: 409,
   quote_not_editable: 409,
@@ -69,3 +71,6 @@ export class AppError extends Error {
 export function assert(cond: unknown, code: ErrorCode, message?: string): asserts cond {
   if (!cond) throw new AppError(code, message);
 }
+
+/** Every error code, e.g. for checking that each one has a translated message. */
+export const ERROR_CODES = Object.keys(STATUS) as ErrorCode[];
