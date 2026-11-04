@@ -1,6 +1,24 @@
 import { env } from "../env";
 import { dirOf, type Locale } from "../i18n/config";
 
+/**
+ * Resolves the sender. EMAIL_FROM may be "Name <address>" or a bare address; EMAIL_FROM_NAME, when set,
+ * replaces the display name. Falls back to the SMTP username as the address and APP_NAME as the name.
+ */
+export function senderAddress(): { name: string; address: string } {
+  const raw = env.emailFrom.trim();
+  const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+  let name = m ? m[1]!.trim() : "";
+  let address = m ? m[2]!.trim() : raw;
+  if (!address.includes("@") && env.smtpUrl) {
+    try {
+      address = decodeURIComponent(new URL(env.smtpUrl).username);
+    } catch {}
+  }
+  if (env.emailFromName) name = env.emailFromName;
+  return { name: name || env.appName, address };
+}
+
 export type EmailMessage = { to: string; subject: string; text: string; html: string };
 
 let transporter: { sendMail: (m: Record<string, unknown>) => Promise<unknown> } | null = null;
@@ -17,7 +35,7 @@ async function smtp() {
 export async function sendEmail(msg: EmailMessage): Promise<void> {
   if (env.emailProvider === "smtp" && env.smtpUrl) {
     const t = await smtp();
-    await t.sendMail({ from: env.emailFrom, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+    await t.sendMail({ from: senderAddress(), to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
     return;
   }
   if (!env.isTest) {
