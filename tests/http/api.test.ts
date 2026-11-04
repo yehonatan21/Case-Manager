@@ -3,7 +3,7 @@
  *   API_BASE=http://localhost:3000 npm run test:api
  * Skipped when API_BASE is not set. CI runs them against the production build.
  */
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const BASE = process.env.API_BASE;
 const ORIGIN = BASE ? new URL(BASE).origin : "";
@@ -127,17 +127,84 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect((await fetch(BASE + "/admin/cases?status=all", { headers: { Cookie: admin.cookie } })).status).toBe(200);
   });
 
-  it("a case manager can open a request for a client; customers can't", async () => {
-    const client = await signIn("client@example.com");
-    const body = { customer: { email: `phone-${Date.now()}@example.com`, name: "Phone Client", customerType: "private", locale: "he" }, title: "From a call", description: "Details", serviceCategory: "other", urgency: "normal" };
-    expect((await call("/api/admin/cases", { body, cookie: client.cookie })).status).toBe(403);
-    expect((await call("/api/admin/cases", { body: { ...body, title: "" }, cookie: (await signIn("manager@example.com")).cookie })).status).toBe(400);
-    const manager = await signIn("manager@example.com");
-    const r = await call("/api/admin/cases", { body, cookie: manager.cookie });
-    expect(r.status).toBe(200);
-    expect(r.json!.data.customerCreated).toBe(true);
-    expect((await call(`/api/cases/${r.json!.data.id}`, { cookie: manager.cookie })).status).toBe(200);
-    expect((await fetch(BASE + "/admin/cases/new", { headers: { Cookie: manager.cookie } })).status).toBe(200);
+  describe("opening a request for a client (POST /api/admin/cases)", () => {
+    const newClient = () => ({ email: `phone-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`, name: "Phone Client", customerType: "private", locale: "he" });
+    const request = { title: "From a call", description: "Details", serviceCategory: "other", urgency: "normal" };
+    let manager: { cookie: string };
+    beforeAll(async () => {
+      manager = await signIn("manager@example.com");
+    });
+
+    it("requires a session and a manager or admin role", async () => {
+      const body = { customer: newClient(), ...request };
+      expect((await call("/api/admin/cases", { body })).status).toBe(401);
+      for (const email of ["client@example.com", "staff@example.com", "finance@example.com"]) {
+        expect((await call("/api/admin/cases", { body, cookie: (await signIn(email)).cookie })).status, email).toBe(403);
+      }
+    });
+
+    it("blocks cross-site requests", async () => {
+      expect((await call("/api/admin/cases", { body: { customer: newClient(), ...request }, cookie: manager.cookie, origin: "https://evil.example" })).status).toBe(403);
+    });
+
+    it("validates the input", async () => {
+      const bad = [
+        { customer: newClient(), ...request, title: "" },
+        { customer: newClient(), ...request, description: "   " },
+        { customer: newClient(), ...request, urgency: "whenever" },
+        { customer: { ...newClient(), email: "not-an-email" }, ...request },
+        { customer: { ...newClient(), customerType: "vip" }, ...request },
+        { customer: { ...newClient(), locale: "fr" }, ...request },
+        { customer: { id: "not-a-uuid" }, ...request },
+        { customer: {}, ...request },
+        { ...request },
+      ];
+      for (const body of bad) {
+        const r = await call("/api/admin/cases", { body, cookie: manager.cookie });
+        expect(r.status, JSON.stringify(body)).toBe(400);
+        expect(r.json?.error?.code).toBe("validation");
+      }
+    });
+
+    it("creates a request for a new client, who can then sign in and see it", async () => {
+      const client = newClient();
+      const r = await call("/api/admin/cases", { body: { customer: client, ...request }, cookie: manager.cookie });
+      expect(r.status).toBe(200);
+      expect(r.json!.data).toMatchObject({ customerCreated: true, number: expect.stringMatching(/^CASE-/) });
+      expect((await call(`/api/cases/${r.json!.data.id}`, { cookie: manager.cookie })).status).toBe(200);
+      const signedIn = await signIn(client.email);
+      const mine = (await call("/api/cases", { cookie: signedIn.cookie })).json!.data as { id: string }[];
+      expect(mine.map((c) => c.id)).toEqual([r.json!.data.id]);
+      // The same email again is attached to the same client.
+      const again = await call("/api/admin/cases", { body: { customer: client, ...request }, cookie: manager.cookie });
+      expect(again.json!.data.customerCreated).toBe(false);
+    });
+
+    it("creates a request for an existing client by id; unknown ids and staff emails are refused", async () => {
+      const admin = await signIn("admin@example.com");
+      const r = await call("/api/admin/cases", { body: { customer: newClient(), ...request }, cookie: admin.cookie });
+      const created = (await call(`/api/cases/${r.json!.data.id}`, { cookie: admin.cookie })).json!.data;
+      const customerId = created.case.customerId as string;
+      const byId = await call("/api/admin/cases", { body: { customer: { id: customerId }, ...request, assignToMe: false }, cookie: manager.cookie });
+      expect(byId.status).toBe(200);
+      expect(byId.json!.data.customerCreated).toBe(false);
+      expect((await call("/api/admin/cases", { body: { customer: { id: "00000000-0000-0000-0000-000000000000" }, ...request }, cookie: manager.cookie })).status).toBe(404);
+      expect((await call("/api/admin/cases", { body: { customer: { ...newClient(), email: "staff@example.com" }, ...request }, cookie: manager.cookie })).json?.error?.code).toBe("staff_email");
+    });
+
+    it("the page is for managers and admins only", async () => {
+      expect((await fetch(BASE + "/admin/cases/new", { headers: { Cookie: manager.cookie } })).status).toBe(200);
+      const anon = await fetch(BASE + "/admin/cases/new", { redirect: "manual" });
+      expect(anon.headers.get("location") ?? "").toContain("/login");
+      const client = await fetch(BASE + "/admin/cases/new", { headers: { Cookie: (await signIn("client@example.com")).cookie }, redirect: "manual" });
+      expect(client.headers.get("location") ?? "").toContain("/portal");
+      const finance = (await signIn("finance@example.com")).cookie;
+      const fin = await fetch(BASE + "/admin/cases/new", { headers: { Cookie: finance }, redirect: "manual" });
+      expect(fin.headers.get("location") ?? "").toContain("/admin/cases");
+      // The "New request" button is shown to managers, not to finance.
+      expect(await (await fetch(BASE + "/admin/cases", { headers: { Cookie: manager.cookie } })).text()).toContain('href="/admin/cases/new"');
+      expect(await (await fetch(BASE + "/admin/cases", { headers: { Cookie: finance } })).text()).not.toContain('href="/admin/cases/new"');
+    });
   });
 
   it("finance can't read case messages or documents", async () => {

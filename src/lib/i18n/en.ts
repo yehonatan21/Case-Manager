@@ -859,6 +859,7 @@ export const en: typeof he = {
     too_many_attempts: "Too many wrong attempts. Please request a new code.",
     account_disabled: "This account is disabled. Please contact the team.",
     signup_required: "Please fill in your details to create an account.",
+    staff_email: "This email belongs to a team member, not a client. Use the client's own email address.",
     no_account: "There's no account with this email address.",
     terms_required: "Please accept the terms of use.",
     invalid_transition: "This status can't be set from the current state.",

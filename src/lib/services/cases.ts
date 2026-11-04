@@ -564,7 +564,8 @@ export async function createCaseForCustomer(db: Database, actor: User, input: St
       const [existing] = await tx.select().from(users).where(eq(users.email, email));
       if (existing) {
         // Same email typed again: reuse the client's account rather than failing.
-        if (existing.role !== "customer") throw new AppError("conflict", "This email belongs to a staff account");
+        if (existing.role !== "customer") throw new AppError("staff_email");
+        if (existing.status === "disabled") throw new AppError("account_disabled");
         const [c] = await tx.select().from(customers).where(eq(customers.userId, existing.id));
         if (!c) throw new AppError("conflict");
         customerId = c.id;
