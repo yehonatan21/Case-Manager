@@ -68,6 +68,8 @@ export const env = {
   emailProvider: str("EMAIL_PROVIDER", smtpUrl ? "smtp" : "console") as "console" | "smtp",
   smtpUrl,
   emailFrom: str("EMAIL_FROM", "Case Manager <no-reply@example.com>"),
+  /** Sender name shown in recipients' inboxes; overrides the name part of EMAIL_FROM. */
+  emailFromName: str("EMAIL_FROM_NAME").trim(),
   devMailbox: bool("DEV_MAILBOX", !isProd || demoMode),
 
   paymentProvider: str("PAYMENT_PROVIDER", stripeSecretKey ? "stripe" : "mock") as "mock" | "stripe",

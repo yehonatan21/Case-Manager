@@ -163,6 +163,7 @@ All settings are environment variables — see [`.env.example`](.env.example). K
 | `APP_SECRET` | **Required in production.** Signs codes and derives the file-encryption key. |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | Enables Claude (default model `claude-opus-5-5`). |
 | `EMAIL_PROVIDER=smtp`, `SMTP_URL` | Real email delivery. |
+| `EMAIL_FROM`, `EMAIL_FROM_NAME` | Sender address, and the sender name recipients see (e.g. your business name). Note: Gmail shows "me" / "אני" instead of any name when you email yourself. |
 | `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout; point the webhook at `/api/webhooks/stripe`. |
 | `STORAGE_PROVIDER=s3`, `S3_*` | S3-compatible storage. |
 | `CLAMAV_HOST` | Malware scanning. |

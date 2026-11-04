@@ -146,3 +146,20 @@ describe("security helpers", () => {
     expect(decryptBuffer(enc).toString()).toBe("secret document");
   });
 });
+
+describe("email sender", () => {
+  it("uses EMAIL_FROM_NAME over the name in EMAIL_FROM", async () => {
+    const { env } = await import("@/lib/env");
+    const { senderAddress } = await import("@/lib/email");
+    const saved = { ...env };
+    Object.assign(env, { emailFrom: "Case Manager <office@example.com>", emailFromName: "" });
+    expect(senderAddress()).toEqual({ name: "Case Manager", address: "office@example.com" });
+    Object.assign(env, { emailFromName: "משרד כהן ושות׳" });
+    expect(senderAddress()).toEqual({ name: "משרד כהן ושות׳", address: "office@example.com" });
+    Object.assign(env, { emailFrom: "office@example.com", emailFromName: "" });
+    expect(senderAddress()).toEqual({ name: saved.appName, address: "office@example.com" });
+    Object.assign(env, { emailFrom: "", smtpUrl: "smtps://me%40gmail.com:pw@smtp.gmail.com:465", emailFromName: "Office" });
+    expect(senderAddress()).toEqual({ name: "Office", address: "me@gmail.com" });
+    Object.assign(env, saved);
+  });
+});

@@ -12,7 +12,7 @@ import { AuthTabs } from "@/components/app/auth-tabs";
 import { Notice } from "@/components/ui/misc";
 import { GOOGLE_SIGNUP_COOKIE, googleEnabled, readPendingGoogleSignup } from "@/lib/services/google";
 
-export type AuthSearchParams = { next?: string; error?: string; as?: string; google?: string };
+export type AuthSearchParams = { next?: string; error?: string; as?: string; google?: string; email?: string };
 
 /** Shared sign-in / registration page, served at both /login and /register. */
 export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: AuthSearchParams }) {
@@ -97,7 +97,7 @@ export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: Aut
               )}
             </>
           }
-          register={<RegisterForm next={next} google={false} googleProfile={pending ?? undefined} />}
+          register={<RegisterForm next={next} google={false} googleProfile={pending ?? undefined} initialEmail={sp.email?.slice(0, 200)} />}
         />
       </main>
     </>

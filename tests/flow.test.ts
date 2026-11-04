@@ -244,3 +244,16 @@ describe("money", () => {
     expect(computeTotals([{ quantity: 1, unitPriceCents: 11800 }], 18, true)).toMatchObject({ subtotalCents: 10000, taxCents: 1800, totalCents: 11800 });
   });
 });
+
+describe("sign-in code requests", () => {
+  it("does not email a sign-in code to an address with no account", async () => {
+    await expect(requestLoginCode(db, { email: "nobody-here@example.com", ip: null, locale: "en", purpose: "login" })).rejects.toSatisfy(
+      (e: unknown) => e instanceof AppError && e.code === "no_account",
+    );
+    const codes = await db.select().from(s.authCodes).where(eq(s.authCodes.email, "nobody-here@example.com"));
+    expect(codes).toHaveLength(0);
+    // Registration still sends one, and existing accounts can sign in.
+    expect((await requestLoginCode(db, { email: "nobody-here@example.com", ip: null, locale: "en", purpose: "signup" })).devCode).toMatch(/^\d{6}$/);
+    expect((await requestLoginCode(db, { email: admin.email, ip: null, locale: "en", purpose: "login" })).existingUser).toBe(true);
+  });
+});
