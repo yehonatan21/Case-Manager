@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { RequestReview } from "@/components/intake/request-review";
 import { emptySummary } from "@/lib/services/intake";
 import { isStaffRole } from "@/lib/domain";
+import { googleEnabled } from "@/lib/services/google";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -11,5 +12,6 @@ export async function generateMetadata() {
 
 export default async function ManualRequestPage() {
   const user = await getCurrentUser();
-  return <RequestReview intakeId={null} summary={emptySummary()} mode="manual" user={user ? { name: user.name, isStaff: isStaffRole(user.role) } : null} />;
+  return <RequestReview intakeId={null} summary={emptySummary()} mode="manual" user={user ? { name: user.name, isStaff: isStaffRole(user.role) } : null}
+      googleEnabled={googleEnabled()} />;
 }

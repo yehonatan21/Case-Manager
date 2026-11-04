@@ -157,9 +157,20 @@ All settings are environment variables — see [`.env.example`](.env.example). K
 | `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout; point the webhook at `/api/webhooks/stripe`. |
 | `STORAGE_PROVIDER=s3`, `S3_*` | S3-compatible storage. |
 | `CLAMAV_HOST` | Malware scanning. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google" sign-in and registration (see below). |
 | `CRON_SECRET` | Enables `POST /api/jobs/run` (expire quotes, flush email outbox). |
 | `JOBS_INTERVAL_MINUTES` | Runs those jobs inside the server every N minutes instead of external cron. |
 | `DEMO_MODE` | Public demo: codes on screen, demo data, warning banner. Never with real data. |
+
+### Google sign-in
+
+Customers can register at `/register` with an email code or with Google; "Continue with Google" also appears on the sign-in page and at the end of a new request. To enable it:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen, then create an **OAuth client ID** of type **Web application**.
+2. Add the authorized redirect URI `https://<your-domain>/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local development).
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` and redeploy.
+
+Existing accounts (including invited staff) sign in directly when the Google email matches and is verified. A new Google user only confirms their details, chooses a customer type and accepts the terms — no code needed.
 
 ## Scripts
 
