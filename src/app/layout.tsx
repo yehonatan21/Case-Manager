@@ -5,6 +5,7 @@ import { dirOf } from "@/lib/i18n/config";
 import { I18nProvider } from "@/lib/i18n/client";
 import { ToastProvider } from "@/components/ui/toast";
 import { env } from "@/lib/env";
+import { WebAnalytics } from "@/components/app/web-analytics";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { d } = await getDict();
@@ -29,6 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <I18nProvider locale={locale}>
           <ToastProvider>{children}</ToastProvider>
         </I18nProvider>
+        {env.isVercel && <WebAnalytics />}
       </body>
     </html>
   );
