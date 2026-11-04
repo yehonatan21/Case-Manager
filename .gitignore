@@ -1,16 +1,45 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Next.js / build output
 .next/
 out/
 build/
-.data/
-coverage/
+dist/
 *.tsbuildinfo
 next-env.d.ts
+
+# Local data (embedded database, uploaded files)
+.data/
+
+# Environment and secrets — only .env.example is committed
 .env
-.env.local
-.env.*.local
-npm-debug.log*
-.DS_Store
+.env*.local
+.env.production
+.env.development
+*.pem
+*.key
+
+# Hosting platforms
+.vercel/
+.netlify/
+
+# Tests
+coverage/
 test-results/
 playwright-report/
 e2e/screenshots/
+server.log
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db

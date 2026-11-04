@@ -94,9 +94,18 @@ docker run -p 3000:3000 -v case-data:/var/data -e APP_SECRET="$(openssl rand -he
 
 This works on Railway, Fly.io, Koyeb, Google Cloud Run (with an external database and S3 storage) or any VPS. The public URL is detected automatically on Render, Railway and Fly; elsewhere set `APP_URL`. Migrations run automatically on start (serialised with a database lock). On serverless hosts other than Vercel, set `NEXT_PUBLIC_REALTIME=poll` at build time and `STORAGE_PROVIDER=database` (or S3).
 
-### CI
+### CI/CD
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the type check, the test suite on PGlite and on PostgreSQL 16, the production build, and the Docker build on every push and pull request.
+[`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and every push to `main`:
+
+| Job | What it does |
+|---|---|
+| **Type check, tests, build** | `tsc`, the test suite on PGlite and on PostgreSQL 16, production build |
+| **Browser walkthrough** | Starts the production server in demo mode and runs the full Playwright journey (Hebrew/English, desktop/mobile); screenshots are kept as a build artifact |
+| **Docker image** | Builds the image on every run; on `main` pushes it to `ghcr.io/<owner>/case-manager` (`latest` + commit SHA) |
+| **Deploy to Vercel** | After the checks pass: a preview deployment for each PR, production for `main`, then a health check. Enabled by the repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (create the token in Vercel → Account Settings → Tokens; the two IDs are in the project's Settings → General). |
+
+If you use this workflow for deployments, turn off Vercel's own Git deployments so each commit isn't deployed twice: Vercel project → Settings → Git → Ignored Build Step → "Don't build anything". Without the secrets, the deploy job is skipped and Vercel's Git integration keeps deploying as before. [Dependabot](.github/dependabot.yml) opens weekly update PRs for npm packages and GitHub Actions.
 
 ## What's in the MVP
 

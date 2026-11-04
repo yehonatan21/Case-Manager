@@ -90,8 +90,9 @@ export const env = {
 
   cronSecret: str("CRON_SECRET"),
   /** "Continue with Google" sign-in (OAuth client from Google Cloud Console). */
-  googleClientId: str("GOOGLE_CLIENT_ID"),
-  googleClientSecret: str("GOOGLE_CLIENT_SECRET"),
+  // Trimmed (and stripped of wrapping quotes): pasted dashboard values often carry stray whitespace.
+  googleClientId: str("GOOGLE_CLIENT_ID").trim().replace(/^["']|["']$/g, ""),
+  googleClientSecret: str("GOOGLE_CLIENT_SECRET").trim().replace(/^["']|["']$/g, ""),
   /** Run maintenance jobs (quote expiry, email outbox) inside the server every N minutes; 0 = off. */
   jobsIntervalMinutes: Number(str("JOBS_INTERVAL_MINUTES", "0")),
 };
