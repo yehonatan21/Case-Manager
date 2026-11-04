@@ -10,6 +10,7 @@ export type ErrorCode =
   | "too_many_attempts"
   | "account_disabled"
   | "signup_required"
+  | "no_account"
   | "terms_required"
   | "invalid_transition"
   | "quote_not_editable"
@@ -36,6 +37,7 @@ const STATUS: Record<ErrorCode, number> = {
   too_many_attempts: 429,
   account_disabled: 403,
   signup_required: 400,
+  no_account: 404,
   terms_required: 400,
   invalid_transition: 409,
   quote_not_editable: 409,

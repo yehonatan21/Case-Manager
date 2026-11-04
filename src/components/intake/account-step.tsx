@@ -25,6 +25,7 @@ export function AccountStep({
   google,
   googleNext,
   googleProfile,
+  initialEmail,
 }: {
   onBack?: () => void;
   onVerified: () => Promise<void>;
@@ -33,10 +34,12 @@ export function AccountStep({
   google?: boolean;
   googleNext?: string;
   googleProfile?: { email: string; name: string };
+  /** Prefilled address, e.g. when sign-in found no account for it. */
+  initialEmail?: string;
 }) {
   const { d } = useI18n();
   const [name, setName] = useState(googleProfile?.name ?? "");
-  const [email, setEmail] = useState(googleProfile?.email ?? "");
+  const [email, setEmail] = useState(googleProfile?.email ?? initialEmail ?? "");
   const [phone, setPhone] = useState("");
   const [type, setType] = useState<CustomerType>("private");
   const [orgName, setOrgName] = useState("");

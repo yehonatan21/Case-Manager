@@ -18,17 +18,23 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
   const [devCode, setDevCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [noAccount, setNoAccount] = useState<string | null>(null);
+
+  const registerHref = (addr: string) => `/register?email=${encodeURIComponent(addr)}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
 
   const request = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setBusy(true);
     setError(null);
+    setNoAccount(null);
     try {
-      const r = await api<{ devCode?: string }>("/api/auth/request-code", { body: { email: email.trim() } });
+      // Sign-in only sends a code to an existing account; unknown emails are offered registration.
+      const r = await api<{ devCode?: string }>("/api/auth/request-code", { body: { email: email.trim(), purpose: "login" } });
       setSent(true);
       setDevCode(r.devCode ?? null);
     } catch (err) {
-      setError(errorText(err, d));
+      if (err instanceof ApiClientError && err.code === "no_account") setNoAccount(email.trim());
+      else setError(errorText(err, d));
     } finally {
       setBusy(false);
     }
@@ -100,6 +106,18 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
             </button>
           </div>
         </form>
+      )}
+      {noAccount && (
+        <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50 p-4" role="status">
+          <p className="font-semibold text-slate-900">{d.register.noAccountTitle}</p>
+          <p dir="ltr" className="break-all text-start font-medium text-brand-800">
+            {noAccount}
+          </p>
+          <p className="mt-1 text-sm text-slate-600">{d.register.noAccountText}</p>
+          <a href={registerHref(noAccount)} className="mt-3 inline-flex h-10 items-center rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+            {d.register.registerWithEmail}
+          </a>
+        </div>
       )}
       {error && (
         <Notice tone="danger" className="mt-4">

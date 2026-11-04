@@ -23,13 +23,18 @@ export function devCodeVisible() {
 }
 
 /** Passwordless sign-in: emails a 6-digit one-time code. Rate limited per email and per IP. */
-export async function requestLoginCode(db: Database, input: { email: string; ip: string | null; locale: Locale }) {
+export async function requestLoginCode(
+  db: Database,
+  input: { email: string; ip: string | null; locale: Locale; purpose?: "login" | "signup" },
+) {
   const email = normalizeEmail(input.email);
   await rateLimit(db, `otp:email:${email}`, 5, 15 * 60);
   if (input.ip) await rateLimit(db, `otp:ip:${input.ip}`, 30, 15 * 60);
 
   const existing = await findUserByEmail(db, email);
   if (existing?.status === "disabled") throw new AppError("account_disabled");
+  // Sign-in only: don't email a code to an address with no account — offer registration instead.
+  if (input.purpose === "login" && !existing) throw new AppError("no_account");
 
   const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
   await db.insert(authCodes).values({
