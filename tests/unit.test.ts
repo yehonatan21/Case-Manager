@@ -10,6 +10,7 @@ import { redactPII } from "@/lib/ai/redact";
 import { validateUpload } from "@/lib/storage/validate";
 import { signToken, verifyToken, encryptBuffer, decryptBuffer } from "@/lib/crypto";
 import { fmt } from "@/lib/i18n/config";
+import { ERROR_CODES } from "@/lib/errors";
 
 type Tree = { [k: string]: unknown };
 function leaves(obj: unknown, prefix = ""): Map<string, string> {
@@ -22,6 +23,13 @@ function leaves(obj: unknown, prefix = ""): Map<string, string> {
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",");
 
 describe("i18n", () => {
+  it("every error code has a message in both languages", () => {
+    for (const code of ERROR_CODES) {
+      expect((he.errors as Record<string, string>)[code], `he.errors.${code}`).toBeTruthy();
+      expect((en.errors as Record<string, string>)[code], `en.errors.${code}`).toBeTruthy();
+    }
+  });
+
   const H = leaves(he);
   const E = leaves(en);
   it("Hebrew and English have exactly the same keys", () => {

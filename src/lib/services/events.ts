@@ -5,6 +5,7 @@ import { isStaffRole } from "../domain";
 
 export type EventType =
   | "case_submitted"
+  | "case_opened_by_staff"
   | "assigned"
   | "unassigned"
   | "status_changed"

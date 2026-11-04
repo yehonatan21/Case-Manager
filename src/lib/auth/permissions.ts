@@ -87,3 +87,8 @@ export function canSeePayments(role: UserRole) {
 export function canSeeCustomers(role: UserRole) {
   return role === "admin" || role === "case_manager";
 }
+
+/** Opening a case on a client's behalf (e.g. after a phone call). */
+export function canCreateCasesForClients(role: UserRole) {
+  return role === "admin" || role === "case_manager";
+}
