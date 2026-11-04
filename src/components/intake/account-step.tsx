@@ -10,12 +10,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox, Field, Input } from "@/components/ui/form";
 import { Notice } from "@/components/ui/misc";
 import type { CustomerType } from "@/lib/db/schema";
+import { GoogleButton } from "@/components/app/google-button";
 
-/** Contact details + passwordless verification, shown before the first submission. */
-export function AccountStep({ onBack, onVerified, submitting }: { onBack: () => void; onVerified: () => Promise<void>; submitting: boolean }) {
+/**
+ * Contact details + passwordless verification. Used at the end of a request ("request"), on the
+ * standalone register page ("register"), and to finish a first Google sign-in ("google": email is
+ * already verified by Google, so no code step).
+ */
+export function AccountStep({
+  onBack,
+  onVerified,
+  submitting,
+  mode = "request",
+  google,
+  googleNext,
+  googleProfile,
+}: {
+  onBack?: () => void;
+  onVerified: () => Promise<void>;
+  submitting: boolean;
+  mode?: "request" | "register" | "google";
+  google?: boolean;
+  googleNext?: string;
+  googleProfile?: { email: string; name: string };
+}) {
   const { d } = useI18n();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(googleProfile?.name ?? "");
+  const [email, setEmail] = useState(googleProfile?.email ?? "");
   const [phone, setPhone] = useState("");
   const [type, setType] = useState<CustomerType>("private");
   const [orgName, setOrgName] = useState("");
@@ -30,6 +51,34 @@ export function AccountStep({ onBack, onVerified, submitting }: { onBack: () => 
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
 
   const isOrg = type === "business" || type === "company";
+
+  const completeGoogle = async () => {
+    const fe: Record<string, string> = {};
+    if (!name.trim()) fe.name = d.account.nameRequired;
+    if (!terms) fe.terms = d.account.termsRequired;
+    setFieldErr(fe);
+    if (Object.keys(fe).length) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/auth/google/complete", {
+        body: {
+          name: name.trim(),
+          phone: phone.trim() || null,
+          customerType: type,
+          organizationName: isOrg ? orgName.trim() || null : null,
+          organizationNumber: isOrg ? orgId.trim() || null : null,
+          acceptTerms: terms,
+          aiConsent,
+        },
+      });
+      await onVerified();
+    } catch (e) {
+      setError(errorText(e, d));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const sendCode = async () => {
     const fe: Record<string, string> = {};
@@ -98,17 +147,27 @@ export function AccountStep({ onBack, onVerified, submitting }: { onBack: () => 
   return (
     <Card className="mt-6 border-brand-200">
       <CardHeader className="flex-col items-stretch">
-        <CardTitle>{d.account.title}</CardTitle>
-        <p className="text-sm text-slate-600">{d.account.subtitle}</p>
+        <CardTitle>{mode === "request" ? d.account.title : mode === "google" ? d.register.googleTitle : d.register.title}</CardTitle>
+        <p className="text-sm text-slate-600">{mode === "request" ? d.account.subtitle : mode === "google" ? d.register.googleSubtitle : d.register.subtitle}</p>
       </CardHeader>
       <CardContent className="space-y-5 py-5">
+        {google && mode !== "google" && !codeSent && (
+          <div>
+            <GoogleButton next={googleNext} />
+            <div className="mt-5 flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              {d.register.orEmail}
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          </div>
+        )}
         <fieldset disabled={codeSent} className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label={d.account.fullName} required error={fieldErr.name}>
               {(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />}
             </Field>
             <Field label={d.account.email} required error={fieldErr.email}>
-              {(p) => <Input {...p} type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />}
+              {(p) => <Input {...p} type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" readOnly={mode === "google"} />}
             </Field>
             <Field label={d.account.phone} hint={d.account.phoneHint}>
               {(p) => <Input {...p} type="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />}
@@ -168,7 +227,7 @@ export function AccountStep({ onBack, onVerified, submitting }: { onBack: () => 
                 )}
               </Field>
               <Button size="lg" onClick={verify} loading={busy || submitting} disabled={code.length !== 6}>
-                {busy ? d.account.verifying : d.account.verifyAndSubmit}
+                {busy ? d.account.verifying : mode === "request" ? d.account.verifyAndSubmit : d.register.verifyAndCreate}
               </Button>
             </div>
             <div className="mt-3 flex gap-4 text-sm">
@@ -186,12 +245,22 @@ export function AccountStep({ onBack, onVerified, submitting }: { onBack: () => 
 
         {!codeSent && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button variant="ghost" onClick={onBack}>
-              {d.common.back}
-            </Button>
-            <Button size="lg" onClick={sendCode} loading={busy}>
-              {busy ? d.account.sendingCode : d.account.sendCode}
-            </Button>
+            {onBack ? (
+              <Button variant="ghost" onClick={onBack}>
+                {d.common.back}
+              </Button>
+            ) : (
+              <span />
+            )}
+            {mode === "google" ? (
+              <Button size="lg" onClick={completeGoogle} loading={busy || submitting}>
+                {d.register.createAccount}
+              </Button>
+            ) : (
+              <Button size="lg" onClick={sendCode} loading={busy}>
+                {busy ? d.account.sendingCode : d.account.sendCode}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

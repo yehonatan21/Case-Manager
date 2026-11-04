@@ -18,9 +18,14 @@ export async function PublicHeader() {
               {isStaffRole(user.role) ? d.nav.staffArea : d.nav.clientArea}
             </ButtonLink>
           ) : (
-            <ButtonLink href="/login" variant="ghost" size="md">
-              {d.nav.login}
-            </ButtonLink>
+            <>
+              <ButtonLink href="/login" variant="ghost" size="md">
+                {d.nav.login}
+              </ButtonLink>
+              <ButtonLink href="/register" variant="outline" size="md" className="hidden sm:inline-flex">
+                {d.nav.register}
+              </ButtonLink>
+            </>
           )}
         </nav>
       </div>
@@ -42,6 +47,9 @@ export async function PublicFooter() {
           </a>
           <a href="/terms" className="hover:text-slate-800">
             {d.home.terms}
+          </a>
+          <a href="/login?next=/admin" className="hover:text-slate-800">
+            {d.home.staffLogin}
           </a>
         </nav>
       </div>

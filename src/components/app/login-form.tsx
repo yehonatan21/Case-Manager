@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/form";
 import { Notice } from "@/components/ui/misc";
 
-export function LoginForm({ next }: { next: string | null }) {
+export function LoginForm({ next, initialEmail }: { next: string | null; initialEmail?: string }) {
   const { d } = useI18n();
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -47,6 +47,16 @@ export function LoginForm({ next }: { next: string | null }) {
       setBusy(false);
     }
   };
+
+  // Demo shortcut: /login?as=<email> sends the code straight away.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (initialEmail && !autoSent.current) {
+      autoSent.current = true;
+      void request();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEmail]);
 
   return (
     <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">

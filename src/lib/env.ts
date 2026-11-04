@@ -89,6 +89,9 @@ export const env = {
   clamavPort: Number(str("CLAMAV_PORT", "3310")),
 
   cronSecret: str("CRON_SECRET"),
+  /** "Continue with Google" sign-in (OAuth client from Google Cloud Console). */
+  googleClientId: str("GOOGLE_CLIENT_ID"),
+  googleClientSecret: str("GOOGLE_CLIENT_SECRET"),
   /** Run maintenance jobs (quote expiry, email outbox) inside the server every N minutes; 0 = off. */
   jobsIntervalMinutes: Number(str("JOBS_INTERVAL_MINUTES", "0")),
 };

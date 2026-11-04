@@ -20,11 +20,12 @@ type Props = {
   summary: IntakeSummary;
   mode: "review" | "manual";
   user: { name: string; isStaff: boolean } | null;
+  googleEnabled?: boolean;
 };
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 
-export function RequestReview({ intakeId, summary, mode, user }: Props) {
+export function RequestReview({ intakeId, summary, mode, user, googleEnabled }: Props) {
   const { d } = useI18n();
   const router = useRouter();
   const [title, setTitle] = useState(summary.request_title);
@@ -203,7 +204,14 @@ export function RequestReview({ intakeId, summary, mode, user }: Props) {
           </div>
         </div>
       ) : (
-        <AccountStep onBack={() => setStage("edit")} onVerified={submitCase} submitting={submitting} />
+        <AccountStep
+          onBack={() => setStage("edit")}
+          onVerified={submitCase}
+          submitting={submitting}
+          // Google returns to this page signed in; the reviewed request is kept in the intake session.
+          google={googleEnabled && !!intakeId}
+          googleNext={intakeId ? `/intake/${intakeId}/review` : undefined}
+        />
       )}
     </div>
   );

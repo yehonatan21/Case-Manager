@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { summaryFromMessages } from "@/lib/services/intake";
 import { isStaffRole } from "@/lib/domain";
+import { googleEnabled } from "@/lib/services/google";
 import { loadIntake } from "../../_load";
 
 export async function generateMetadata() {
@@ -34,6 +35,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
       summary={summary}
       mode={manual ? "manual" : "review"}
       user={user ? { name: user.name, isStaff: isStaffRole(user.role) } : null}
+      googleEnabled={googleEnabled()}
     />
   );
 }
