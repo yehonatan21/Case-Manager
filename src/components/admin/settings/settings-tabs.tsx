@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/i18n/format";
 import { api, errorText } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
@@ -121,7 +122,20 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
               <Button
                 loading={busy === "invite"}
                 disabled={!invite.name.trim() || !invite.email.includes("@")}
-                onClick={() => call("invite", () => api("/api/admin/users", { body: invite }), () => setInvite({ email: "", name: "", role: "case_manager" }))}
+                onClick={async () => {
+                  setBusy("invite");
+                  try {
+                    const r = await api<{ outcome: "invited" | "converted" | "reactivated" }>("/api/admin/users", { body: invite });
+                    const msg = { invited: d.settingsPage.inviteDone, converted: d.settingsPage.inviteConverted, reactivated: d.settingsPage.inviteReactivated }[r.outcome];
+                    toast("success", fmt(msg, { email: invite.email.trim() }));
+                    setInvite({ email: "", name: "", role: "case_manager" });
+                    router.refresh();
+                  } catch (e) {
+                    toast("error", errorText(e, d));
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
               >
                 <Plus className="size-4" /> {d.settingsPage.invite}
               </Button>

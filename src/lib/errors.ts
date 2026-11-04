@@ -12,6 +12,8 @@ export type ErrorCode =
   | "signup_required"
   | "no_account"
   | "staff_email"
+  | "already_team_member"
+  | "email_is_client"
   | "terms_required"
   | "invalid_transition"
   | "quote_not_editable"
@@ -40,6 +42,8 @@ const STATUS: Record<ErrorCode, number> = {
   signup_required: 400,
   no_account: 404,
   staff_email: 409,
+  already_team_member: 409,
+  email_is_client: 409,
   terms_required: 400,
   invalid_transition: 409,
   quote_not_editable: 409,

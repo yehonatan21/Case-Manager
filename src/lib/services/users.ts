@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import type { DbOrTx } from "../db";
-import { customers, organizations, users, type CustomerType, type User, type UserRole } from "../db/schema";
+import { cases, customers, organizations, users, type CustomerType, type User, type UserRole } from "../db/schema";
 import { AppError } from "../errors";
 import { audit } from "./audit";
 import { STAFF_ROLES } from "../domain";
@@ -86,17 +86,44 @@ export async function listAssignableStaff(db: DbOrTx) {
     .orderBy(asc(users.name));
 }
 
-export async function inviteStaff(db: DbOrTx, actor: User, input: { email: string; name: string; role: UserRole }) {
+export type InviteOutcome = "invited" | "converted" | "reactivated";
+
+/**
+ * Adds a team member by email. Handles accounts that already use the email:
+ * - a disabled team member is re-enabled with the chosen role;
+ * - a client account with no requests (e.g. someone who signed up to try the site) becomes a team account;
+ * - an active or invited team member, or a client who has requests, is refused with a specific error.
+ */
+export async function inviteStaff(db: DbOrTx, actor: User, input: { email: string; name: string; role: UserRole }): Promise<{ user: User; outcome: InviteOutcome }> {
   if (actor.role !== "admin") throw new AppError("forbidden");
   if (input.role === "customer") throw new AppError("validation");
   const existing = await findUserByEmail(db, input.email);
-  if (existing) throw new AppError("conflict", "A user with this email already exists");
+
+  if (existing && existing.role !== "customer") {
+    if (existing.status !== "disabled") throw new AppError("already_team_member");
+    const [u] = await db.update(users).set({ role: input.role, status: "active" }).where(eq(users.id, existing.id)).returning();
+    await audit(db, { actorId: actor.id, action: "user.reactivate", entityType: "user", entityId: existing.id, details: { role: input.role } });
+    return { user: u!, outcome: "reactivated" };
+  }
+
+  if (existing) {
+    const [cust] = await db.select({ id: customers.id }).from(customers).where(eq(customers.userId, existing.id));
+    if (cust) {
+      const [hasCase] = await db.select({ id: cases.id }).from(cases).where(eq(cases.customerId, cust.id)).limit(1);
+      if (hasCase) throw new AppError("email_is_client");
+      await db.delete(customers).where(eq(customers.id, cust.id));
+    }
+    const [u] = await db.update(users).set({ role: input.role, status: existing.status === "disabled" ? "active" : existing.status }).where(eq(users.id, existing.id)).returning();
+    await audit(db, { actorId: actor.id, action: "user.convert_to_staff", entityType: "user", entityId: existing.id, details: { role: input.role } });
+    return { user: u!, outcome: "converted" };
+  }
+
   const [u] = await db
     .insert(users)
     .values({ email: normalizeEmail(input.email), name: input.name.trim(), role: input.role, status: "invited" })
     .returning();
   await audit(db, { actorId: actor.id, action: "user.invite", entityType: "user", entityId: u!.id, details: { role: input.role } });
-  return u!;
+  return { user: u!, outcome: "invited" };
 }
 
 export async function updateStaffUser(db: DbOrTx, actor: User, userId: string, patch: { role?: UserRole; status?: "active" | "disabled" }) {

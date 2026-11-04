@@ -142,6 +142,6 @@ describe("administration is admin-only", () => {
     await expectCode(updateStaffUser(db, admin, admin.id, { status: "disabled" }), "validation");
     await expectCode(updateStaffUser(db, admin, admin.id, { role: "staff" }), "validation");
     await expectCode(updateStaffUser(db, admin, customer.id, { role: "admin" }), "not_found");
-    await expectCode(inviteStaff(db, admin, { email: admin.email, name: "dup", role: "staff" }), "conflict");
+    await expectCode(inviteStaff(db, admin, { email: admin.email, name: "dup", role: "staff" }), "already_team_member");
   });
 });
