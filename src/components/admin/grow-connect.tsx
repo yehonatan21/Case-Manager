@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import type { PaymentProviderStatus } from "@/lib/services/payment-settings";
 
-/** Payments page: shows which provider takes payments, and lets an admin connect or disconnect Grow. */
-export function GrowConnect({ status, canEdit }: { status: PaymentProviderStatus; canEdit: boolean }) {
+/** Payments page and Settings → Integrations: shows which provider takes payments, and lets an admin connect or disconnect Grow. */
+export function GrowConnect({ status, canEdit, className = "mb-6" }: { status: PaymentProviderStatus; canEdit: boolean; className?: string }) {
   const { d, locale } = useI18n();
   const t = d.growConnect;
   const router = useRouter();
@@ -56,7 +56,7 @@ export function GrowConnect({ status, canEdit }: { status: PaymentProviderStatus
   }
 
   return (
-    <Card className="mb-6">
+    <Card className={className}>
       <CardContent className="grid gap-4 py-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
