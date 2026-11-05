@@ -30,6 +30,12 @@ export type ErrorCode =
   | "whatsapp_unavailable"
   | "whatsapp_phone_invalid"
   | "whatsapp_needs_opt_in"
+  | "signature_not_pdf"
+  | "signature_already_requested"
+  | "signature_not_pending"
+  | "signature_name_invalid"
+  | "signature_outdated"
+  | "signature_pdf_unsupported"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -68,6 +74,12 @@ const STATUS: Record<ErrorCode, number> = {
   whatsapp_unavailable: 400,
   whatsapp_phone_invalid: 400,
   whatsapp_needs_opt_in: 400,
+  signature_not_pdf: 400,
+  signature_already_requested: 409,
+  signature_not_pending: 409,
+  signature_name_invalid: 400,
+  signature_outdated: 409,
+  signature_pdf_unsupported: 400,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,

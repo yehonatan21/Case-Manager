@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { documentFiles, documents, type User } from "../db/schema";
+import { documentFiles, documents, signatures, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { sha256 } from "../crypto";
 import { storage } from "../storage";
@@ -20,7 +20,7 @@ import type { Locale } from "../i18n/config";
 type UploadFile = { name: string; data: Buffer };
 
 /** Validate → scan → store encrypted. Infected files are rejected and audited. */
-async function storeFile(db: DbOrTx, actorId: string | null, file: UploadFile, scope: string) {
+export async function storeFile(db: DbOrTx, actorId: string | null, file: UploadFile, scope: string) {
   const filename = safeFilename(file.name);
   const mimeType = validateUpload(filename, file.data);
   const scan = await scanBuffer(file.data);
@@ -102,7 +102,8 @@ export async function uploadCaseDocument(
             inArray(documents.status, ["requested", "needs_new_version"]),
           ),
         );
-      const back = (left?.n ?? 0) === 0 ? statusAfterClientResponse(c.status) : null;
+      const [unsigned] = await tx.select({ n: sql<number>`count(*)::int` }).from(signatures).where(and(eq(signatures.caseId, c.id), eq(signatures.status, "requested")));
+      const back = (left?.n ?? 0) === 0 && (unsigned?.n ?? 0) === 0 ? statusAfterClientResponse(c.status) : null;
       if (back) await applyStatus(tx, c, back, actor, { notifyClient: false });
       await notify(tx, { userIds: await staffRecipients(tx, c), type: "document_uploaded", caseId: c.id, vars: { number: c.number, title: doc.title }, link: `${adminCaseLink(c.id)}?tab=documents` });
     } else if (doc.visibility === "client") {

@@ -56,7 +56,9 @@ export default async function CustomerCasePage({ params, searchParams }: { param
             requestNote: doc.requestNote,
             reviewNote: doc.reviewNote,
             aiAnalysis: null,
-            files: doc.files.map((f) => ({ id: f.id, version: f.version, filename: f.filename, sizeBytes: f.sizeBytes, scanStatus: f.scanStatus, createdAt: f.createdAt, uploaderName: f.uploaderName })),
+            files: doc.files.map((f) => ({ id: f.id, version: f.version, filename: f.filename, mimeType: f.mimeType, sizeBytes: f.sizeBytes, scanStatus: f.scanStatus, createdAt: f.createdAt, uploaderName: f.uploaderName })),
+            // The latest signature request on the document (cancelled ones are hidden from clients by the bundle).
+            signature: b.signatures.find((x) => x.documentId === doc.id && x.status !== "cancelled") ?? null,
           })),
           // Only customer-facing quote fields cross to the browser.
           quotes: b.quotes.map((q) => ({

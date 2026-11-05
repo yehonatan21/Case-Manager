@@ -72,6 +72,8 @@ export const documentStatusEnum = pgEnum("document_status", [
   "needs_new_version",
 ]);
 
+export const signatureStatusEnum = pgEnum("signature_status", ["requested", "signed", "cancelled"]);
+
 export const scanStatusEnum = pgEnum("scan_status", ["pending", "clean", "infected", "skipped", "error"]);
 
 export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "waiting", "done", "cancelled"]);
@@ -405,6 +407,43 @@ export const documentFiles = pgTable(
   (t) => [index("document_files_doc_idx").on(t.documentId)],
 );
 
+/**
+ * An electronic signature: requested by staff on a PDF document (then signed by the client), or made by the
+ * client when approving a quote. Signing stores a new file version: the original stamped on every page plus a
+ * certificate page. The record keeps the evidence (who, when, IP, device, method, fingerprints).
+ */
+export const signatures = pgTable(
+  "signatures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    /** The document to sign, or (for a quote) the document the signed quote PDF was saved as. */
+    documentId: uuid("document_id").references(() => documents.id, { onDelete: "cascade" }),
+    quoteId: uuid("quote_id"),
+    status: signatureStatusEnum("status").notNull().default("requested"),
+    note: text("note"),
+    requestedById: uuid("requested_by_id").references(() => users.id),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The file version that has to be signed (the request is for exactly this content). */
+    fileVersion: integer("file_version"),
+    signerId: uuid("signer_id").references(() => users.id),
+    signerName: text("signer_name"),
+    signerEmail: text("signer_email"),
+    method: text("method").$type<"typed" | "drawn">(),
+    signedAt: timestamp("signed_at", { withTimezone: true }),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    originalSha256: text("original_sha256"),
+    signedSha256: text("signed_sha256"),
+    signedFileId: uuid("signed_file_id"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("signatures_case_idx").on(t.caseId), index("signatures_document_idx").on(t.documentId)],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -665,6 +704,7 @@ export type DocumentRow = typeof documents.$inferSelect;
 export type DocumentFile = typeof documentFiles.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;
+export type Signature = typeof signatures.$inferSelect;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type IntakeSession = typeof intakeSessions.$inferSelect;

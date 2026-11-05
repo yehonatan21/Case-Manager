@@ -10,6 +10,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Clients see the checklist with progress ("3 of 5 required documents provided"), and one to-do for all the required documents still missing.
   - Automatic reminders about missing required documents: one per case every N days, up to a maximum per document. Both are set under Settings → General; 0 turns reminders off.
 
+- **Electronic signatures.** Staff request a signature on a PDF in a case; the client reviews it and signs with their full name, optionally drawing a signature too.
+  - The signed copy is saved as a new version: each page stamped, plus a signature certificate page (signer, time, IP, device, method, SHA-256 of the original). Staff see the same evidence in the app.
+  - Approving a quote is signed as well, and a signed PDF of the approved version is saved to the case's documents.
 - **WhatsApp.** Updates on WhatsApp for users who opt in on their profile, through the Meta Cloud API (the provider can be swapped).
   - An admin connects the business number under Settings → Integrations; the credentials are checked with WhatsApp and stored encrypted.
   - Updates are sent as plain text within 24 hours of the user's last WhatsApp message, otherwise with an approved template.

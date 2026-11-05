@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, CreditCard, Lock } from "lucide-react";
+import { CheckCircle2, CreditCard, Lock, PenLine } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/i18n/format";
@@ -13,6 +13,7 @@ import { Notice, EmptyState } from "@/components/ui/misc";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { SignatureFields, nameLooksValid } from "./signature";
 import { QuoteView, type QuoteViewData } from "./quote-view";
 import type { CaseStatus, PaymentStatusT } from "./types-quote";
 
@@ -40,6 +41,8 @@ export function ClientQuotePanel({
   const router = useRouter();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
+  const [signName, setSignName] = useState(customerName);
+  const [signImage, setSignImage] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"clarify" | "decline" | null>(null);
   const [text, setText] = useState("");
@@ -88,9 +91,22 @@ export function ClientQuotePanel({
 
       {open && (
         <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-5">
+          <section aria-labelledby="quote-sign-title" className="mb-4 grid gap-3 rounded-lg bg-white p-4 ring-1 ring-brand-100">
+            <h3 id="quote-sign-title" className="flex items-center gap-1.5 text-sm font-semibold">
+              <PenLine className="size-4 text-brand-700" aria-hidden />
+              {d.signatures.quoteTitle}
+            </h3>
+            <p className="text-xs text-slate-600">{d.signatures.quoteHint}</p>
+            <SignatureFields name={signName} setName={setSignName} setImage={setSignImage} />
+          </section>
           <Checkbox label={d.quote.approveConfirm} checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="lg" disabled={!confirm} loading={busy === "approve"} onClick={() => run("approve", () => api(`/api/quotes/${current.id}/approve`, { body: { confirm: true } }))}>
+            <Button
+              size="lg"
+              disabled={!confirm || !nameLooksValid(signName)}
+              loading={busy === "approve"}
+              onClick={() => run("approve", () => api(`/api/quotes/${current.id}/approve`, { body: { confirm: true, signature: { name: signName, image: signImage } } }))}
+            >
               <CheckCircle2 className="size-4" aria-hidden />
               {d.quote.approve}
             </Button>

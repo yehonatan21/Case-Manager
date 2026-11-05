@@ -7,6 +7,7 @@ import {
   cases,
   customers,
   documentFiles,
+  signatures,
   documents,
   intakeSessions,
   messages,
@@ -276,6 +277,7 @@ export type ClientAction =
   | { type: "pay"; quoteId: string }
   | { type: "upload"; documentId: string; title: string; note: string | null }
   | { type: "upload_many"; count: number; titles: string[] }
+  | { type: "sign"; count: number; documentId: string; title: string }
   | { type: "reply" }
   | { type: "task"; title: string };
 
@@ -288,6 +290,8 @@ export function computeClientActions(input: {
   openQuote: { id: string; status: string; serviceName: string; validUntil: string | null } | null;
   requestedDocs: { id: string; title: string; requestNote: string | null; required?: boolean }[];
   clientTasks: { title: string }[];
+  /** Documents waiting for the client's signature. */
+  pendingSignatures?: { documentId: string; title: string }[];
 }): ClientAction[] {
   const actions: ClientAction[] = [];
   const q = input.openQuote;
@@ -300,7 +304,9 @@ export function computeClientActions(input: {
   const required = input.requestedDocs.filter((d) => d.required !== false);
   if (required.length === 1) actions.push({ type: "upload", documentId: required[0]!.id, title: required[0]!.title, note: required[0]!.requestNote });
   else if (required.length > 1) actions.push({ type: "upload_many", count: required.length, titles: required.map((d) => d.title) });
-  if ((input.status === "awaiting_information" || input.status === "awaiting_client") && input.requestedDocs.length === 0) actions.push({ type: "reply" });
+  const sign = input.pendingSignatures ?? [];
+  if (sign.length) actions.push({ type: "sign", count: sign.length, documentId: sign[0]!.documentId, title: sign[0]!.title });
+  if ((input.status === "awaiting_information" || input.status === "awaiting_client") && input.requestedDocs.length === 0 && sign.length === 0) actions.push({ type: "reply" });
   for (const t of input.clientTasks) actions.push({ type: "task", title: t.title });
   return actions;
 }
@@ -321,6 +327,11 @@ async function clientActionsForCases(db: DbOrTx, rows: Pick<Case, "id" | "status
     .select({ caseId: tasks.caseId, title: tasks.title })
     .from(tasks)
     .where(and(inArray(tasks.caseId, ids), eq(tasks.requiresClientAction, true), inArray(tasks.status, ["todo", "in_progress", "waiting"]), isNull(tasks.relatedDocumentId)));
+  const sigs = await db
+    .select({ caseId: signatures.caseId, documentId: documents.id, title: documents.title })
+    .from(signatures)
+    .innerJoin(documents, eq(documents.id, signatures.documentId))
+    .where(and(inArray(signatures.caseId, ids), eq(signatures.status, "requested"), eq(documents.visibility, "client")));
   const map = new Map<string, ClientAction[]>();
   for (const r of rows) {
     map.set(
@@ -330,6 +341,7 @@ async function clientActionsForCases(db: DbOrTx, rows: Pick<Case, "id" | "status
         openQuote: qs.find((q) => q.caseId === r.id) ?? null,
         requestedDocs: docs.filter((d) => d.caseId === r.id),
         clientTasks: ts.filter((t) => t.caseId === r.id),
+        pendingSignatures: sigs.filter((x) => x.caseId === r.id),
       }),
     );
   }
@@ -429,12 +441,44 @@ export async function getCaseBundle(db: DbOrTx, user: User, caseId: string) {
   const quoteList = quoteRows.map((q) => ({ ...q, items: itemRows.filter((i) => i.quoteId === q.id), expired: isQuoteExpired(q) }));
   const paymentRows = access.viewQuotes ? await db.select().from(payments).where(eq(payments.caseId, c.id)).orderBy(desc(payments.createdAt)) : [];
 
+  const sigRows = access.documents
+    ? await db
+        .select()
+        .from(signatures)
+        .where(eq(signatures.caseId, c.id))
+        .orderBy(desc(signatures.requestedAt))
+    : [];
+  const visibleDocIds = new Set(docs.map((d) => d.id));
+  const signatureList = sigRows
+    .filter((x) => !x.documentId || visibleDocIds.has(x.documentId))
+    .filter((x) => !client || x.status !== "cancelled")
+    .map((x) => ({
+      id: x.id,
+      documentId: x.documentId,
+      quoteId: x.quoteId,
+      status: x.status,
+      note: x.note,
+      requestedAt: x.requestedAt,
+      fileVersion: x.fileVersion,
+      signerName: x.signerName,
+      signedAt: x.signedAt,
+      method: x.method,
+      originalSha256: x.originalSha256,
+      signedSha256: x.signedSha256,
+      // Evidence details are for staff.
+      ip: client ? null : x.ip,
+      userAgent: client ? null : x.userAgent,
+    }));
+
   const openQuote = quoteList.find((q) => ["sent", "clarification_requested", "approved", "expired"].includes(q.status)) ?? null;
   const actions = computeClientActions({
     status: c.status,
     openQuote,
     requestedDocs: docs.filter((d) => (d.status === "requested" || d.status === "needs_new_version") && d.visibility === "client"),
     clientTasks: taskRows.filter((t) => t.requiresClientAction && !t.relatedDocumentId && ["todo", "in_progress", "waiting"].includes(t.status)),
+    pendingSignatures: signatureList
+      .filter((x) => x.status === "requested" && x.documentId)
+      .map((x) => ({ documentId: x.documentId!, title: docs.find((d) => d.id === x.documentId)?.title ?? "" })),
   });
 
   return {
@@ -449,6 +493,7 @@ export async function getCaseBundle(db: DbOrTx, user: User, caseId: string) {
     tasks: taskRows,
     quotes: quoteList,
     payments: paymentRows,
+    signatures: signatureList,
     actions,
   };
 }

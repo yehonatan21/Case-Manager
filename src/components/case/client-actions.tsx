@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, FileUp, FileText, MessageSquareReply, ListChecks, Clock } from "lucide-react";
+import { CreditCard, FileUp, FileText, MessageSquareReply, ListChecks, Clock, PenLine } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import type { ClientAction } from "@/lib/services/cases";
@@ -20,6 +20,10 @@ export function useActionText() {
         return { icon: FileUp, title: d.caseView.actionUpload, text: fmt(d.caseView.actionUploadText, { title: a.title }), cta: d.caseView.goToUpload, tab: "documents" };
       case "upload_many":
         return { icon: FileUp, title: fmt(d.caseView.actionUploadMany, { n: a.count }), text: a.titles.join(", "), cta: d.caseView.goToUploadMany, tab: "documents" };
+      case "sign":
+        return a.count === 1
+          ? { icon: PenLine, title: d.signatures.actionSign, text: a.title, cta: d.signatures.goToSign, tab: "documents" }
+          : { icon: PenLine, title: fmt(d.signatures.actionSignMany, { n: a.count }), text: "", cta: d.signatures.goToSign, tab: "documents" };
       case "reply":
         return { icon: MessageSquareReply, title: d.caseView.actionReply, text: d.caseView.actionReplyText, cta: d.caseView.goToMessages, tab: "messages" };
       case "task":

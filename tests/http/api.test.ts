@@ -403,6 +403,33 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("electronic signatures (e2e/signatures.cjs covers signing)", () => {
+    it("requests, cancelling and signing check who is asking and what they send", async () => {
+      const manager = await session("manager@example.com");
+      const client = await session("client@example.com");
+      const created = await call("/api/admin/cases", { body: { customer: { email: "client@example.com", name: "x", customerType: "private", locale: "he" }, title: "Signature", description: "d", serviceCategory: "other", urgency: "normal" }, cookie: manager.cookie });
+      const caseId = created.json!.data.id as string;
+      const fake = "00000000-0000-4000-8000-000000000000";
+      expect((await call(`/api/cases/${caseId}/signatures`, { body: { documentId: fake } })).status).toBe(401);
+      expect((await call(`/api/cases/${caseId}/signatures`, { body: { documentId: fake }, cookie: client.cookie })).status).toBe(403);
+      expect((await call(`/api/cases/${caseId}/signatures`, { body: { documentId: "nope" }, cookie: manager.cookie })).status).toBe(400);
+      expect((await call(`/api/cases/${caseId}/signatures`, { body: { documentId: fake }, cookie: manager.cookie })).status).toBe(404);
+      expect((await call(`/api/signatures/${fake}`, { method: "DELETE", cookie: manager.cookie })).status).toBe(404);
+      expect((await call(`/api/signatures/${fake}/sign`, { body: { name: "נועם ישראלי", consent: true }, cookie: client.cookie })).status).toBe(404);
+      expect((await call(`/api/signatures/${fake}/sign`, { body: { name: "נועם ישראלי" }, cookie: client.cookie })).status).toBe(400);
+    });
+
+    it("a quote approval with an invalid signature is refused before anything is approved", async () => {
+      const client = await session("client@example.com");
+      const fake = "00000000-0000-4000-8000-000000000000";
+      const r = await call(`/api/quotes/${fake}/approve`, { body: { confirm: true, signature: { name: "1" } }, cookie: client.cookie });
+      expect(r.status).toBe(400);
+      expect(r.json!.error!.code).toBe("signature_name_invalid");
+      const img = await call(`/api/quotes/${fake}/approve`, { body: { confirm: true, signature: { name: "נועם ישראלי", image: "data:image/png;base64,AAAA" } }, cookie: client.cookie });
+      expect(img.status).toBe(400);
+    });
+  });
+
   describe("WhatsApp (not connected; e2e/whatsapp.cjs covers a connected number)", () => {
     it("only admins see or change the connection; bad bodies are rejected", async () => {
       const manager = await session("manager@example.com");
