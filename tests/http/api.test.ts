@@ -403,6 +403,38 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("meetings (e2e/meetings.cjs covers booking in the browser)", () => {
+    it("slots, booking, the .ics file and availability check who is asking and what they send", async () => {
+      const manager = await session("manager@example.com");
+      const client = await session("client@example.com");
+      const created = await call("/api/admin/cases", { body: { customer: { email: "client@example.com", name: "x", customerType: "private", locale: "he" }, title: "Meeting", description: "d", serviceCategory: "other", urgency: "normal" }, cookie: manager.cookie });
+      const caseId = created.json!.data.id as string;
+      expect((await call(`/api/cases/${caseId}/meetings/slots?duration=30`)).status).toBe(401);
+      expect((await call(`/api/cases/${caseId}/meetings/slots?duration=45`, { cookie: client.cookie })).status).toBe(400);
+      const slots = await call(`/api/cases/${caseId}/meetings/slots?duration=30`, { cookie: client.cookie });
+      expect(slots.status).toBe(200);
+      const first = slots.json!.data[0] as { start: string };
+      for (const bad of [{}, { start: "tomorrow", durationMinutes: 30, mode: "video" }, { start: first.start, durationMinutes: 30, mode: "carrier pigeon" }]) {
+        expect((await call(`/api/cases/${caseId}/meetings`, { body: bad, cookie: client.cookie })).status).toBe(400);
+      }
+      const booked = await call(`/api/cases/${caseId}/meetings`, { body: { start: first.start, durationMinutes: 30, mode: "phone" }, cookie: client.cookie });
+      expect(booked.status).toBe(200);
+      const id = booked.json!.data.id as string;
+      expect((await call(`/api/cases/${caseId}/meetings`, { body: { start: first.start, durationMinutes: 30, mode: "phone" }, cookie: client.cookie })).status).toBe(409);
+      const ics = await fetch(`${BASE}/api/meetings/${id}/ics`, { headers: { Cookie: client.cookie } });
+      expect(ics.headers.get("content-type")).toContain("text/calendar");
+      expect(await ics.text()).toContain("BEGIN:VCALENDAR");
+      expect((await fetch(`${BASE}/api/meetings/${id}/ics`)).status).toBe(401);
+      expect((await call(`/api/meetings/${id}`, { method: "DELETE", cookie: client.cookie })).status).toBe(200);
+      expect((await call(`/api/meetings/${id}`, { method: "DELETE", cookie: client.cookie })).status).toBe(409);
+
+      expect((await call("/api/me/availability", { cookie: client.cookie })).status).toBe(403);
+      expect((await call("/api/me/availability", { method: "PUT", body: { bookable: true, weekly: { "0": [{ start: "17:00", end: "09:00" }] } }, cookie: manager.cookie })).status).toBe(400);
+      expect((await call("/api/integrations/google-calendar", { cookie: client.cookie })).status).toBe(403);
+      expect((await call("/api/admin/settings", { method: "PATCH", body: { meeting_durations: [5] }, cookie: (await session("admin@example.com")).cookie })).status).toBe(400);
+    });
+  });
+
   describe("electronic signatures (e2e/signatures.cjs covers signing)", () => {
     it("requests, cancelling and signing check who is asking and what they send", async () => {
       const manager = await session("manager@example.com");

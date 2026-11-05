@@ -10,6 +10,8 @@ import { RealtimeRefresher } from "@/components/app/realtime";
 import { EmptyState } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { env } from "@/lib/env";
+import { listCaseMeetings } from "@/lib/services/meetings";
+import { getSettings } from "@/lib/services/settings";
 
 export default async function CaseWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
@@ -24,7 +26,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
     return <EmptyState title={d.caseView.notFound} text={d.states.notFoundText} action={<ButtonLink href="/admin/cases">{d.admin.casesTitle}</ButtonLink>} />;
   }
   await markCaseRead(db, user, id);
-  const [staff, templates] = await Promise.all([listAssignableStaff(db), listTemplates(db, true)]);
+  const [staff, templates, meetingList, settings] = await Promise.all([listAssignableStaff(db), listTemplates(db, true), listCaseMeetings(db, user, id), getSettings(db)]);
   return (
     <>
       <RealtimeRefresher caseId={id} />
@@ -35,6 +37,8 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}
         staff={staff}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, documents: t.documents }))}
+        meetings={meetingList}
+        meetingDurations={settings.meeting_durations}
         c={{
           id: b.case.id,
           number: b.case.number,

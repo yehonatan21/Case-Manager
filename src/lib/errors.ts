@@ -37,6 +37,10 @@ export type ErrorCode =
   | "signature_outdated"
   | "signature_pdf_unsupported"
   | "category_exists"
+  | "calendar_not_granted"
+  | "meeting_slot_taken"
+  | "meeting_limit"
+  | "meeting_in_past"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -82,6 +86,10 @@ const STATUS: Record<ErrorCode, number> = {
   signature_outdated: 409,
   signature_pdf_unsupported: 400,
   category_exists: 409,
+  calendar_not_granted: 400,
+  meeting_slot_taken: 409,
+  meeting_limit: 400,
+  meeting_in_past: 400,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,

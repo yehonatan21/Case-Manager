@@ -33,8 +33,15 @@ export function googleRedirectUri() {
 
 const b64url = (b: Buffer) => b.toString("base64url");
 
-/** Builds the Google consent URL and the signed state cookie value (state, PKCE verifier, return path). */
-export function startGoogleSignIn(next: string | null) {
+/** Calendar access for meetings: free/busy times and events (with Google Meet links) on the primary calendar. */
+export const CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.freebusy"];
+
+/**
+ * Builds the Google consent URL and the signed state cookie value (state, PKCE verifier, return path).
+ * With `calendarFor`, it's a team member connecting their Google Calendar instead of signing in: calendar scopes,
+ * offline access (a refresh token), and the same redirect URI, so no extra setup in Google Cloud.
+ */
+export function startGoogleSignIn(next: string | null, opts: { calendarFor?: string } = {}) {
   if (!googleEnabled()) throw new AppError("not_found");
   const state = b64url(crypto.randomBytes(24));
   const verifier = b64url(crypto.randomBytes(32));
@@ -45,13 +52,13 @@ export function startGoogleSignIn(next: string | null) {
     client_id: env.googleClientId,
     redirect_uri: googleRedirectUri(),
     response_type: "code",
-    scope: "openid email profile",
+    scope: ["openid", "email", "profile", ...(opts.calendarFor ? CALENDAR_SCOPES : [])].join(" "),
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    prompt: "select_account",
+    ...(opts.calendarFor ? { access_type: "offline", prompt: "consent", include_granted_scopes: "true" } : { prompt: "select_account" }),
   }).toString();
-  const cookie = signToken(JSON.stringify({ state, verifier, next: safeNext }), 600);
+  const cookie = signToken(JSON.stringify({ state, verifier, next: safeNext, ...(opts.calendarFor ? { calendarFor: opts.calendarFor } : {}) }), 600);
   return { url: url.toString(), cookie, cookieName: googleStateCookieName(state) };
 }
 
@@ -60,7 +67,7 @@ export type GoogleProfile = { email: string; emailVerified: boolean; name: strin
 /** Exchanges the authorization code (validating state) and fetches the verified profile. */
 export async function finishGoogleSignIn(params: { code: string | null; state: string | null; cookie: string | undefined }) {
   const raw = params.cookie ? verifyToken(params.cookie) : null;
-  const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null }) : null;
+  const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null; calendarFor?: string }) : null;
   if (!saved || !params.state || saved.state !== params.state || !params.code) {
     // Which check failed, for the server log (no secrets): no cookie, expired/forged cookie, or another attempt's cookie.
     const why = !params.cookie ? "no state cookie" : !raw ? "state cookie expired or invalid" : !params.code ? "no code" : "state does not match";
@@ -83,12 +90,17 @@ export async function finishGoogleSignIn(params: { code: string | null; state: s
     const detail = await tokenRes.text().catch(() => "");
     throw new AppError("unauthorized", `Google token exchange failed (${tokenRes.status}): ${detail.slice(0, 300)}`, { reason: "token" });
   }
-  const token = (await tokenRes.json()) as { access_token?: string };
+  const token = (await tokenRes.json()) as { access_token?: string; refresh_token?: string; scope?: string };
   const infoRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${token.access_token}` } });
   if (!infoRes.ok) throw new AppError("unauthorized", "Google profile request failed", { reason: "profile" });
   const info = (await infoRes.json()) as { sub: string; email?: string; email_verified?: boolean; name?: string };
   if (!info.email) throw new AppError("unauthorized", "Google account has no email");
-  return { profile: { email: normalizeEmail(info.email), emailVerified: !!info.email_verified, name: info.name ?? "", sub: info.sub } as GoogleProfile, next: saved.next };
+  const profile = { email: normalizeEmail(info.email), emailVerified: !!info.email_verified, name: info.name ?? "", sub: info.sub } as GoogleProfile;
+  // Connecting a calendar: the granted scopes and the refresh token, for the user who started it.
+  const calendar = saved.calendarFor
+    ? { userId: saved.calendarFor, refreshToken: token.refresh_token ?? null, scopesGranted: CALENDAR_SCOPES.every((sc) => (token.scope ?? "").split(" ").includes(sc)) }
+    : null;
+  return { profile, next: saved.next, calendar };
 }
 
 /**

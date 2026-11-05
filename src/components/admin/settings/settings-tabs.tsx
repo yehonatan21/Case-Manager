@@ -76,6 +76,7 @@ export function SettingsTabs({
   const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
+  const [durationsText, setDurationsText] = useState(settings.meeting_durations.join(", "));
   const [invite, setInvite] = useState({ email: "", name: "", role: "case_manager" as UserRole });
   const emptyTpl = { name: "", category: "other", description: "", tasks: "", docsRequired: "", docsOptional: "" };
   const [tpl, setTpl] = useState<{ id?: string; name: string; category: string; description: string; tasks: string; docsRequired: string; docsOptional: string }>(emptyTpl);
@@ -146,6 +147,28 @@ export function SettingsTabs({
               <Field label={d.settingsPage.docReminderMax}>
                 {(p) => <Input {...p} type="number" dir="ltr" min={1} max={10} value={s.document_reminder_max} onChange={(e) => setS({ ...s, document_reminder_max: Number(e.target.value) })} />}
               </Field>
+              <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.meetings.settingsTitle}</h3>
+              <Field label={d.meetings.durations}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    dir="ltr"
+                    inputMode="numeric"
+                    value={durationsText}
+                    onChange={(e) => {
+                      setDurationsText(e.target.value);
+                      const list = e.target.value.split(/[,\s]+/).map(Number).filter((n) => Number.isInteger(n) && n >= 15 && n <= 240);
+                      if (list.length) setS({ ...s, meeting_durations: [...new Set(list)].slice(0, 4) });
+                    }}
+                  />
+                )}
+              </Field>
+              <Field label={d.meetings.buffer}>{(p) => <Input {...p} type="number" dir="ltr" min={0} max={120} value={s.meeting_buffer_minutes} onChange={(e) => setS({ ...s, meeting_buffer_minutes: Number(e.target.value) })} />}</Field>
+              <Field label={d.meetings.notice}>{(p) => <Input {...p} type="number" dir="ltr" min={0} max={168} value={s.meeting_min_notice_hours} onChange={(e) => setS({ ...s, meeting_min_notice_hours: Number(e.target.value) })} />}</Field>
+              <Field label={d.meetings.horizon}>{(p) => <Input {...p} type="number" dir="ltr" min={1} max={90} value={s.meeting_horizon_days} onChange={(e) => setS({ ...s, meeting_horizon_days: Number(e.target.value) })} />}</Field>
+              <div className="sm:col-span-2">
+                <Field label={d.meetings.officeAddress}>{(p) => <Input {...p} value={s.meeting_office_address} onChange={(e) => setS({ ...s, meeting_office_address: e.target.value })} />}</Field>
+              </div>
               <div className="sm:col-span-2 flex justify-end">
                 <Button loading={busy === "general"} onClick={() => call("general", () => api("/api/admin/settings", { method: "PATCH", body: s }))}>
                   {d.common.save}
