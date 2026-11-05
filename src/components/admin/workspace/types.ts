@@ -55,4 +55,4 @@ export type WorkspaceData = {
 };
 
 export type StaffOption = { id: string; name: string; role: UserRole };
-export type TemplateOption = { id: string; name: string; category: string };
+export type TemplateOption = { id: string; name: string; category: string; documents?: { title: string; note?: string; required?: boolean }[] };

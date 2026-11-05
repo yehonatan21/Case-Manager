@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
 import { documentFiles, documents, type User } from "../db/schema";
 import { AppError } from "../errors";
@@ -89,7 +89,20 @@ export async function uploadCaseDocument(
     await audit(tx, { actorId: actor.id, action: "document.upload", entityType: "document", entityId: doc.id, details: { fileId: file!.id, version } });
 
     if (access.isClient) {
-      const back = statusAfterClientResponse(c.status);
+      // Back to the team once nothing required is still waiting on the client (a checklist may ask for several).
+      const [left] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(documents)
+        .where(
+          and(
+            eq(documents.caseId, c.id),
+            eq(documents.visibility, "client"),
+            eq(documents.required, true),
+            isNotNull(documents.requestedById),
+            inArray(documents.status, ["requested", "needs_new_version"]),
+          ),
+        );
+      const back = (left?.n ?? 0) === 0 ? statusAfterClientResponse(c.status) : null;
       if (back) await applyStatus(tx, c, back, actor, { notifyClient: false });
       await notify(tx, { userIds: await staffRecipients(tx, c), type: "document_uploaded", caseId: c.id, vars: { number: c.number, title: doc.title }, link: `${adminCaseLink(c.id)}?tab=documents` });
     } else if (doc.visibility === "client") {
@@ -129,7 +142,13 @@ export async function reviewDocument(
     if (!access.edit || !access.documents) throw new AppError("forbidden");
     await tx
       .update(documents)
-      .set({ status: input.status, reviewNote: input.status === "needs_new_version" ? input.note?.trim() || null : doc.reviewNote, updatedAt: new Date() })
+      .set({
+        status: input.status,
+        reviewNote: input.status === "needs_new_version" ? input.note?.trim() || null : doc.reviewNote,
+        // Asking for a new version starts a fresh reminder cycle.
+        ...(input.status === "needs_new_version" ? { reminderCount: 0, lastRemindedAt: null } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(documents.id, doc.id));
     const clientVisible = doc.visibility === "client" && input.status !== "in_review";
     await addEvent(tx, {

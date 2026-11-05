@@ -34,7 +34,7 @@ export default async function NotificationsPage() {
                   {!n.readAt && <span className="sr-only">{d.notificationsUi.unread}: </span>}
                   {n.title}
                 </p>
-                {n.body && <p className="bidi-auto mt-0.5 text-sm text-slate-600">{n.body}</p>}
+                {n.body && <p className="bidi-auto mt-0.5 whitespace-pre-line text-sm text-slate-600">{n.body}</p>}
                 <p className="mt-1 text-xs text-slate-500">{formatDateTime(n.createdAt, locale)}</p>
               </Link>
             </li>

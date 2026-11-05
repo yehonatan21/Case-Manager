@@ -15,16 +15,28 @@ import { TabList, TabPanel } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { SERVICE_CATEGORIES } from "@/lib/domain";
 import type { AppSettings } from "@/lib/services/settings";
-import type { ServiceTemplateTask, UserRole } from "@/lib/db/schema";
+import type { ServiceTemplateDocument, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
 
 type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled" };
-type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; active: boolean };
+type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; documents: ServiceTemplateDocument[]; active: boolean };
 type Price = { id: string; code: string; name: string; category: string; unitPriceCents: number; currency: string; active: boolean };
 
 const STAFF_ROLES: UserRole[] = ["admin", "case_manager", "staff", "finance"];
 
 /** "Title" per line; a leading or trailing * marks a client action. */
 const tasksToText = (tasks: ServiceTemplateTask[]) => tasks.map((t) => `${t.requiresClientAction ? "* " : ""}${t.title}${t.dueInDays != null ? ` | ${t.dueInDays}` : ""}`).join("\n");
+/** Documents are edited one per line: "Title" or "Title | note". */
+const docsToText = (docs: ServiceTemplateDocument[], required: boolean) =>
+  docs
+    .filter((x) => (x.required ?? true) === required)
+    .map((x) => `${x.title}${x.note ? ` | ${x.note}` : ""}`)
+    .join("\n");
+const textToDocs = (text: string, required: boolean): ServiceTemplateDocument[] =>
+  text
+    .split("\n")
+    .map((line) => line.split("|").map((p) => p.trim()))
+    .filter(([title]) => title)
+    .map(([title, ...note]) => ({ title: title!, note: note.join(" | ") || undefined, required }));
 const textToTasks = (s: string): ServiceTemplateTask[] =>
   s
     .split("\n")
@@ -44,7 +56,8 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [invite, setInvite] = useState({ email: "", name: "", role: "case_manager" as UserRole });
-  const [tpl, setTpl] = useState<{ id?: string; name: string; category: string; description: string; tasks: string }>({ name: "", category: "other", description: "", tasks: "" });
+  const emptyTpl = { name: "", category: "other", description: "", tasks: "", docsRequired: "", docsOptional: "" };
+  const [tpl, setTpl] = useState<{ id?: string; name: string; category: string; description: string; tasks: string; docsRequired: string; docsOptional: string }>(emptyTpl);
   const [price, setPrice] = useState({ code: "", name: "", category: "other", price: "", currency: settings.currency });
 
   const call = async (key: string, fn: () => Promise<unknown>, after?: () => void) => {
@@ -94,6 +107,12 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
               <Field label={d.settingsPage.quoteValidity}>{(p) => <Input {...p} type="number" dir="ltr" value={s.quote_validity_days} onChange={(e) => setS({ ...s, quote_validity_days: Number(e.target.value) })} />}</Field>
               <Field label={d.settingsPage.sla}>{(p) => <Input {...p} type="number" dir="ltr" value={s.first_response_sla_hours} onChange={(e) => setS({ ...s, first_response_sla_hours: Number(e.target.value) })} />}</Field>
               <Field label={d.settingsPage.questionLimit}>{(p) => <Input {...p} type="number" dir="ltr" value={s.intake_question_limit} onChange={(e) => setS({ ...s, intake_question_limit: Number(e.target.value) })} />}</Field>
+              <Field label={d.settingsPage.docReminderDays} hint={d.settingsPage.docReminderDaysHint}>
+                {(p) => <Input {...p} type="number" dir="ltr" min={0} max={60} value={s.document_reminder_days} onChange={(e) => setS({ ...s, document_reminder_days: Number(e.target.value) })} />}
+              </Field>
+              <Field label={d.settingsPage.docReminderMax}>
+                {(p) => <Input {...p} type="number" dir="ltr" min={1} max={10} value={s.document_reminder_max} onChange={(e) => setS({ ...s, document_reminder_max: Number(e.target.value) })} />}
+              </Field>
               <div className="sm:col-span-2 flex justify-end">
                 <Button loading={busy === "general"} onClick={() => call("general", () => api("/api/admin/settings", { method: "PATCH", body: s }))}>
                   {d.common.save}
@@ -206,7 +225,13 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => setTpl({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: tasksToText(t.tasks) })}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setTpl({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: tasksToText(t.tasks), docsRequired: docsToText(t.documents, true), docsOptional: docsToText(t.documents, false) })
+                      }
+                    >
                       {d.common.edit}
                     </Button>
                     <Button size="icon" variant="ghost" aria-label={d.common.delete} onClick={() => confirm(d.tasks.deleteConfirm) && call(t.id, () => api(`/api/admin/templates/${t.id}`, { method: "DELETE" }))}>
@@ -222,6 +247,21 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
                     </li>
                   ))}
                 </ol>
+                {t.documents.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-slate-600">{d.settingsPage.templateDocsTitle}</p>
+                    <ul className="mt-1 flex flex-wrap gap-1.5">
+                      {t.documents.map((x, i) => (
+                        <li key={i}>
+                          <Badge tone={x.required === false ? "muted" : "info"} className="bidi-auto">
+                            {x.title}
+                            {x.required === false && <span> · {d.checklist.optional}</span>}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -242,9 +282,15 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
               </Field>
               <Field label={d.tasks.description}>{(p) => <Input {...p} value={tpl.description} onChange={(e) => setTpl({ ...tpl, description: e.target.value })} />}</Field>
               <Field label={d.settingsPage.templateTasks}>{(p) => <Textarea {...p} value={tpl.tasks} rows={6} onChange={(e) => setTpl({ ...tpl, tasks: e.target.value })} />}</Field>
+              <Field label={d.settingsPage.templateDocsRequired} hint={d.settingsPage.templateDocsHint}>
+                {(p) => <Textarea {...p} value={tpl.docsRequired} rows={4} className="bidi-auto" onChange={(e) => setTpl({ ...tpl, docsRequired: e.target.value })} />}
+              </Field>
+              <Field label={d.settingsPage.templateDocsOptional}>
+                {(p) => <Textarea {...p} value={tpl.docsOptional} rows={2} className="bidi-auto" onChange={(e) => setTpl({ ...tpl, docsOptional: e.target.value })} />}
+              </Field>
               <div className="flex justify-end gap-2">
                 {tpl.id && (
-                  <Button variant="ghost" onClick={() => setTpl({ name: "", category: "other", description: "", tasks: "" })}>
+                  <Button variant="ghost" onClick={() => setTpl(emptyTpl)}>
                     {d.common.cancel}
                   </Button>
                 )}
@@ -257,9 +303,15 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
                       () =>
                         api(tpl.id ? `/api/admin/templates/${tpl.id}` : "/api/admin/templates", {
                           method: tpl.id ? "PATCH" : "POST",
-                          body: { name: tpl.name, category: tpl.category, description: tpl.description, tasks: textToTasks(tpl.tasks) },
+                          body: {
+                            name: tpl.name,
+                            category: tpl.category,
+                            description: tpl.description,
+                            tasks: textToTasks(tpl.tasks),
+                            documents: [...textToDocs(tpl.docsRequired, true), ...textToDocs(tpl.docsOptional, false)],
+                          },
                         }),
-                      () => setTpl({ name: "", category: "other", description: "", tasks: "" }),
+                      () => setTpl(emptyTpl),
                     )
                   }
                 >

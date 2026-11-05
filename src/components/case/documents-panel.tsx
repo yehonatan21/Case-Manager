@@ -2,19 +2,20 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Download, FilePlus2, FileText, Lock, Upload } from "lucide-react";
+import { Bot, CheckCircle2, ClipboardList, Download, FilePlus2, FileText, Lock, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime } from "@/lib/i18n/format";
 import { api, errorText } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Notice, EmptyState } from "@/components/ui/misc";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { DocumentStatusBadge } from "@/components/app/status";
 import { useToast } from "@/components/ui/toast";
 import { ACCEPT_ATTRIBUTE } from "@/lib/domain";
+import { documentChecklist, sameTitle } from "@/lib/checklist";
 import type { DocumentStatus, ScanStatusT } from "./types";
 
 export type DocFile = { id: string; version: number; filename: string; sizeBytes: number; scanStatus: ScanStatusT; createdAt: Date | string; uploaderName: string | null };
@@ -23,6 +24,9 @@ export type Doc = {
   title: string;
   status: DocumentStatus;
   visibility: "client" | "internal";
+  required: boolean;
+  requested: boolean;
+  reminderCount: number;
   requestNote: string | null;
   reviewNote: string | null;
   aiAnalysis: Record<string, unknown> | null;
@@ -65,7 +69,69 @@ function UploadButton({ caseId, documentId, label, variant = "primary", visibili
   );
 }
 
-export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId: string; docs: Doc[]; mode: "client" | "staff"; canEdit: boolean; maxMb: number }) {
+export type ChecklistTemplate = { id: string; name: string; documents?: { title: string; note?: string; required?: boolean }[] };
+
+/** Progress of the documents requested from the client (required ones count toward "complete"). */
+function ChecklistSummary({ docs, mode }: { docs: Doc[]; mode: "client" | "staff" }) {
+  const { d } = useI18n();
+  const list = documentChecklist(docs);
+  if (list.items.length === 0) return null;
+  const pct = list.required ? Math.round((list.requiredProvided / list.required) * 100) : 100;
+  return (
+    <section aria-labelledby="checklist-title" className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="checklist-title" className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <ClipboardList className="size-4 text-brand-700" aria-hidden />
+          {d.checklist.title}
+        </h3>
+        {list.complete ? (
+          <Badge tone="success">
+            <CheckCircle2 className="size-3.5" aria-hidden /> {d.checklist.complete}
+          </Badge>
+        ) : (
+          <span className="text-sm text-slate-600">{fmt(d.checklist.progress, { done: list.requiredProvided, total: list.required })}</span>
+        )}
+      </div>
+      {list.required > 0 && (
+        <div
+          className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"
+          role="progressbar"
+          aria-label={d.checklist.title}
+          aria-valuemin={0}
+          aria-valuemax={list.required}
+          aria-valuenow={list.requiredProvided}
+          aria-valuetext={fmt(d.checklist.progress, { done: list.requiredProvided, total: list.required })}
+        >
+          <div className={`h-full rounded-full ${list.complete ? "bg-emerald-600" : "bg-brand-600"}`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      {list.missing.length > 0 && (
+        <p className="mt-3 text-sm text-slate-700">
+          {mode === "client" ? d.checklist.missingClient : d.checklist.missingStaff}{" "}
+          <span className="bidi-auto font-medium">{list.missing.map((x) => x.title).join(", ")}</span>
+        </p>
+      )}
+      {list.optional > 0 && <p className="mt-1 text-xs text-slate-500">{fmt(d.checklist.optionalCount, { done: list.optionalProvided, total: list.optional })}</p>}
+    </section>
+  );
+}
+
+export function DocumentsPanel({
+  caseId,
+  docs,
+  mode,
+  canEdit,
+  maxMb,
+  checklistTemplates = [],
+}: {
+  caseId: string;
+  docs: Doc[];
+  mode: "client" | "staff";
+  canEdit: boolean;
+  maxMb: number;
+  /** Staff: service templates with a document checklist, the case's category first. */
+  checklistTemplates?: ChecklistTemplate[];
+}) {
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
@@ -76,6 +142,14 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
   const [reviewNote, setReviewNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [staffVisibility, setStaffVisibility] = useState<"client" | "internal">("client");
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [templateId, setTemplateId] = useState(checklistTemplates[0]?.id ?? "");
+  const [picked, setPicked] = useState<number[] | null>(null);
+  const tpl = checklistTemplates.find((t) => t.id === templateId);
+  // Already asked for (and not yet approved): shown but not requested again.
+  const alreadyAsked = (title: string) => docs.some((x) => x.visibility === "client" && x.status !== "approved" && sameTitle(x.title, title));
+  const defaultPick = (t?: ChecklistTemplate) => (t?.documents ?? []).map((x, i) => (alreadyAsked(x.title) ? -1 : i)).filter((i) => i >= 0);
+  const selection = picked ?? defaultPick(tpl);
 
   const requested = docs.filter((x) => x.status === "requested" || x.status === "needs_new_version");
   const others = docs.filter((x) => !requested.includes(x));
@@ -121,6 +195,21 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
     }
   };
 
+  const requestChecklist = async () => {
+    setBusy("checklist");
+    try {
+      const r = await api<{ created: number }>(`/api/cases/${caseId}/documents`, { body: { templateId, only: selection } });
+      toast("success", fmt(d.checklist.requested, { n: r.created }));
+      setChecklistOpen(false);
+      setPicked(null);
+      router.refresh();
+    } catch (e) {
+      toast("error", errorText(e, d));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const renderDoc = (doc: Doc) => {
     const latest = doc.files[0];
     const analysis = doc.aiAnalysis as null | { readable?: boolean; summary?: string; fields?: { label: string; value: string; confidence: string }[]; notes?: string };
@@ -132,7 +221,12 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
             <div className="min-w-0">
               <p className="bidi-auto font-medium text-slate-900">{doc.title}</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <DocumentStatusBadge status={doc.status} />
+                {/* An optional document still waiting is "optional", not "needed". */}
+                {doc.requested && !doc.required && doc.status === "requested" ? (
+                  <Badge tone="muted">{d.checklist.optional}</Badge>
+                ) : (
+                  <DocumentStatusBadge status={doc.status} />
+                )}
                 {mode === "staff" && doc.visibility === "internal" && (
                   <Badge tone="muted">
                     <Lock className="size-3" aria-hidden />
@@ -227,6 +321,7 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
 
   return (
     <div className="space-y-6">
+      <ChecklistSummary docs={docs} mode={mode} />
       {requested.length > 0 && (
         <section>
           <h3 className="mb-2 text-sm font-semibold text-slate-800">{mode === "client" ? d.documents.requestedTitle : d.documentStatus.requested}</h3>
@@ -246,6 +341,19 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
                   <FilePlus2 className="size-4" aria-hidden />
                   {d.documents.requestDocument}
                 </Button>
+                {checklistTemplates.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setPicked(null);
+                      setChecklistOpen(true);
+                    }}
+                  >
+                    <ClipboardList className="size-4" aria-hidden />
+                    {d.checklist.requestChecklist}
+                  </Button>
+                )}
                 <Select aria-label={d.documents.visibility} value={staffVisibility} onChange={(e) => setStaffVisibility(e.target.value as "client" | "internal")} className="h-8 w-auto text-xs">
                   <option value="client">{d.documents.visibleToClient}</option>
                   <option value="internal">{d.documents.internal}</option>
@@ -264,6 +372,69 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
           </ul>
         )}
       </section>
+
+      <Dialog
+        open={checklistOpen}
+        onClose={() => setChecklistOpen(false)}
+        title={d.checklist.requestChecklist}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setChecklistOpen(false)}>
+              {d.common.cancel}
+            </Button>
+            <Button onClick={requestChecklist} loading={busy === "checklist"} disabled={selection.length === 0}>
+              {fmt(d.checklist.requestN, { n: selection.length })}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label={d.checklist.template}>
+            {(p) => (
+              <Select
+                {...p}
+                value={templateId}
+                onChange={(e) => {
+                  setTemplateId(e.target.value);
+                  setPicked(null);
+                }}
+              >
+                {checklistTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-700">{d.checklist.choose}</legend>
+            <ul className="space-y-2">
+              {(tpl?.documents ?? []).map((x, i) => {
+                const asked = alreadyAsked(x.title);
+                return (
+                  <li key={i}>
+                    <Checkbox
+                      checked={!asked && selection.includes(i)}
+                      disabled={asked}
+                      onChange={(e) => setPicked(e.target.checked ? [...selection, i] : selection.filter((j) => j !== i))}
+                      label={
+                        <span className="bidi-auto">
+                          {x.title}
+                          {x.required === false && <span className="text-slate-500"> · {d.checklist.optional}</span>}
+                          {asked && <span className="text-slate-500"> · {d.checklist.alreadyRequested}</span>}
+                          {x.note && <span className="block text-xs text-slate-500">{x.note}</span>}
+                        </span>
+                      }
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+          <Notice tone="info">{d.checklist.clientNotified}</Notice>
+        </div>
+      </Dialog>
 
       <Dialog
         open={requestOpen}

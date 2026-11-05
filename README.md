@@ -86,6 +86,7 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **AI copilot** | Case summary: what the client wants, known facts **linked to their source**, missing info, complexities, next step. Also up to 3 recommended actions, clarifying-question drafts, rewrite / shorten / translate, thread summary, status-update drafts, task plans, quote drafts and document analysis. Anything customer-facing is a draft a person must send. |
 | **Quotes** | Line items; VAT on top or included; currency, payment terms, timeline, disclaimers, validity; live preview of the customer view. AI drafts use prices **only** from the price list. Sent quotes are immutable, and revisions create new versions. Quotes expire automatically. |
 | **Approval & payment** | The customer approves a specific version (identity, time, IP and a hash of the content are recorded), asks for clarification, or declines. One payment per quote through [Grow, Stripe or the test checkout](#payments). Only a verified payment activates the case. |
+| **Document checklists** | Each service template lists the documents it needs (required or optional, with a note for the client). Staff request a whole checklist in one step: one message to the client, nothing requested twice. The client sees "3 of 5 required documents provided"; the case keeps waiting for the client until every required document is in. Automatic reminders go out every N days for missing required documents, up to a maximum (Settings → General). |
 | **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
 | **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
 | **Notifications** | In-app (bell and page), email, and [push](#push-notifications) for every event, localized per recipient, through a retrying outbox. |
@@ -275,9 +276,9 @@ Feature branches open pull requests into `dev`, and `dev` is then released to `m
 
 | Suite | Command | Covers |
 |---|---|---|
-| Unit + integration | `npm test` | Roles and permissions, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
 | HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow and push endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API) and push (with a stand-in push service). |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service) and document checklists. |
 
 The HTTP and browser suites need the server in demo mode (codes on screen). The Grow and push scripts also need `GROW_API_URL=http://localhost:4010` and `PUSH_EXTRA_HOSTS=localhost:4012`:
 
@@ -345,7 +346,7 @@ e2e/                   Playwright browser scripts
 | `npm run db:migrate` | Apply migrations (also automatic on start unless `AUTO_MIGRATE=false`) |
 | `npm run db:seed -- --demo` | Insert demo data |
 | `npm run db:remove-demo` | Preview removing the demo accounts and sample requests; add `-- --apply` to remove them (one transaction; real data kept) |
-| `npm run jobs:run` | Run maintenance once: expire quotes, send pending emails and pushes, prune old push rows |
+| `npm run jobs:run` | Run maintenance once: expire quotes, send document reminders, send pending emails and pushes, prune old push rows |
 
 ## Out of scope
 

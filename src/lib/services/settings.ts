@@ -12,6 +12,8 @@ export type AppSettings = {
   quote_validity_days: number;
   first_response_sla_hours: number;
   intake_question_limit: number;
+  document_reminder_days: number;
+  document_reminder_max: number;
 };
 
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {

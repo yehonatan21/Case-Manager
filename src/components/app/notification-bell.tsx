@@ -64,16 +64,20 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="relative inline-flex size-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
-        aria-label={`${d.nav.notifications}${unread ? ` (${unread})` : ""}`}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-controls="notifications-panel"
       >
+        {/* The name comes from the content ("Notifications 3 unread"), so it always contains the visible badge (WCAG 2.5.3). */}
         <Bell className="size-5" aria-hidden />
+        <span className="sr-only">{d.nav.notifications}</span>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-            {unread > 9 ? "9+" : unread}
-          </span>
+          <>
+            <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+            <span className="sr-only"> {d.notificationsUi.unreadCount}</span>
+          </>
         )}
       </button>
       {open && (
