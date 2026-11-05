@@ -5,7 +5,7 @@ import { seedBase } from "@/lib/db/seed";
 import * as s from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
-import { completeGoogleSignup, finishGoogleSignIn, resolveGoogleUser, startGoogleSignIn } from "@/lib/services/google";
+import { completeGoogleSignup, finishGoogleSignIn, googleStateCookieName, resolveGoogleUser, startGoogleSignIn } from "@/lib/services/google";
 import { createTestDatabase } from "./db";
 
 let db: Database;
@@ -49,6 +49,24 @@ describe("Google sign-in", () => {
     expect(r.profile).toMatchObject({ email: "new.person@gmail.com", emailVerified: true, name: "New Person" });
     const body = String((fetchMock.mock.calls[0]![1] as RequestInit).body);
     expect(body).toContain("code_verifier=");
+  });
+
+  it("two sign-in attempts at once (two tabs, or a double click) each keep their own state cookie", async () => {
+    const first = startGoogleSignIn("/portal");
+    const second = startGoogleSignIn("/portal");
+    const stateOf = (u: string) => new URL(u).searchParams.get("state")!;
+    expect(first.cookieName).not.toBe(second.cookieName);
+    expect(first.cookieName).toBe(googleStateCookieName(stateOf(first.url)));
+    // The callback looks up the cookie by the state Google returns, so the first attempt still completes.
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => (String(input).includes("token") ? Response.json({ access_token: "at" }) : Response.json({ sub: "9", email: "two@gmail.com", email_verified: true, name: "Two Tabs" }))));
+    const jar = new Map([
+      [first.cookieName, first.cookie],
+      [second.cookieName, second.cookie],
+    ]);
+    const r = await finishGoogleSignIn({ code: "c", state: stateOf(first.url), cookie: jar.get(googleStateCookieName(stateOf(first.url))) });
+    expect(r.profile.email).toBe("two@gmail.com");
+    // Another attempt's cookie still doesn't validate this state.
+    await expect(finishGoogleSignIn({ code: "c", state: stateOf(first.url), cookie: second.cookie })).rejects.toSatisfy(isCode("forbidden"));
   });
 
   it("signs existing users in and activates invited staff", async () => {

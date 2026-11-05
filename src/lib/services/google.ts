@@ -12,6 +12,15 @@ import type { Locale } from "../i18n/config";
 /** Google sign-in: OAuth 2.0 authorization-code flow with state and PKCE. */
 
 export const GOOGLE_STATE_COOKIE = "cm_google_oauth";
+
+/**
+ * One cookie per sign-in attempt, named after its state. With a single shared cookie, starting Google sign-in in
+ * a second tab (or clicking twice) replaced the first attempt's cookie, and finishing the first then failed.
+ */
+export function googleStateCookieName(state: string | null | undefined) {
+  const id = (state ?? "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 16);
+  return id ? `${GOOGLE_STATE_COOKIE}_${id}` : GOOGLE_STATE_COOKIE;
+}
 export const GOOGLE_SIGNUP_COOKIE = "cm_google_signup";
 
 export function googleEnabled() {
@@ -43,7 +52,7 @@ export function startGoogleSignIn(next: string | null) {
     prompt: "select_account",
   }).toString();
   const cookie = signToken(JSON.stringify({ state, verifier, next: safeNext }), 600);
-  return { url: url.toString(), cookie };
+  return { url: url.toString(), cookie, cookieName: googleStateCookieName(state) };
 }
 
 export type GoogleProfile = { email: string; emailVerified: boolean; name: string; sub: string };
@@ -52,7 +61,11 @@ export type GoogleProfile = { email: string; emailVerified: boolean; name: strin
 export async function finishGoogleSignIn(params: { code: string | null; state: string | null; cookie: string | undefined }) {
   const raw = params.cookie ? verifyToken(params.cookie) : null;
   const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null }) : null;
-  if (!saved || !params.state || saved.state !== params.state || !params.code) throw new AppError("forbidden", "Invalid OAuth state", { reason: "state" });
+  if (!saved || !params.state || saved.state !== params.state || !params.code) {
+    // Which check failed, for the server log (no secrets): no cookie, expired/forged cookie, or another attempt's cookie.
+    const why = !params.cookie ? "no state cookie" : !raw ? "state cookie expired or invalid" : !params.code ? "no code" : "state does not match";
+    throw new AppError("forbidden", `Invalid OAuth state (${why})`, { reason: "state" });
+  }
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

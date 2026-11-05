@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import { createSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 import { isStaffRole } from "@/lib/domain";
-import { GOOGLE_SIGNUP_COOKIE, GOOGLE_STATE_COOKIE, finishGoogleSignIn, resolveGoogleUser } from "@/lib/services/google";
+import { GOOGLE_SIGNUP_COOKIE, GOOGLE_STATE_COOKIE, finishGoogleSignIn, googleStateCookieName, resolveGoogleUser } from "@/lib/services/google";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -13,7 +13,11 @@ export async function GET(req: Request) {
   const fail = (code: string) => NextResponse.redirect(new URL(`/login?error=${code}`, env.appUrl));
   if (url.searchParams.get("error")) return fail("google_cancelled");
   try {
-    const { profile, next } = await finishGoogleSignIn({ code: url.searchParams.get("code"), state: url.searchParams.get("state"), cookie: jar.get(GOOGLE_STATE_COOKIE)?.value });
+    const state = url.searchParams.get("state");
+    const name = googleStateCookieName(state);
+    // Falls back to the old shared cookie for attempts started before this change.
+    const { profile, next } = await finishGoogleSignIn({ code: url.searchParams.get("code"), state, cookie: jar.get(name)?.value ?? jar.get(GOOGLE_STATE_COOKIE)?.value });
+    jar.set(name, "", { path: "/api/auth/google", maxAge: 0 });
     jar.delete(GOOGLE_STATE_COOKIE);
     const res = await resolveGoogleUser(await getDb(), profile);
     if ("user" in res) {
