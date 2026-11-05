@@ -65,7 +65,7 @@ export function QuoteView({ q }: { q: QuoteViewData }) {
           {lines(q.excluded).length > 0 && (
             <section>
               <h4 className="font-semibold text-slate-800">{d.quote.excluded}</h4>
-              <ul className="mt-1 list-inside list-disc space-y-0.5 text-slate-700 marker:text-slate-400">
+              <ul className="mt-1 list-inside list-disc space-y-0.5 text-slate-700 marker:text-slate-500">
                 {lines(q.excluded).map((l, i) => (
                   <li key={i} className="bidi-auto">{l}</li>
                 ))}

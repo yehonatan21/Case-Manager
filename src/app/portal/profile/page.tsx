@@ -5,6 +5,7 @@ import { getCustomerForUser } from "@/lib/services/users";
 import { PageHeader } from "@/components/ui/misc";
 import { ProfileForm } from "@/components/app/profile-form";
 import { LogoutButton } from "@/components/app/logout-button";
+import { PushToggle } from "@/components/app/push-toggle";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -23,6 +24,7 @@ export default async function ProfilePage() {
         customerType={cust?.customer.type ?? null}
         organization={cust?.organization?.name ?? null}
       />
+      <PushToggle className="mt-6 rounded-xl border border-slate-200 bg-white p-4" />
     </div>
   );
 }

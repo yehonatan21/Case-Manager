@@ -55,7 +55,7 @@ export function Notice({
 export function EmptyState({ icon, title, text, action, className }: { icon?: React.ReactNode; title: React.ReactNode; text?: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
     <div className={cn("flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center", className)}>
-      {icon && <div className="mb-3 text-slate-400">{icon}</div>}
+      {icon && <div className="mb-3 text-slate-500">{icon}</div>}
       <p className="font-semibold text-slate-800">{title}</p>
       {text && <p className="mt-1 max-w-md text-sm text-slate-500">{text}</p>}
       {action && <div className="mt-5">{action}</div>}

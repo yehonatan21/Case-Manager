@@ -93,7 +93,7 @@ export function Timeline({ events, audience, empty }: { events: TimelineEvent[];
             <p className="text-sm font-medium text-slate-800">
               {label(e)}
               {audience === "staff" && e.visibility === "internal" && (
-                <Lock className="ms-1.5 inline size-3 text-slate-400" aria-label={d.common.internalOnly} />
+                <Lock className="ms-1.5 inline size-3 text-slate-500" aria-label={d.common.internalOnly} />
               )}
             </p>
             {e.type === "client_update" && typeof e.data?.text === "string" && (

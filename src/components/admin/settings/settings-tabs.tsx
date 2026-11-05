@@ -210,7 +210,7 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
                       {d.common.edit}
                     </Button>
                     <Button size="icon" variant="ghost" aria-label={d.common.delete} onClick={() => confirm(d.tasks.deleteConfirm) && call(t.id, () => api(`/api/admin/templates/${t.id}`, { method: "DELETE" }))}>
-                      <Trash2 className="size-4 text-slate-400" />
+                      <Trash2 className="size-4 text-slate-500" />
                     </Button>
                   </div>
                 </div>

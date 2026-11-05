@@ -18,6 +18,8 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
   const [items, setItems] = useState<N[] | null>(null);
   const [unread, setUnread] = useState(initialUnread);
   const box = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => setUnread(initialUnread), [initialUnread]);
 
@@ -33,7 +35,14 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
     const onDoc = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    // Esc closes the panel and returns focus to the bell (WCAG 2.1.1, 2.4.3).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    // Move focus into the panel when it opens.
+    requestAnimationFrame(() => panel.current?.focus());
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -51,12 +60,14 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
   return (
     <div className="relative" ref={box}>
       <button
+        ref={button}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="relative inline-flex size-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
         aria-label={`${d.nav.notifications}${unread ? ` (${unread})` : ""}`}
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
+        aria-controls="notifications-panel"
       >
         <Bell className="size-5" aria-hidden />
         {unread > 0 && (
@@ -66,7 +77,14 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
         )}
       </button>
       {open && (
-        <div className="absolute end-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div
+          ref={panel}
+          id="notifications-panel"
+          role="dialog"
+          aria-label={d.notificationsUi.title}
+          tabIndex={-1}
+          className="absolute end-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl focus:outline-none"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <p className="text-sm font-semibold">{d.notificationsUi.title}</p>
             {unread > 0 && (
@@ -88,9 +106,12 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
                   }}
                   className="block px-4 py-3 hover:bg-slate-50"
                 >
-                  <p className="bidi-auto text-sm font-medium text-slate-800">{n.title}</p>
+                  <p className="bidi-auto text-sm font-medium text-slate-800">
+                    {!n.readAt && <span className="sr-only">{d.notificationsUi.unread}: </span>}
+                    {n.title}
+                  </p>
                   {n.body && <p className="bidi-auto mt-0.5 line-clamp-2 text-xs text-slate-500">{n.body}</p>}
-                  <p className="mt-1 text-[11px] text-slate-400"><RelativeTime value={n.createdAt} /></p>
+                  <p className="mt-1 text-[11px] text-slate-500"><RelativeTime value={n.createdAt} /></p>
                 </Link>
               </li>
             ))}

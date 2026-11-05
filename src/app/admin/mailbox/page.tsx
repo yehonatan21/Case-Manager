@@ -31,7 +31,7 @@ export default async function MailboxPage() {
                 </p>
                 <div className="flex items-center gap-2">
                   <Badge tone={n.status === "sent" ? "success" : n.status === "failed" ? "danger" : "warning"}>{n.status}</Badge>
-                  <span className="text-xs text-slate-400">{formatDateTime(n.createdAt, locale)}</span>
+                  <span className="text-xs text-slate-500">{formatDateTime(n.createdAt, locale)}</span>
                 </div>
               </div>
               <p className="bidi-auto mt-1 font-medium text-slate-900">{n.title}</p>

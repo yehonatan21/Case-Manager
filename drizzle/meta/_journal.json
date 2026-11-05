@@ -15,6 +15,13 @@
       "when": 1793770306395,
       "tag": "0001_file_blobs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793815506389,
+      "tag": "0002_push_notifications",
+      "breakpoints": true
     }
   ]
 }

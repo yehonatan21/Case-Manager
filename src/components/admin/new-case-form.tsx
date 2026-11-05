@@ -338,7 +338,7 @@ export function NewCaseForm({
         <Button
           type="submit"
           loading={busy}
-          disabled={busy || (mode === "existing" && !clientId)}
+          disabled={mode === "existing" && !clientId}
         >
           {t.create}
         </Button>

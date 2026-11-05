@@ -6,6 +6,7 @@ import { dictionaries } from "../i18n/dictionaries";
 import { fmt, type Locale } from "../i18n/config";
 import { env } from "../env";
 import { renderEmail, sendEmail } from "../email";
+import { schedulePushDispatch, usersWithPush } from "./push";
 
 export type NotifyType = keyof (typeof dictionaries)["he"]["notify"];
 
@@ -24,6 +25,7 @@ export async function notify(
     .from(users)
     .where(inArray(users.id, ids));
   const rows: (typeof notifications.$inferInsert)[] = [];
+  const pushUsers = await usersWithPush(db, recipients.map((r) => r.id));
   for (const r of recipients) {
     if (r.status === "disabled") continue;
     const tpl = dictionaries[(r.locale as Locale) ?? "he"].notify[opts.type];
@@ -33,10 +35,14 @@ export async function notify(
     if (r.emailNotifications) {
       rows.push({ userId: r.id, caseId: opts.caseId ?? null, type: opts.type, channel: "email", toEmail: r.email, title, body, link: opts.link ?? null, status: "pending" });
     }
+    if (pushUsers.has(r.id)) {
+      rows.push({ userId: r.id, caseId: opts.caseId ?? null, type: opts.type, channel: "push", title, body, link: opts.link ?? null, status: "pending" });
+    }
   }
   if (rows.length) {
     await db.insert(notifications).values(rows);
     scheduleEmailDispatch();
+    if (rows.some((r) => r.channel === "push")) schedulePushDispatch();
   }
 }
 

@@ -1,3 +1,4 @@
+import { AccessibilityLink } from "@/components/app/accessibility-link";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDict } from "@/lib/i18n/server";
 import { requirePageStaff } from "@/lib/auth/session";
@@ -35,7 +36,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <LogoutButton withLabel={false} />
     </div>
   );
-  const navProps = { role: user.role, inboxCount: user.role === "admin" || user.role === "case_manager" ? inboxCount : 0, devMailbox: env.devMailbox, header, footer };
+  const sidebarFooter = (
+    <>
+      {footer}
+      <AccessibilityLink className="mt-2 block px-1" />
+    </>
+  );
+  const navProps = { role: user.role, inboxCount: user.role === "admin" || user.role === "case_manager" ? inboxCount : 0, devMailbox: env.devMailbox, header, footer: sidebarFooter };
   return (
     <div className="min-h-dvh">
       <RealtimeRefresher />

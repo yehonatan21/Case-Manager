@@ -98,7 +98,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 
 export const aiRunStatusEnum = pgEnum("ai_run_status", ["ok", "error", "fallback"]);
 
-export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email"]);
+export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email", "push"]);
 
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "read"]);
 
@@ -548,6 +548,25 @@ export const notifications = pgTable(
   },
   (t) => [index("notifications_user_idx").on(t.userId, t.createdAt), index("notifications_status_idx").on(t.status)],
 );
+
+/** A browser/device that agreed to receive push notifications (Web Push). One user can have several. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint), index("push_subscriptions_user_idx").on(t.userId)],
+);
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
 export const auditLogs = pgTable(
   "audit_logs",

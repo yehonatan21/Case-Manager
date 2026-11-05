@@ -6,11 +6,11 @@ type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "link"
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-700 text-white hover:bg-brand-800 shadow-sm disabled:bg-brand-300",
+  primary: "bg-brand-700 text-white hover:bg-brand-800 shadow-sm disabled:bg-brand-300 aria-disabled:bg-brand-300",
   secondary: "bg-brand-50 text-brand-800 hover:bg-brand-100",
   outline: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50",
   ghost: "text-slate-700 hover:bg-slate-100",
-  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
+  danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300 aria-disabled:bg-red-300",
   link: "text-brand-700 underline-offset-4 hover:underline px-0",
 };
 const sizes: Record<Size, string> = {
@@ -22,7 +22,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70 whitespace-nowrap",
+    "inline-flex items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70 aria-disabled:cursor-wait aria-disabled:opacity-70 whitespace-nowrap",
     variants[variant],
     sizes[size],
     className,
@@ -32,9 +32,32 @@ export function buttonClasses(variant: Variant = "primary", size: Size = "md", c
 export const Button = forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size; loading?: boolean }
->(function Button({ variant, size, className, loading, children, disabled, type = "button", ...props }, ref) {
+>(function Button({ variant, size, className, loading, children, disabled, type = "button", onClick, ...props }, ref) {
+  // While loading the button stays focusable (aria-disabled instead of disabled), so keyboard and screen-reader
+  // users keep their place when a form is submitted (WCAG 2.4.3); clicks and Enter-submits are ignored meanwhile.
   return (
-    <button ref={ref} type={type} className={buttonClasses(variant, size, className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
+    <button
+      ref={ref}
+      type={type}
+      className={buttonClasses(variant, size, className)}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
+      aria-busy={loading || undefined}
+      // Only buttons with a loading state (always in client components) get the guard; server-rendered
+      // buttons must not receive an event handler.
+      onClick={
+        loading === undefined
+          ? onClick
+          : (e) => {
+              if (loading) {
+                e.preventDefault();
+                return;
+              }
+              onClick?.(e);
+            }
+      }
+      {...props}
+    >
       {loading && <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />}
       {children}
     </button>
