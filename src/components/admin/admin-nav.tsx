@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CalendarClock, CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
+import { BarChart3, CalendarClock, CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/db/schema";
 
-type Item = { href: string; key: "dashboard" | "inbox" | "cases" | "quotes" | "tasks" | "meetings" | "customers" | "payments" | "settings" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
+type Item = { href: string; key: "dashboard" | "inbox" | "cases" | "quotes" | "tasks" | "meetings" | "customers" | "payments" | "reports" | "settings" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
 
 const ITEMS: Item[] = [
   { href: "/admin", key: "dashboard", icon: LayoutDashboard, roles: ["admin", "case_manager", "staff", "finance"], exact: true },
@@ -19,6 +19,7 @@ const ITEMS: Item[] = [
   { href: "/admin/meetings", key: "meetings", icon: CalendarClock, roles: ["admin", "case_manager", "staff"] },
   { href: "/admin/customers", key: "customers", icon: Users, roles: ["admin", "case_manager"] },
   { href: "/admin/payments", key: "payments", icon: CreditCard, roles: ["admin", "finance"] },
+  { href: "/admin/reports", key: "reports", icon: BarChart3, roles: ["admin", "case_manager", "finance"] },
   { href: "/admin/settings", key: "settings", icon: Settings, roles: ["admin"] },
   { href: "/admin/mailbox", key: "mailbox", icon: Mail, roles: ["admin"] },
 ];

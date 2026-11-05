@@ -10,6 +10,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Clients see the checklist with progress ("3 of 5 required documents provided"), and one to-do for all the required documents still missing.
   - Automatic reminders about missing required documents: one per case every N days, up to a maximum per document. Both are set under Settings → General; 0 turns reminders off.
 
+- **Reports.** A Reports page for admins, finance and case managers: revenue, the request → payment funnel, handling times, requests by service type and status, and team workload, for a chosen period, with an Excel export.
 - **Meetings.** Clients book a consultation (video, phone or at the office) from their case, in a free slot of the team member handling it; staff book any free time. Both sides can move or cancel it, get notifications and reminders, and add it to any calendar (.ics). Team members set their hours on the new Meetings page and can connect Google Calendar: busy times are excluded, and meetings are added with a Google Meet link.
 - **New service types from the assistant.** When no service type fits a request (for example insurance claims or lawsuits), the intake assistant creates one; requests with the same kind of service reuse it. Admins manage them under Settings → Service types (add, rename, hide).
 - **AI consent for accounts the team opened.** Such clients are asked once on the portal whether the team may use AI; anyone can give or withdraw consent on their profile. Self-registered clients keep the answer they gave at registration.
