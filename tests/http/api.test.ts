@@ -61,6 +61,31 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect(page.headers.get("x-powered-by")).toBeNull();
   });
 
+  it("every page links the browser-tab icon and the iPhone home-screen icon", async () => {
+    // Regression: setting `icons` in the root layout's metadata once replaced the generated links and the
+    // tab icon disappeared. The icons come only from src/app/icon.svg and src/app/apple-icon.png.
+    const client = await session("biz@example.com");
+    const staff = await session("finance@example.com");
+    const pages: [string, string | undefined][] = [["/", undefined], ["/login", undefined], ["/accessibility", undefined], ["/portal", client.cookie], ["/admin", staff.cookie]];
+    const hrefs = new Set<string>();
+    for (const [path, cookie] of pages) {
+      for (const locale of ["he", "en"]) {
+        const html = await (await fetch(BASE + path, { headers: { Cookie: [cookie, `cm_locale=${locale}`].filter(Boolean).join("; ") } })).text();
+        const icon = html.match(/<link rel="icon" href="([^"]+)"[^>]*type="image\/svg\+xml"/);
+        expect(icon?.[1], `${path} (${locale}): tab icon`).toMatch(/^\/icon\.svg/);
+        const apple = html.match(/<link rel="apple-touch-icon" href="([^"]+)"/);
+        expect(apple?.[1], `${path} (${locale}): apple icon`).toMatch(/^\/apple-icon\.png/);
+        hrefs.add(icon![1]!);
+        hrefs.add(apple![1]!);
+      }
+    }
+    for (const href of hrefs) {
+      const r = await fetch(BASE + href);
+      expect(r.status, href).toBe(200);
+      expect(r.headers.get("content-type"), href).toMatch(href.includes("svg") ? /image\/svg\+xml/ : /image\/png/);
+    }
+  });
+
   it("public pages render in both languages", async () => {
     for (const p of ["/", "/login", "/register", "/intake/manual", "/privacy", "/terms"]) {
       const he = await fetch(BASE + p);
