@@ -203,9 +203,9 @@ export async function queueTestPush(db: DbOrTx, user: Pick<User, "id">, text: { 
   await db.insert(notifications).values({ userId: user.id, type: "push_test", channel: "push", title: text.title, body: text.body, link: null, status: "pending" });
 }
 
-/** Old delivered/failed push rows aren't shown anywhere; keep the outbox small. */
+/** Old delivered/failed push and WhatsApp rows aren't shown anywhere; keep the outbox small. */
 export async function prunePushOutbox(db: DbOrTx, olderThanDays = 30) {
   await db
     .delete(notifications)
-    .where(and(eq(notifications.channel, "push"), inArray(notifications.status, ["sent", "failed"]), lt(notifications.createdAt, new Date(Date.now() - olderThanDays * 86400_000))));
+    .where(and(inArray(notifications.channel, ["push", "whatsapp"]), inArray(notifications.status, ["sent", "failed"]), lt(notifications.createdAt, new Date(Date.now() - olderThanDays * 86400_000))));
 }

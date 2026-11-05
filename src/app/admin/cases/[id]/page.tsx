@@ -61,7 +61,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
             : null,
           access: b.access,
           events: b.events.map((e) => ({ id: e.id, type: e.type, visibility: e.visibility, actorKind: e.actorKind, actorName: e.actorName, data: e.data, createdAt: e.createdAt })),
-          messages: b.messages.map((m) => ({ id: m.id, senderId: m.senderId, senderName: m.senderName, senderRole: m.senderRole, kind: m.kind, body: m.body, isInfoRequest: m.isInfoRequest, aiRunId: m.aiRunId, createdAt: m.createdAt })),
+          messages: b.messages.map((m) => ({ id: m.id, senderId: m.senderId, senderName: m.senderName, senderRole: m.senderRole, kind: m.kind, body: m.body, isInfoRequest: m.isInfoRequest, via: m.via, aiRunId: m.aiRunId, createdAt: m.createdAt })),
           documents: b.documents.map((doc) => ({
             id: doc.id,
             title: doc.title,

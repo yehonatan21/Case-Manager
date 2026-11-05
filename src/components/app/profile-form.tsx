@@ -14,10 +14,13 @@ export function ProfileForm({
   user,
   customerType,
   organization,
+  whatsappAvailable = false,
 }: {
-  user: { name: string; email: string; phone: string | null; locale: "he" | "en"; emailNotifications: boolean };
+  user: { name: string; email: string; phone: string | null; locale: "he" | "en"; emailNotifications: boolean; whatsapp: boolean };
   customerType: CustomerType | null;
   organization: string | null;
+  /** WhatsApp is connected, so users can opt in to updates there. */
+  whatsappAvailable?: boolean;
 }) {
   const { d } = useI18n();
   const router = useRouter();
@@ -26,12 +29,13 @@ export function ProfileForm({
   const [phone, setPhone] = useState(user.phone ?? "");
   const [locale, setLocale] = useState(user.locale);
   const [emailNotifications, setEmailNotifications] = useState(user.emailNotifications);
+  const [whatsapp, setWhatsapp] = useState(user.whatsapp);
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
     setBusy(true);
     try {
-      await api("/api/profile", { method: "PATCH", body: { name, phone: phone || null, locale, emailNotifications } });
+      await api("/api/profile", { method: "PATCH", body: { name, phone: phone || null, locale, emailNotifications, ...(whatsappAvailable ? { whatsapp } : {}) } });
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "he" ? "rtl" : "ltr";
       toast("success", d.portal.profileSaved);
@@ -48,7 +52,7 @@ export function ProfileForm({
       <CardContent className="space-y-5 py-6">
         <Field label={d.account.fullName}>{(p) => <Input {...p} value={name} onChange={(e) => setName(e.target.value)} />}</Field>
         <Field label={d.account.email}>{(p) => <Input {...p} value={user.email} dir="ltr" disabled />}</Field>
-        <Field label={d.account.phone}>{(p) => <Input {...p} type="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />}</Field>
+        <Field label={d.account.phone}>{(p) => <Input {...p} type="tel" dir="ltr" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />}</Field>
         {customerType && (
           <p className="text-sm text-slate-600">
             {d.account.customerType}: <span className="font-medium text-slate-800">{d.customerType[customerType]}</span>
@@ -64,6 +68,14 @@ export function ProfileForm({
           )}
         </Field>
         <Checkbox label={d.portal.emailNotifications} checked={emailNotifications} onChange={(e) => setEmailNotifications(e.target.checked)} />
+        {whatsappAvailable && (
+          <div>
+            <Checkbox label={d.portal.whatsappUpdates} checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} aria-describedby="whatsapp-hint" />
+            <p id="whatsapp-hint" className="ms-6 mt-1 text-xs text-slate-500">
+              {whatsapp && !phone.trim() ? d.portal.whatsappNeedsPhone : d.portal.whatsappHint}
+            </p>
+          </div>
+        )}
         <div className="flex justify-end">
           <Button onClick={save} loading={busy}>
             {d.common.save}

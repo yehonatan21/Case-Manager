@@ -98,7 +98,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 
 export const aiRunStatusEnum = pgEnum("ai_run_status", ["ok", "error", "fallback"]);
 
-export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email", "push"]);
+export const notificationChannelEnum = pgEnum("notification_channel", ["in_app", "email", "push", "whatsapp"]);
 
 export const notificationStatusEnum = pgEnum("notification_status", ["pending", "sent", "failed", "read"]);
 
@@ -181,12 +181,18 @@ export const users = pgTable(
     status: userStatusEnum("status").notNull().default("active"),
     locale: text("locale").$type<Locale>().notNull().default("he"),
     emailNotifications: boolean("email_notifications").notNull().default(true),
+    /** WhatsApp number in international format, digits only (972501234567). Set when the user opts in. */
+    whatsappPhone: text("whatsapp_phone"),
+    /** When the user agreed to get updates on WhatsApp. WhatsApp requires an opt-in. */
+    whatsappOptInAt: timestamp("whatsapp_opt_in_at", { withTimezone: true }),
+    /** Last message from this user on WhatsApp: within 24 hours, updates can go as plain text instead of a template. */
+    whatsappLastInboundAt: timestamp("whatsapp_last_inbound_at", { withTimezone: true }),
     termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
     aiConsentAt: timestamp("ai_consent_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("users_email_idx").on(t.email)],
+  (t) => [uniqueIndex("users_email_idx").on(t.email), index("users_whatsapp_idx").on(t.whatsappPhone)],
 );
 
 export const customers = pgTable(
@@ -328,9 +334,13 @@ export const messages = pgTable(
     body: text("body").notNull(),
     isInfoRequest: boolean("is_info_request").notNull().default(false),
     aiRunId: uuid("ai_run_id"),
+    /** Where the message came from when not the app itself ("whatsapp"). */
+    via: text("via"),
+    /** The provider's message id, so a webhook delivered twice adds the message once. */
+    externalId: text("external_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("messages_case_idx").on(t.caseId, t.createdAt)],
+  (t) => [index("messages_case_idx").on(t.caseId, t.createdAt), uniqueIndex("messages_external_idx").on(t.externalId)],
 );
 
 export const caseReads = pgTable(
@@ -549,6 +559,10 @@ export const notifications = pgTable(
     type: text("type").notNull(),
     channel: notificationChannelEnum("channel").notNull(),
     toEmail: text("to_email"),
+    /** WhatsApp number (digits, international format) for the "whatsapp" channel. */
+    toPhone: text("to_phone"),
+    /** The provider's message id (WhatsApp), to match delivery updates and replies to the case. */
+    externalId: text("external_id"),
     title: text("title").notNull(),
     body: text("body").notNull().default(""),
     link: text("link"),
@@ -559,7 +573,7 @@ export const notifications = pgTable(
     sentAt: timestamp("sent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt), index("notifications_status_idx").on(t.status)],
+  (t) => [index("notifications_user_idx").on(t.userId, t.createdAt), index("notifications_status_idx").on(t.status), index("notifications_external_idx").on(t.externalId)],
 );
 
 /** A browser/device that agreed to receive push notifications (Web Push). One user can have several. */

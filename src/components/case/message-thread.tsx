@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Lock, Send } from "lucide-react";
+import { Bot, Lock, MessageCircle, Send } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime } from "@/lib/i18n/format";
@@ -22,6 +22,8 @@ export type ThreadMessage = {
   body: string;
   isInfoRequest: boolean;
   aiRunId: string | null;
+  /** "whatsapp" when the client wrote on WhatsApp. */
+  via?: string | null;
   createdAt: Date | string;
 };
 
@@ -100,6 +102,15 @@ export function MessageThread({
                 <p className="mb-1 text-xs text-slate-500">
                   <span className="font-medium text-slate-700">{mine ? d.common.you : m.senderName}</span>
                   {staffSender && !mine && kind === "thread" && <> · {d.messages.team}</>} · {formatDateTime(m.createdAt, locale)}
+                  {m.via === "whatsapp" && (
+                    <>
+                      {" · "}
+                      <span className="inline-flex items-center gap-0.5 align-middle text-emerald-800">
+                        <MessageCircle className="size-3" aria-hidden />
+                        {d.whatsapp.via}
+                      </span>
+                    </>
+                  )}
                 </p>
                 <div
                   className={cn(

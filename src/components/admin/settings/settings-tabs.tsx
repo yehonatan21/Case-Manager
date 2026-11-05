@@ -48,11 +48,28 @@ const textToTasks = (s: string): ServiceTemplateTask[] =>
       return { title: title!, requiresClientAction: client, ...(days && !isNaN(Number(days)) ? { dueInDays: Number(days) } : {}) };
     });
 
-export function SettingsTabs({ initialTab, currentUserId, settings, staff, templates, prices }: { initialTab?: string; currentUserId: string; settings: AppSettings; staff: Staff[]; templates: Template[]; prices: Price[] }) {
+export function SettingsTabs({
+  initialTab,
+  currentUserId,
+  settings,
+  staff,
+  templates,
+  prices,
+  integrations,
+}: {
+  initialTab?: string;
+  currentUserId: string;
+  settings: AppSettings;
+  staff: Staff[];
+  templates: Template[];
+  prices: Price[];
+  /** Rendered in the Integrations tab (WhatsApp). */
+  integrations?: React.ReactNode;
+}) {
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState(["general", "users", "templates", "priceList"].includes(initialTab ?? "") ? initialTab! : "general");
+  const [tab, setTab] = useState(["general", "users", "templates", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [invite, setInvite] = useState({ email: "", name: "", role: "case_manager" as UserRole });
@@ -85,9 +102,15 @@ export function SettingsTabs({ initialTab, currentUserId, settings, staff, templ
           { id: "users", label: d.settingsPage.tabs.users },
           { id: "templates", label: d.settingsPage.tabs.templates },
           { id: "priceList", label: d.settingsPage.tabs.priceList },
+          ...(integrations ? [{ id: "integrations", label: d.settingsPage.tabs.integrations }] : []),
         ]}
       />
       <div className="pt-5">
+        {integrations && (
+          <TabPanel id="integrations" active={tab === "integrations"} className="max-w-3xl space-y-4">
+            {integrations}
+          </TabPanel>
+        )}
         <TabPanel id="general" active={tab === "general"}>
           <Card className="max-w-2xl">
             <CardContent className="grid gap-4 py-5 sm:grid-cols-2">

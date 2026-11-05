@@ -100,6 +100,14 @@ export const env = {
   growApiKey: str("GROW_API_KEY"),
   growSandbox: bool("GROW_SANDBOX", true),
   growApiUrl: str("GROW_API_URL"),
+  /** WhatsApp (Meta Cloud API). Can also be entered by an admin under Settings → Integrations. */
+  whatsappPhoneNumberId: str("WHATSAPP_PHONE_NUMBER_ID").trim(),
+  whatsappAccessToken: str("WHATSAPP_ACCESS_TOKEN").trim(),
+  whatsappAppSecret: str("WHATSAPP_APP_SECRET").trim(),
+  whatsappVerifyToken: str("WHATSAPP_VERIFY_TOKEN").trim(),
+  whatsappTemplate: str("WHATSAPP_TEMPLATE", "case_update").trim(),
+  /** Graph API base URL (with version). Override only for tests. */
+  whatsappApiUrl: str("WHATSAPP_API_URL", "https://graph.facebook.com/v23.0").replace(/\/+$/, ""),
 
   // local disk by default; Vercel Blob when connected; the database when the host has no persistent disk.
   storageProvider: str("STORAGE_PROVIDER", blobToken ? "vercel-blob" : isVercel ? "database" : "local") as "local" | "s3" | "vercel-blob" | "database",

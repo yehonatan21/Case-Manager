@@ -10,11 +10,17 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Clients see the checklist with progress ("3 of 5 required documents provided"), and one to-do for all the required documents still missing.
   - Automatic reminders about missing required documents: one per case every N days, up to a maximum per document. Both are set under Settings → General; 0 turns reminders off.
 
+- **WhatsApp.** Updates on WhatsApp for users who opt in on their profile, through the Meta Cloud API (the provider can be swapped).
+  - An admin connects the business number under Settings → Integrations; the credentials are checked with WhatsApp and stored encrypted.
+  - Updates are sent as plain text within 24 hours of the user's last WhatsApp message, otherwise with an approved template.
+  - Client replies arrive on a signed webhook and are added to the right case's messages, labelled "WhatsApp". Files they send are added to the case's documents. "STOP" opts out.
+
 ### Changed
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).
 
 ### Fixed
 - The notifications bell's unread badge is no longer read twice by screen readers (WCAG 2.5.3).
+- Tab bars no longer show horizontal and vertical scrollbars; they still scroll.
 
 ## [1.0.0] — 2026-11-05
 
