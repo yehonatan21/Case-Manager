@@ -43,6 +43,13 @@
       "when": 1793877791321,
       "tag": "0005_signatures",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793879787266,
+      "tag": "0006_service_types_ai_consent",
+      "breakpoints": true
     }
   ]
 }

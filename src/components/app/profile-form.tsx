@@ -16,7 +16,7 @@ export function ProfileForm({
   organization,
   whatsappAvailable = false,
 }: {
-  user: { name: string; email: string; phone: string | null; locale: "he" | "en"; emailNotifications: boolean; whatsapp: boolean };
+  user: { name: string; email: string; phone: string | null; locale: "he" | "en"; emailNotifications: boolean; whatsapp: boolean; aiConsent?: boolean | null };
   customerType: CustomerType | null;
   organization: string | null;
   /** WhatsApp is connected, so users can opt in to updates there. */
@@ -30,12 +30,15 @@ export function ProfileForm({
   const [locale, setLocale] = useState(user.locale);
   const [emailNotifications, setEmailNotifications] = useState(user.emailNotifications);
   const [whatsapp, setWhatsapp] = useState(user.whatsapp);
+  const [aiConsent, setAiConsent] = useState(!!user.aiConsent);
+  // Only clients are asked (staff accounts don't get the setting).
+  const showAi = user.aiConsent !== null && user.aiConsent !== undefined;
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
     setBusy(true);
     try {
-      await api("/api/profile", { method: "PATCH", body: { name, phone: phone || null, locale, emailNotifications, ...(whatsappAvailable ? { whatsapp } : {}) } });
+      await api("/api/profile", { method: "PATCH", body: { name, phone: phone || null, locale, emailNotifications, ...(whatsappAvailable ? { whatsapp } : {}), ...(showAi && aiConsent !== !!user.aiConsent ? { aiConsent } : {}) } });
       document.documentElement.lang = locale;
       document.documentElement.dir = locale === "he" ? "rtl" : "ltr";
       toast("success", d.portal.profileSaved);
@@ -68,6 +71,14 @@ export function ProfileForm({
           )}
         </Field>
         <Checkbox label={d.portal.emailNotifications} checked={emailNotifications} onChange={(e) => setEmailNotifications(e.target.checked)} />
+        {showAi && (
+          <div>
+            <Checkbox label={d.portal.aiConsentProfile} checked={aiConsent} onChange={(e) => setAiConsent(e.target.checked)} aria-describedby="ai-consent-hint" />
+            <p id="ai-consent-hint" className="ms-6 mt-1 text-xs text-slate-500">
+              {d.portal.aiConsentProfileHint}
+            </p>
+          </div>
+        )}
         {whatsappAvailable && (
           <div>
             <Checkbox label={d.portal.whatsappUpdates} checked={whatsapp} onChange={(e) => setWhatsapp(e.target.checked)} aria-describedby="whatsapp-hint" />

@@ -296,7 +296,7 @@ export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L;
           : "Thank you! It looks like we have a good picture of the request. You can move to the summary now, review and fix it — or keep adding details.",
       quick_replies: [],
       ready_for_review: true,
-      summary,
+      summary: { ...summary, new_service_type: null },
     };
   }
   const intro =
@@ -309,7 +309,7 @@ export function mockIntakeTurn(opts: { messages: IntakeChatMessage[]; locale: L;
     reply: `${intro} ${pick(l, next.text)}`,
     quick_replies: pickArr(l, next.replies),
     ready_for_review: false,
-    summary,
+    summary: { ...summary, new_service_type: null },
     questionId: next.id,
   };
 }

@@ -3,11 +3,12 @@
 import { ClipboardList } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import type { IntakeSummary } from "@/lib/db/schema";
-import { normalizeCategory } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 
 /** Live "what we understood so far" card, updated after each turn. */
 export function UnderstoodCard({ summary }: { summary: IntakeSummary | null }) {
   const { d } = useI18n();
+  const categories = useCategories();
   const has = summary && (summary.request_title || summary.known_facts.length);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -61,7 +62,7 @@ export function UnderstoodCard({ summary }: { summary: IntakeSummary | null }) {
           )}
           <div>
             <dt className="text-xs text-slate-500">{d.review.category}</dt>
-            <dd className="text-slate-700">{d.categories[normalizeCategory(summary!.service_category)]}</dd>
+            <dd className="text-slate-700">{categories.label(summary!.service_category)}</dd>
           </div>
         </dl>
       )}

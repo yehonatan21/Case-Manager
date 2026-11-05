@@ -191,6 +191,8 @@ export const users = pgTable(
     whatsappLastInboundAt: timestamp("whatsapp_last_inbound_at", { withTimezone: true }),
     termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
     aiConsentAt: timestamp("ai_consent_at", { withTimezone: true }),
+    /** The user chose not to allow AI (at registration or later). Unset with no consent = never asked (e.g. an account the team opened). */
+    aiConsentDeclinedAt: timestamp("ai_consent_declined_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -406,6 +408,20 @@ export const documentFiles = pgTable(
   },
   (t) => [index("document_files_doc_idx").on(t.documentId)],
 );
+
+/**
+ * Service types beyond the built-in ones (SERVICE_CATEGORIES): added by an admin, or proposed by the intake AI
+ * when no existing type fits a request (e.g. insurance claims, lawsuits). Admins can rename or hide them.
+ */
+export const serviceCategories = pgTable("service_categories", {
+  key: text("key").primaryKey(),
+  nameHe: text("name_he").notNull(),
+  nameEn: text("name_en").notNull(),
+  createdByAi: boolean("created_by_ai").notNull().default(false),
+  createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * An electronic signature: requested by staff on a PDF document (then signed by the client), or made by the
@@ -705,6 +721,7 @@ export type DocumentFile = typeof documentFiles.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;
 export type Signature = typeof signatures.$inferSelect;
+export type ServiceCategoryRow = typeof serviceCategories.$inferSelect;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type IntakeSession = typeof intakeSessions.$inferSelect;

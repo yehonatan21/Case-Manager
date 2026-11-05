@@ -10,6 +10,8 @@ import { SettingsTabs } from "@/components/admin/settings/settings-tabs";
 import { WhatsAppConnect } from "@/components/admin/whatsapp-connect";
 import { getWhatsAppStatus } from "@/lib/services/whatsapp";
 import { GrowConnect } from "@/components/admin/grow-connect";
+import { ServiceTypes } from "@/components/admin/settings/service-types";
+import { listServiceCategories } from "@/lib/services/categories";
 import { getPaymentProviderStatus } from "@/lib/services/payment-settings";
 
 export async function generateMetadata() {
@@ -31,6 +33,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getWhatsAppStatus(db),
     getPaymentProviderStatus(db),
   ]);
+  const categories = await listServiceCategories(db, { includeInactive: true });
   return (
     <>
       <PageHeader title={d.settingsPage.title} />
@@ -40,6 +43,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         settings={settings}
         staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role, status: s.status }))}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: t.tasks, documents: t.documents, active: t.active }))}
+        serviceTypes={<ServiceTypes categories={categories} />}
         integrations={
           <>
             <GrowConnect status={payments} canEdit className="" />

@@ -10,6 +10,8 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Clients see the checklist with progress ("3 of 5 required documents provided"), and one to-do for all the required documents still missing.
   - Automatic reminders about missing required documents: one per case every N days, up to a maximum per document. Both are set under Settings → General; 0 turns reminders off.
 
+- **New service types from the assistant.** When no service type fits a request (for example insurance claims or lawsuits), the intake assistant creates one; requests with the same kind of service reuse it. Admins manage them under Settings → Service types (add, rename, hide).
+- **AI consent for accounts the team opened.** Such clients are asked once on the portal whether the team may use AI; anyone can give or withdraw consent on their profile. Self-registered clients keep the answer they gave at registration.
 - **Electronic signatures.** Staff request a signature on a PDF in a case; the client reviews it and signs with their full name, optionally drawing a signature too.
   - The signed copy is saved as a new version: each page stamped, plus a signature certificate page (signer, time, IP, device, method, SHA-256 of the original). Staff see the same evidence in the app.
   - Approving a quote is signed as well, and a signed PDF of the approved version is saved to the case's documents.
@@ -23,6 +25,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).
 
 ### Fixed
+- The intake assistant no longer shows raw JSON when a model puts the other fields inside its reply text.
 - The notifications bell's unread badge is no longer read twice by screen readers (WCAG 2.5.3).
 - Tab bars no longer show horizontal and vertical scrollbars; they still scroll.
 

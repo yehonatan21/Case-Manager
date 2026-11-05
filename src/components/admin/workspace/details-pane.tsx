@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { CaseStatusBadge } from "@/components/app/status";
-import { MANUAL_TRANSITIONS, SERVICE_CATEGORIES, normalizeCategory } from "@/lib/domain";
+import { MANUAL_TRANSITIONS } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 import type { CaseStatus, Urgency } from "@/lib/db/schema";
 import type { StaffOption, WorkspaceData } from "./types";
 
 export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; staff: StaffOption[]; currentUserId: string }) {
   const { d, locale } = useI18n();
+  const categories = useCategories();
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -167,10 +169,12 @@ export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; sta
             </div>
             <div>
               <Label htmlFor="ws-cat">{d.workspace.category}</Label>
-              <Select id="ws-cat" value={normalizeCategory(c.serviceCategory)} disabled={!canEdit} onChange={(e) => patch("cat", { serviceCategory: e.target.value })}>
-                {SERVICE_CATEGORIES.map((s) => (
-                  <option key={s} value={s}>
-                    {d.categories[s]}
+              <Select id="ws-cat" value={c.serviceCategory} disabled={!canEdit} onChange={(e) => patch("cat", { serviceCategory: e.target.value })}>
+                {/* A hidden type the case still has stays selectable so the select shows it. */}
+                {!categories.list.some((x) => x.key === c.serviceCategory) && <option value={c.serviceCategory}>{categories.label(c.serviceCategory)}</option>}
+                {categories.list.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {categories.label(s.key)}
                   </option>
                 ))}
               </Select>

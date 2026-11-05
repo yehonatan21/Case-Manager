@@ -9,7 +9,7 @@ import { fmt } from "@/lib/i18n/config";
 import { CaseStatusBadge, UrgencyBadge } from "@/components/app/status";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/misc";
-import { normalizeCategory } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 import type { CaseStatus, Urgency } from "@/lib/db/schema";
 
 export type CaseRow = {
@@ -29,6 +29,7 @@ export type CaseRow = {
 
 export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant: "inbox" | "cases"; empty: string }) {
   const { d, locale } = useI18n();
+  const categories = useCategories();
   const router = useRouter();
   if (rows.length === 0) return <EmptyState title={empty} />;
   return (
@@ -60,7 +61,7 @@ export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant:
                 <span className="bidi-auto font-medium text-slate-900">{r.title}</span>
                 {r.hasAiSummary && <Bot className="ms-1.5 inline size-3.5 text-brand-500" aria-label={d.copilot.summaryTitle} />}
               </td>
-              <td className="px-4 py-3 text-slate-600">{d.categories[normalizeCategory(r.serviceCategory)]}</td>
+              <td className="px-4 py-3 text-slate-600">{categories.label(r.serviceCategory)}</td>
               <td className="whitespace-nowrap px-4 py-3 text-slate-600"><RelativeTime value={variant === "inbox" ? r.createdAt : r.updatedAt} /></td>
               <td className="px-4 py-3">
                 <UrgencyBadge urgency={r.urgency} />
