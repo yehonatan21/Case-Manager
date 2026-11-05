@@ -3,15 +3,40 @@
 > **מערכת חכמה לניהול בקשות, שירותים ותיקים.** מבקשה חופשית של לקוח ועד השלמת השירות — בתהליך אחד, ברור, חכם ושקוף.
 > הממשק בעברית (RTL) כברירת מחדל, עם מעבר מלא לאנגלית (LTR) בלחיצה אחת.
 
-A responsive web app where customers describe what they need in their own words, an AI assistant turns it into a structured request, staff review it with an AI copilot and send a quote, and the customer approves, pays and follows the case until it's done.
+A responsive web app for service businesses:
+1. A customer describes what they need in their own words, and an AI assistant turns it into a structured request.
+2. Staff review it with an AI copilot and send a quote.
+3. The customer approves, pays online and follows the case until it's done.
 
-**Languages:** Hebrew (RTL, default) and English (LTR). The language switcher is in every header; the choice is stored in a cookie and on the user's profile (so emails arrive in their language too).
+Staff can also open requests on a client's behalf.
+
+- **Languages:** Hebrew (RTL, default) and English (LTR). The switcher is in every header. The choice is saved in a cookie and on the profile, so emails and push notifications arrive in the user's language.
+- **Live:** production at https://case-manager-eta.vercel.app (branch `main`), dev at https://case-manager-git-dev-yehonatan21.vercel.app (branch `dev`).
 
 | Customer: describe the need | Customer: AI conversation | Customer: case on mobile |
 |---|---|---|
 | ![Home](docs/screenshots/home-he.png) | ![Intake](docs/screenshots/intake-chat-he.png) | ![Mobile case](docs/screenshots/mobile-case-he.png) |
 | **Staff: case workspace + AI copilot** | **Staff: quote editor** | **Staff dashboard (English)** |
 | ![Workspace](docs/screenshots/case-workspace-he.png) | ![Quote editor](docs/screenshots/quote-editor-he.png) | ![Dashboard](docs/screenshots/dashboard-en.png) |
+
+## Contents
+
+- [Quick start](#quick-start)
+- [Features](#features)
+- [Roles and permissions](#roles-and-permissions)
+- [Configuration](#configuration)
+- [AI providers](#ai-providers)
+- [Payments: Grow, Stripe, test checkout](#payments)
+- [Push notifications](#push-notifications)
+- [Email](#email)
+- [Google sign-in](#google-sign-in)
+- [Deploy](#deploy)
+- [Branches and environments](#branches-and-environments)
+- [Testing and CI/CD](#testing-and-cicd)
+- [Architecture](#architecture)
+- [Security](#security)
+- [Scripts](#scripts)
+- [Out of scope](#out-of-scope)
 
 ---
 
@@ -25,9 +50,14 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. That's it: with no configuration the app uses an embedded PostgreSQL (PGlite) in `.data/`, an offline AI engine, a test checkout, local encrypted file storage, and prints emails to the console. Sign-in codes are shown on screen in development.
+Open http://localhost:3000. No configuration is needed. By default the app uses:
+- an embedded PostgreSQL (PGlite) in `.data/`
+- an offline AI engine
+- a test checkout
+- local encrypted file storage
+- emails printed to the console, and sign-in codes shown on screen
 
-**Demo accounts** (seeded automatically on first run, sign in at `/login`):
+**Demo accounts** (seeded on first run in development or demo mode, sign in at `/login`):
 
 | Email | Role |
 |---|---|
@@ -38,51 +68,182 @@ Open http://localhost:3000. That's it: with no configuration the app uses an emb
 | `client@example.com` | Private customer (2 cases) |
 | `biz@example.com` | Company customer (quote waiting for approval) |
 
-To use AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRouter, including free models). See [AI providers](#ai-providers) and `.env.example`. To use real PostgreSQL, `docker compose up -d` and set `DATABASE_URL`.
+To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRouter, including free models). For real PostgreSQL, run `docker compose up -d` and set `DATABASE_URL`.
+
+## Features
+
+| Area | What it does |
+|---|---|
+| **Free-text intake** | Home page prompt plus example chips, then an AI conversation: one question at a time, quick replies, "I don't know" / "Skip", about 7 questions, file attachments, and a live "what we understood so far" card. Works without an account. A manual form is available at any time (`/intake/manual`). |
+| **Review & submit** | "Did we get it right?": every field is editable, and the customer's facts are kept separate from the assistant's interpretation. |
+| **Accounts** | Passwordless sign-in with an emailed code (rate-limited, attempt-limited, stored hashed) or Google. One page for sign-in and registration. An unknown email is offered registration instead of a code. Customer type (private / business / company / other) with organisation details. Terms acceptance and a separate, plain-language AI-processing consent. |
+| **Customer portal** | My cases (status, last update, required action). The case page shows "What needs to be done now?", a progress track of the real stages, a timeline, messages, documents, the quote and payments, and the contact person. Mobile bottom navigation. |
+| **Staff area** | Dashboard (new, awaiting quote, pending quotes, active, waiting on client, overdue tasks) with "Needs attention now"; incoming-requests inbox; case list with filters; customers; payments; settings. |
+| **Requests opened by staff** | Admins and case managers open a request for an existing client, or for a new one by email, from **Cases → New request** or a client's profile. It's assigned to the creator by default; the client is notified and can sign in with that email. |
+| **Case workspace** | Three panes (details / work area / AI copilot): assign, validated status changes, urgency, category, client messages, internal notes, info requests, tasks, quotes, documents, history, client-timeline updates, complete/close. |
+| **AI copilot** | Case summary: what the client wants, known facts **linked to their source**, missing info, complexities, next step. Also up to 3 recommended actions, clarifying-question drafts, rewrite / shorten / translate, thread summary, status-update drafts, task plans, quote drafts and document analysis. Anything customer-facing is a draft a person must send. |
+| **Quotes** | Line items; VAT on top or included; currency, payment terms, timeline, disclaimers, validity; live preview of the customer view. AI drafts use prices **only** from the price list. Sent quotes are immutable, and revisions create new versions. Quotes expire automatically. |
+| **Approval & payment** | The customer approves a specific version (identity, time, IP and a hash of the content are recorded), asks for clarification, or declines. One payment per quote through [Grow, Stripe or the test checkout](#payments). Only a verified payment activates the case. |
+| **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
+| **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
+| **Notifications** | In-app (bell and page), email, and [push](#push-notifications) for every event, localized per recipient, through a retrying outbox. |
+| **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
+| **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit); service templates; price list; payment provider. |
+
+**Status model.** Internal statuses map to simpler customer labels:
+
+- **Internal:** `submitted → under_review ⇄ awaiting_information → quote_preparation → quote_sent → awaiting_payment → active ⇄ awaiting_client → completed → closed`, plus `cancelled` and `declined`.
+- **Customer labels:** received → in review → quote ready → awaiting payment → in progress → completed.
+
+`quote_sent`, `awaiting_payment` and `active` are reached only through the real action: sending a quote, the customer's approval, a verified payment. Every material action writes a case event with time, actor and visibility. Internal events and notes are never shown to customers.
+
+## Roles and permissions
+
+| Role | Can |
+|---|---|
+| **Admin** | Everything, including team members, settings, templates, prices and the payment provider. |
+| **Case manager** | Unassigned new requests and the requests assigned to them; open requests for clients; quotes for their cases. |
+| **Staff** | Only cases where they have an assigned task; no pricing. |
+| **Finance** | Cases, quotes and payments, but no messages, documents or AI tools. |
+| **Customer** | Only their own cases, and only client-facing data. |
+
+Every check runs on the server (`src/lib/auth/permissions.ts`). A case you may not see answers "not found".
+
+**Adding team members** (Settings → Users):
+- A new email is invited and becomes active on first sign-in.
+- An email registered as a client with no requests becomes a team account.
+- A disabled member is re-enabled.
+- Duplicates and clients with requests are refused with a clear reason.
+
+## Configuration
+
+All settings are environment variables; see [`.env.example`](.env.example) for the complete list with comments.
+
+| Variable | Purpose |
+|---|---|
+| `APP_SECRET` | **Required in production.** Signs sessions and codes and derives the encryption key. Never change it once set. |
+| `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED`) | PostgreSQL. Empty: embedded PGlite in `.data/pglite`. |
+| `APP_URL`, `APP_NAME` | Public URL (auto-detected on Vercel, Render, Railway, Fly) and name. |
+| `ADMIN_EMAIL` | This address is ensured to be an administrator. |
+| `DEMO_MODE` | Public demo: codes on screen, demo data, a warning banner. **Never with real data.** |
+| `CRON_SECRET` | Protects `POST /api/jobs/run`. |
+| `JOBS_INTERVAL_MINUTES` | Runs the jobs inside the server every N minutes instead of external cron. |
+| `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, … | See [AI providers](#ai-providers). |
+| `PAYMENT_PROVIDER`, `STRIPE_*`, `GROW_*` | See [Payments](#payments). |
+| `VAPID_*` | Optional; see [Push notifications](#push-notifications). |
+| `SMTP_URL`, `EMAIL_FROM`, `EMAIL_FROM_NAME` | See [Email](#email). |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | See [Google sign-in](#google-sign-in). |
+| `STORAGE_PROVIDER` (`local`, `database`, `s3`, `vercel-blob`), `S3_*`, `BLOB_READ_WRITE_TOKEN` | Where uploads are stored. Auto-selected when unset. |
+| `MAX_UPLOAD_MB`, `CLAMAV_HOST`, `CLAMAV_PORT` | Upload limit; malware scanning. |
+
+## AI providers
+
+The AI features talk to one small interface, `AiProvider` in [`src/lib/ai/providers/types.ts`](src/lib/ai/providers/types.ts). Which provider answers is a setting:
+
+| `AI_PROVIDER` | Uses | Reads documents? |
+|---|---|---|
+| `auto` (default) | The first configured of: Claude → OpenRouter → OpenAI-compatible. With none, the built-in offline engine. | — |
+| `anthropic` | Claude (`ANTHROPIC_API_KEY`, `AI_MODEL`, default `claude-opus-5-5`) | Yes |
+| `openrouter` | [OpenRouter](https://openrouter.ai) (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODELS`, `OPENROUTER_DATA_COLLECTION`) | No (offline analysis) |
+| `openai-compatible` | Any OpenAI-style API: OpenAI, Groq, Mistral, Together, a local Ollama… (`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL_NAME`, `AI_JSON_SCHEMA`) | No (offline analysis) |
+| `mock` | The offline engine only | — |
+
+- **To replace the provider without code,** change the variables and redeploy.
+- **To add a service,** write `src/lib/ai/providers/<name>.ts` exporting an `AiProvider` and add it to `registry` in [`src/lib/ai/providers/index.ts`](src/lib/ai/providers/index.ts).
+
+The default OpenRouter model is free (`nvidia/nemotron-3.5-super-vl:free`, with `google/gemma-4-31b-it:free` as fallback). Free models have daily request limits, and free endpoints may log prompts. Before real clients use the app, switch to a paid model with `OPENROUTER_DATA_COLLECTION=deny`.
+
+**Safety:**
+- Output is validated against Zod schemas.
+- Customer content is wrapped as untrusted data, against prompt injection.
+- Emails, phone and ID numbers are removed before sending.
+- Per-user rate limits apply.
+- Copilot tools are disabled for customers who didn't consent to AI.
+- Uploaded documents go only to providers that declare they read files.
+- Every run is logged in `ai_runs` (provider, model, prompt version, output, latency, tokens).
+- On failure, the app falls back to the manual flow without losing data.
+
+## Payments
+
+While Grow is connected it's used for every checkout. Otherwise `PAYMENT_PROVIDER` decides: `stripe` if `STRIPE_SECRET_KEY` is set, else the built-in test checkout (`mock`). Payment state only moves forward. Duplicate or out-of-order events are no-ops, and an amount that doesn't match the quote is rejected.
+
+### Grow (Meshulam)
+
+[Grow](https://grow.business) takes credit card, Bit, Apple Pay and Google Pay, in shekels.
+
+**Connect.** As an admin, open **Payments → Connect Grow** and enter the `userId` and `pageCode` from Grow, plus `apiKey` only if Grow gave you one.
+- **Test mode** uses Grow's sandbox.
+- The identifiers are stored encrypted, and only their last 4 characters are ever shown.
+- Alternatively, set `GROW_USER_ID`, `GROW_PAGE_CODE` and `GROW_SANDBOX`.
+
+**A payment:**
+1. The customer confirms their full name (two words), Israeli mobile number and the terms. Grow requires these.
+2. The app calls `createPaymentProcess` and sends the customer to Grow's page.
+3. Grow posts a server update to `/api/webhooks/grow/<payment id>/<token>`. Grow doesn't sign these, so:
+   - the token is an HMAC of the payment id;
+   - the transaction is re-read from Grow (`getTransactionInfo`), and its amount must match the quote;
+   - the update is then acknowledged with `approveTransaction`.
+4. The customer returns through `/pay/return/<payment id>/success` to the case, which is now active.
+
+**Going live.** Run a few sandbox payments. Ask Grow (support@grow.business) to enable server updates for your page and for a production review. Then enter the production identifiers with Test mode off.
+
+### Stripe
+
+Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, and point a Stripe webhook at `/api/webhooks/stripe`.
+
+## Push notifications
+
+Web Push reaches browsers and phones even when the site is closed.
+
+- **Turning it on:** each person turns it on per device from **Notifications** (or the profile) with **Notifications on this device**. There's also a test button.
+- **iPhone and iPad:** add the site to the home screen (Share → Add to Home Screen), open it from there, then turn notifications on.
+- **What gets pushed:** every in-app notification also goes, encrypted, to all of the person's devices, through the same retrying outbox as email. Tapping a notification opens the right page.
+- **Expired devices:** devices the push service reports as gone (404/410) are removed automatically.
+- **Keys:** nothing to configure. Without `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`, the app generates a key pair once and stores it encrypted. Set `VAPID_SUBJECT` (`mailto:` or `https:`) to choose the contact address push services see.
+- **Allowed endpoints:** only the browser push services (Google, Mozilla, Apple, Microsoft), so the server can't be used to send requests to arbitrary hosts. `PUSH_EXTRA_HOSTS` exists for tests.
+- **Files:**
+  - [`public/sw.js`](public/sw.js): the service worker.
+  - [`src/app/manifest.ts`](src/app/manifest.ts): the web app manifest.
+  - [`src/lib/services/push.ts`](src/lib/services/push.ts): sending.
+
+## Email
+
+Set `SMTP_URL` (for example Gmail with an app password: `smtps://you%40gmail.com:app-password@smtp.gmail.com:465`). `EMAIL_FROM` sets the sender address, and `EMAIL_FROM_NAME` the name recipients see.
+
+Without SMTP, emails are printed to the server log, and in development they're listed at `/admin/mailbox`. For good deliverability, send from your own domain with SPF/DKIM set up. Gmail shows "me" / "אני" for mail you send to yourself.
+
+## Google sign-in
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen and create an **OAuth client ID** of type **Web application**.
+2. Add the redirect URI `https://<your-domain>/api/auth/google/callback`. For local development, also add `http://localhost:3000/api/auth/google/callback`.
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and redeploy.
+
+Existing accounts sign in directly when the verified Google email matches. A new Google user confirms their details and accepts the terms.
 
 ## Deploy
 
-### Free: Vercel + Neon
+### Vercel + Neon (free tiers; current setup)
 
-Runs on free tiers: **Vercel Hobby** hosts the app (serverless) and **Neon** provides PostgreSQL. Uploaded files are stored encrypted in the database, or in **Vercel Blob** if you connect it. Vercel's Hobby plan is for personal, non-commercial use; for commercial use upgrade to Pro or use the Render/Docker options below.
+1. Import the repository at [vercel.com/new](https://vercel.com/new). Vercel runs `npm run vercel-build`, which applies migrations, then builds.
+2. Add the environment variables `APP_SECRET` (`openssl rand -hex 32`) and `CRON_SECRET`, plus any optional ones from [Configuration](#configuration).
+3. In the **Storage** tab, add **Neon** (free; a region near Frankfurt). It sets `DATABASE_URL` and `DATABASE_URL_UNPOOLED`. Optionally add a private **Blob** store for files.
+4. Redeploy.
 
-1. **Import the project:** go to [vercel.com/new](https://vercel.com/new), sign in with GitHub, and import `yehonatan21/Case-Manager`. Keep the detected Next.js settings. Vercel runs `npm run vercel-build`, which applies database migrations and then builds.
-2. **Before the first deploy, add environment variables:**
-   - `APP_SECRET`: a long random string. Generate one with `openssl rand -hex 32`, and never change it afterwards.
-   - `DEMO_MODE`: `true` to try it right away (sign-in codes on screen, demo accounts).
-   - `CRON_SECRET`: any random string. It protects the daily maintenance job.
-   - Optional: `ADMIN_EMAIL`, `ANTHROPIC_API_KEY`, `SMTP_URL`.
-3. **Add the database:** in the project's **Storage** tab, choose **Neon → Create** (free plan, region close to Frankfurt) and connect it to the project. This sets `DATABASE_URL` and `DATABASE_URL_UNPOOLED` automatically.
-4. **Optional:** in Storage, create a **Blob** store (private) to keep files outside the database.
-5. **Redeploy** from the Deployments tab, so the build runs the migrations against Neon.
+On Vercel the app adapts:
+- Migrations run in the build.
+- Live updates poll instead of streaming.
+- Quote expiry and outbox retries run from the daily cron in [`vercel.json`](vercel.json).
+- Files go to Blob, or to the database if no Blob store is connected.
 
-On Vercel the app adapts automatically:
-- Migrations run once per build instead of on every cold start, over the direct connection.
-- Live updates poll every 8 seconds instead of holding a streaming connection open.
-- Quote expiry runs from the daily cron in [`vercel.json`](vercel.json). Notification emails are still sent immediately.
-- Files go to Vercel Blob if a store is connected, and to the database otherwise.
-
-Free-tier limits that apply: Neon's free compute pauses when idle, so the first request after a pause is slower, and storage is limited. Vercel Hobby limits function usage and allows only daily crons.
-
-The same demo-mode and go-live notes apply as below: set `SMTP_URL` and `DEMO_MODE=false` before real use.
+Vercel Hobby is for personal, non-commercial use. Neon's free compute pauses when idle.
 
 ### Render (paid, long-running server)
 
-**Render (one click).** The app needs a long-running Node server (realtime updates, background email delivery), managed PostgreSQL, persistent encrypted file storage and HTTPS. The included [`render.yaml`](render.yaml) Blueprint provisions all of it from this repository: a Docker web service (Frankfurt, health-checked at `/api/health`), PostgreSQL 16 reachable only from your services, a 1 GB persistent disk for uploads, generated secrets, and auto-deploy on every push.
-
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yehonatan21/Case-Manager)
 
-1. Click the button, sign in to Render and connect GitHub if asked.
-2. Fill the prompted values — `ADMIN_EMAIL` (your email, becomes an administrator), and optionally `ANTHROPIC_API_KEY` and `SMTP_URL`. Review and approve the plan — a paid Starter web service (required for the persistent disk) and a `basic-256mb` PostgreSQL; Render shows the monthly cost before you confirm.
-3. Wait for the first deploy, then open the `onrender.com` URL.
+[`render.yaml`](render.yaml) provisions a Docker web service, PostgreSQL 16, a 1 GB persistent disk for uploads, and generated secrets. It starts in demo mode. Before real use, set `SMTP_URL`, set `DEMO_MODE=false`, and sign in with your `ADMIN_EMAIL`.
 
-The Blueprint starts in **demo mode** (`DEMO_MODE=true`): sign-in codes appear on screen, demo accounts are seeded, and a banner warns that the environment is shared. **Before real customers use it:** set `SMTP_URL` (any SMTP provider), set `DEMO_MODE=false`, and sign in with your `ADMIN_EMAIL` (setting `ADMIN_EMAIL` creates that admin on the next start even if the database already exists). For a clean production database, create the Blueprint with `DEMO_MODE=false` from the start. Optional: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` switch payments to Stripe (webhook URL `https://<your-app>/api/webhooks/stripe`).
-
-> Keep `APP_SECRET` stable: it signs sessions and derives the key that encrypts stored files.
-
-### Anywhere else (Docker)
-
- The [`Dockerfile`](Dockerfile) builds a small standalone image that runs as a non-root user and stores uploads (and the embedded database, if no `DATABASE_URL` is set) under `/var/data`:
+### Docker (anywhere)
 
 ```bash
 docker build -t case-manager .
@@ -92,159 +253,98 @@ docker build -t case-manager .
 docker run -p 3000:3000 -v case-data:/var/data -e APP_SECRET="$(openssl rand -hex 32)" -e DATABASE_URL=postgres://... -e APP_URL=https://cases.example.com -e JOBS_INTERVAL_MINUTES=5 case-manager
 ```
 
-This works on Railway, Fly.io, Koyeb, Google Cloud Run (with an external database and S3 storage) or any VPS. The public URL is detected automatically on Render, Railway and Fly; elsewhere set `APP_URL`. Migrations run automatically on start (serialised with a database lock). On serverless hosts other than Vercel, set `NEXT_PUBLIC_REALTIME=poll` at build time and `STORAGE_PROVIDER=database` (or S3).
+The image runs as a non-root user and keeps data under `/var/data`. Migrations run on start. It works on Railway, Fly.io, Koyeb, Cloud Run (with an external database and S3) or any VPS.
 
-### CI/CD
+**Before real customers:**
+- Set `DEMO_MODE=false` and `SMTP_URL`.
+- Keep `APP_SECRET` stable.
+- Remove demo data with `npm run db:remove-demo` (see [Scripts](#scripts)).
 
-[`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and every push to `main`:
+## Branches and environments
+
+| Branch | Vercel environment | Address | Database |
+|---|---|---|---|
+| `main` | Production | https://case-manager-eta.vercel.app | Neon `main` branch |
+| `dev` | Preview, with its own `dev`-scoped variables (`DEMO_MODE=true`, own secrets, `APP_URL`) | https://case-manager-git-dev-yehonatan21.vercel.app | Neon `dev` branch (separate) |
+
+Feature branches open pull requests into `dev`, and `dev` is then released to `main`. Merging `dev` into `main` through a pull request makes GitHub delete `dev`, because "Automatically delete head branches" is on. Either protect `dev` with a ruleset ("Restrict deletions"), or fast-forward `main` to `dev` instead of using a pull request.
+
+## Testing and CI/CD
+
+| Suite | Command | Covers |
+|---|---|---|
+| Unit + integration | `npm test` | Roles and permissions, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow and push endpoints. |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API) and push (with a stand-in push service). |
+
+The HTTP and browser suites need the server in demo mode (codes on screen). The Grow and push scripts also need `GROW_API_URL=http://localhost:4010` and `PUSH_EXTRA_HOSTS=localhost:4012`:
+
+```bash
+npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 npm start
+```
+
+[`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and push to `main`:
 
 | Job | What it does |
 |---|---|
-| **Type check, tests, build** | `tsc`, the test suite on PGlite and on PostgreSQL 16, production build |
-| **Browser walkthrough** | Starts the production server in demo mode and runs the full Playwright journey (Hebrew/English, desktop/mobile); screenshots are kept as a build artifact |
-| **Docker image** | Builds the image on every run; on `main` pushes it to `ghcr.io/<owner>/case-manager` (`latest` + commit SHA) |
-| **Deploy to Vercel** | After the checks pass: a preview deployment for each PR, production for `main`, then a health check. Enabled by the repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (create the token in Vercel → Account Settings → Tokens; the two IDs are in the project's Settings → General). |
+| **Type check, tests, build** | `tsc`; the tests on PGlite and on PostgreSQL 16; production build. |
+| **Browser walkthrough** | Production server in demo mode, then the HTTP tests and all browser scripts. Screenshots are kept as an artifact. |
+| **Docker image** | Builds the image; on `main` pushes it to `ghcr.io/<owner>/case-manager`. |
+| **Deploy to Vercel** | Runs only with the `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets. Otherwise Vercel's Git integration deploys. |
 
-If you use this workflow for deployments, turn off Vercel's own Git deployments so each commit isn't deployed twice: Vercel project → Settings → Git → Ignored Build Step → "Don't build anything". Without the secrets, the deploy job is skipped and Vercel's Git integration keeps deploying as before. [Dependabot](.github/dependabot.yml) opens weekly update PRs for npm packages and GitHub Actions.
-
-## What's in the MVP
-
-| Area | Implementation |
-|---|---|
-| **Free-text intake** | Home page prompt + example chips → AI conversation (one question at a time, quick replies, "I don't know"/"Skip", ~7 questions by default, file attachments, live "what we understood so far" card). Works without an account. |
-| **Review & submit** | "Did we get it right?" — every field editable; customer facts kept separate from the assistant's interpretation; preliminary-classification notice. Manual form at any time (`/intake/manual`). |
-| **Accounts** | Passwordless email OTP (rate-limited, attempt-limited, hashed codes), customer type (private/business/company/other) with organisation details, terms + separate plain-language AI-processing consent. |
-| **Customer portal** | My cases (status, last update, required action), case page with **"What needs to be done now?"**, real-stage progress track (no fake percentages), timeline of real events, messages, documents, quote & payments, contact person. Mobile bottom navigation. |
-| **Staff area** | Dashboard (new requests, awaiting quote, pending quotes, active, waiting on client, overdue tasks) + "Needs attention now" ranked by urgency/age/SLA; incoming requests inbox; case list with filters; customers; payments; settings. |
-| **Case workspace** | Three panes — details / work area / AI copilot (tabs on small screens): assign, status changes (validated state machine), urgency, category, client messages, internal notes, info requests, tasks, quotes, documents, history, client-timeline updates, complete/close. |
-| **AI copilot** | Case summary (what the client wants, known facts **with links to their source**, missing info, complexities, next step), max 3 recommended actions, clarifying-question drafts, rewrite/shorten/translate, thread summary, status-update drafts, task plans, quote drafts, document analysis. Every customer-facing output is a draft a person must send. |
-| **Quotes** | Editor with line items, VAT on top or included, currency, payment terms, timeline, disclaimers, validity, live preview of the customer view, AI draft (prices **only** from the price list — missing prices are flagged, never invented). Sent quotes are immutable; revisions create new versions. |
-| **Approval & payment** | Customer approves a specific version (identity, time, IP and a hash of the approved content are recorded), asks for clarification or declines. One payment per quote via hosted checkout (Grow, Stripe, or the built-in test checkout). Only a verified webhook moves the case to active; duplicate events are no-ops. |
-| **Documents** | Staff request documents; customers upload (versioned); statuses requested → uploaded → in review → approved / new version needed with a note. Extension + magic-byte validation, size limit, ClamAV scanning, AES-256-GCM encryption at rest (or S3 SSE), permission-checked audited downloads (S3 presigned 60-second links). |
-| **Tasks** | Title, description, owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks"/overdue views. |
-| **Notifications** | In-app (bell + page) and email for every event in the spec, localized per recipient, via a retrying outbox. |
-| **Realtime** | Server-Sent Events push updates within ~2 seconds; the client falls back to polling and shows a notice when disconnected. |
-| **Admin** | Staff users & roles (admin, case manager, staff, finance), general settings (VAT, currency, quote validity, SLA, question limit), service templates, price list. |
-
-### Status model
-
-Internal statuses (`submitted → under_review ⇄ awaiting_information → quote_preparation → quote_sent → awaiting_payment → active ⇄ awaiting_client → completed → closed`, plus `cancelled`, `declined`) are mapped to simpler customer labels (received → in review → quote ready → awaiting payment → in progress → completed). `quote_sent`, `awaiting_payment` and the move to `active` after payment can only happen through the real action (sending a quote, customer approval, verified payment). When the customer replies or uploads, the case returns from "waiting" to work automatically. Every material action writes a case event with time, actor and visibility; internal events and notes are never shown to customers.
+[Dependabot](.github/dependabot.yml) opens weekly update PRs.
 
 ## Architecture
 
 ```
 src/
-  app/                 Next.js App Router pages and REST API (app/api/**)
-  components/          UI (ui/ primitives, intake/, case/, portal/, admin/)
+  app/                 Next.js App Router pages and REST API (app/api/**), manifest.ts
+  components/          UI (ui/ primitives, app/, intake/, case/, portal/, admin/)
   lib/
     db/                Drizzle schema, connection (PostgreSQL or PGlite), seed
-    services/          Domain logic — every function enforces permissions server-side
-    ai/                Claude client, versioned prompts, Zod output schemas, offline engine
-    auth/              Sessions and role/ownership permissions
-    i18n/              he.ts (source of truth), en.ts (type-checked to match), formatters
-    payments/ storage/ email/
+    services/          Domain logic; every function checks permissions on the server
+    ai/                Prompts, Zod output schemas, offline engine, providers/ (Claude, OpenRouter, OpenAI-compatible)
+    payments/          Test checkout, Stripe, Grow
+    auth/ i18n/ storage/ email/
+public/                Service worker (sw.js) and app icons
 drizzle/               SQL migrations
-tests/                 Vitest unit + integration tests
-e2e/                   Playwright walkthrough of the full journey
+scripts/               migrate, seed, jobs, remove-demo-data
+tests/                 Vitest unit, integration and HTTP tests
+e2e/                   Playwright browser scripts
 ```
 
-- **Stack:** Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, Drizzle ORM, PostgreSQL (PGlite for zero-setup development), Zod.
-- **API:** the endpoints from the spec (`POST /api/intake`, `POST /api/cases`, `GET /api/cases/:id`, `PATCH /api/cases/:id/status`, `POST /api/cases/:id/messages|documents|quotes`, `POST /api/quotes/:id/approve`, `POST /api/payments/checkout`, `POST /api/webhooks/payments`, `POST /api/intake/:id/message` (= `ai/intake/next`), `POST /api/ai/case-summary|draft-quote|suggest-tasks`, …). The UI uses the same API. Mutations require a same-origin request; authorization is checked per case on the server.
-- **AI layer:** a single server-side module; the browser never talks to the AI provider. Calls use Claude structured outputs validated by Zod schemas, adaptive thinking with an explicit effort level, and the server-side refusal fallback. Each run is logged in `ai_runs` (action, model, prompt version, output, latency, tokens, human approval). Customer content is wrapped as untrusted data (prompt-injection defence), direct identifiers are redacted before sending, per-user rate limits apply, and copilot tools are disabled for customers who didn't consent to AI processing. Without an API key, a deterministic offline engine provides the same features in a simpler form.
-- **Multi-tenancy:** the MVP serves one operator, but no data hangs off a single admin user — a `tenant_id` can be added to the top-level tables later.
+- **Stack:** Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, Drizzle ORM, PostgreSQL / PGlite, Zod, web-push.
+- **API:** REST endpoints under `/api`, also used by the UI. Mutations require a same-origin request, and authorization is checked per case on the server.
+- **i18n:** `src/lib/i18n/he.ts` is the source of truth, and `en.ts` is type-checked against it. Every error code has a message in both languages (enforced by a test).
+- **Multi-tenancy:** one operator for now. A `tenant_id` can be added to the top-level tables later.
 
-## Configuration
+## Security
 
-All settings are environment variables — see [`.env.example`](.env.example). Key ones:
-
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection. Empty → embedded PGlite in `.data/pglite`. |
-| `APP_SECRET` | **Required in production.** Signs codes and derives the file-encryption key. |
-| `ANTHROPIC_API_KEY`, `AI_MODEL` | Enables Claude (default model `claude-opus-5-5`). |
-| `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | Enables OpenRouter (default: a free model). See [AI providers](#ai-providers). |
-| `AI_PROVIDER=openai-compatible`, `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL_NAME` | Any OpenAI-compatible API. |
-| `EMAIL_PROVIDER=smtp`, `SMTP_URL` | Real email delivery. |
-| `EMAIL_FROM`, `EMAIL_FROM_NAME` | Sender address, and the sender name recipients see (e.g. your business name). Note: Gmail shows "me" / "אני" instead of any name when you email yourself. |
-| `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout; point the webhook at `/api/webhooks/stripe`. |
-| `GROW_USER_ID`, `GROW_PAGE_CODE` (+ `GROW_API_KEY`, `GROW_SANDBOX`) | Grow (Meshulam): card, Bit, Apple Pay, Google Pay. Or connect it in the app: **Payments → Connect Grow**. See [Grow payments](#grow-payments). |
-| `STORAGE_PROVIDER=s3`, `S3_*` | S3-compatible storage. |
-| `CLAMAV_HOST` | Malware scanning. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | "Continue with Google" sign-in and registration (see below). |
-| `CRON_SECRET` | Enables `POST /api/jobs/run` (expire quotes, flush email outbox). |
-| `JOBS_INTERVAL_MINUTES` | Runs those jobs inside the server every N minutes instead of external cron. |
-| `DEMO_MODE` | Public demo: codes on screen, demo data, warning banner. Never with real data. |
-
-### Google sign-in
-
-Customers can register at `/register` with an email code or with Google; "Continue with Google" also appears on the sign-in page and at the end of a new request. To enable it:
-
-1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen, then create an **OAuth client ID** of type **Web application**.
-2. Add the authorized redirect URI `https://<your-domain>/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local development).
-3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` and redeploy.
-
-Existing accounts (including invited staff) sign in directly when the Google email matches and is verified. A new Google user only confirms their details, chooses a customer type and accepts the terms — no code needed.
+- **Sessions:** httpOnly, SameSite cookies.
+- **Sign-in codes:** hashed, single-use, time-limited, rate-limited and attempt-limited.
+- **Requests:** same-origin checks on all mutations; security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
+- **Files:** encrypted at rest (AES-256-GCM, or S3 server-side encryption); content-type and magic-byte checks; optional malware scan; permission-checked, audited downloads.
+- **Encrypted settings:** payment identifiers and push keys are stored encrypted with a key derived from `APP_SECRET`.
+- **Webhooks:**
+  - mock and Stripe events are verified by signature;
+  - Grow's are checked with a per-payment token and re-read from Grow's API;
+  - all of them are applied idempotently.
+- **Push endpoints:** limited to the browser push services.
+- **Audit log:** covers sign-in, team, settings, payment and case actions.
 
 ## Scripts
 
 | Command | What it does |
 |---|---|
 | `npm run dev` / `npm run build` / `npm start` | Develop / build / serve |
-| `npm test` | Unit + integration tests (in-memory PGlite; set `TEST_DATABASE_URL` to run against PostgreSQL) |
+| `npm test` · `npm run test:api` · `npm run e2e` | Tests (see [Testing](#testing-and-cicd)) |
 | `npm run typecheck` | TypeScript |
-| `npm run db:generate` | Generate a migration after editing `src/lib/db/schema.ts` |
-| `npm run db:migrate` | Apply migrations (also done automatically on start unless `AUTO_MIGRATE=false`) |
+| `npm run db:generate` | Create a migration after editing `src/lib/db/schema.ts` |
+| `npm run db:migrate` | Apply migrations (also automatic on start unless `AUTO_MIGRATE=false`) |
 | `npm run db:seed -- --demo` | Insert demo data |
-| `npm run jobs:run` | Run maintenance jobs once |
-| `npm run e2e` | Browser walkthrough of the full journey against a running dev server |
+| `npm run db:remove-demo` | Preview removing the demo accounts and sample requests; add `-- --apply` to remove them (one transaction; real data kept) |
+| `npm run jobs:run` | Run maintenance once: expire quotes, send pending emails and pushes, prune old push rows |
 
-## Acceptance scenarios covered by tests
-
-The integration suite (`tests/flow.test.ts`) and the browser walkthrough (`e2e/walkthrough.cjs`) cover the launch checklist: a vague private request becomes an editable summary; a business request; skipping questions; **AI failure → manual continuation without data loss**; clarification request and reply; quote created, edited and sent; approval and payment; **a failed payment does not activate the case**; **a duplicate payment webhook changes nothing**; staff status change visible to the customer; document upload, approval and new-version request; **a customer cannot open another customer's case**; malicious/forged uploads and webhooks are rejected; case completion; everything in Hebrew on mobile, and in English after switching language.
-
-## Out of scope (per the MVP definition)
+## Out of scope
 
 Marketplace, native apps, subcontractors, accounting (receipts come from an external system), milestone payments, government integrations, advanced e-signatures, a no-code workflow designer, and AI that makes legal or financial decisions.
-
-
-## Grow payments
-
-[Grow](https://grow.business) (formerly Meshulam) takes payments by credit card, Bit, Apple Pay and Google Pay.
-
-**Connect:** as an admin, open **Payments → Connect Grow** and enter the `userId` and `pageCode` Grow gave you (and `apiKey` only if they gave you one). Keep **Test mode** on for Grow's sandbox. The identifiers are stored encrypted with `APP_SECRET`; the page shows only their last 4 characters. Alternatively set `GROW_USER_ID` / `GROW_PAGE_CODE` / `GROW_SANDBOX`. While Grow is connected, every checkout uses it; disconnecting switches back to `PAYMENT_PROVIDER`.
-
-**How a payment works:**
-1. On the quote, the customer clicks **Continue to secure payment** and confirms their full name (two words), Israeli mobile number and the terms. Grow requires these.
-2. The app calls `createPaymentProcess` (amount in ILS) and sends the customer to Grow's page.
-3. Grow posts a server update to `/api/webhooks/grow/<payment id>/<token>`. Grow doesn't sign these, so the token is an HMAC of the payment id, and the app re-reads the transaction from Grow (`getTransactionInfo`) before it counts. The amount must match the quote. Then it acknowledges with `approveTransaction`, as Grow requires. Repeated updates are no-ops.
-4. The customer returns to `/pay/return/<payment id>/success` and lands on the case, which is now active.
-
-**Going live:**
-- Ask Grow support (support@grow.business) for a production review. They check the logs for the calls above, so run a few sandbox payments first.
-- Ask them to enable server updates for your page.
-- Once approved, enter the production identifiers with **Test mode** off.
-- Online payment through Grow is in shekels only.
-
-
-## AI providers
-
-The AI features (intake chat, case summary, quote draft, task plan, text tools, document analysis) talk to one small interface, `AiProvider` in `src/lib/ai/providers/types.ts`. Which provider answers is a setting:
-
-| `AI_PROVIDER` | Uses | Reads documents? |
-|---|---|---|
-| `auto` (default) | The first configured of: Claude → OpenRouter → OpenAI-compatible. With none, the built-in offline engine. | — |
-| `anthropic` | Claude (`ANTHROPIC_API_KEY`, `AI_MODEL`) | Yes |
-| `openrouter` | [OpenRouter](https://openrouter.ai) (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODELS`) | No (offline analysis) |
-| `openai-compatible` | Any OpenAI-style API: OpenAI, Groq, Mistral, Together, a local Ollama… (`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL_NAME`) | No (offline analysis) |
-| `mock` | The offline engine only | — |
-
-**Replacing the provider:**
-- **No code:** change the variables above and redeploy.
-- **New service:** write `src/lib/ai/providers/<name>.ts` exporting an `AiProvider` (`structured()` takes a system prompt, messages and a Zod schema, and returns validated output), then add it to `registry` in `src/lib/ai/providers/index.ts`.
-
-Every call is logged in `ai_runs` with the provider and model. Personal details (emails, phone numbers, ID numbers) are removed before anything is sent. If a provider fails or hits a rate limit, the request is logged and the app falls back to the manual flow.
-
-**Free OpenRouter models:**
-- Free models have daily request limits; buying any credits raises them.
-- Free endpoints may log or train on prompts, so set `OPENROUTER_DATA_COLLECTION=deny` (with a paid model) once real clients use the app.
-- Uploaded documents are never sent to OpenRouter or OpenAI-compatible providers.

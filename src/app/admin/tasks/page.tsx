@@ -29,7 +29,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title={d.admin.tasksTitle} />
-      <nav className="mb-4 flex gap-1 border-b border-slate-200">
+      <nav aria-label={d.nav.filterMenu} className="mb-4 flex gap-1 border-b border-slate-200">
         {tabs.map((t) => (
           <Link key={t.href} href={t.href} aria-current={t.active ? "page" : undefined} className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", t.active ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-800")}>
             {t.label}

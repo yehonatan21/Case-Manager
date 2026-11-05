@@ -1,3 +1,4 @@
+import { AccessibilityLink } from "@/components/app/accessibility-link";
 import { getDict } from "@/lib/i18n/server";
 import { requirePageCustomer } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -35,6 +36,9 @@ export default async function PortalLayout({ children }: { children: React.React
       <main id="main" className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
         {children}
       </main>
+      <footer className="mx-auto max-w-6xl px-4 pb-24 text-center md:pb-6">
+        <AccessibilityLink />
+      </footer>
       <PortalBottomNav unreadMessages={unreadMessages} />
     </div>
   );

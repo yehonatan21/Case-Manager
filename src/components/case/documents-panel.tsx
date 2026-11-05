@@ -212,7 +212,7 @@ export function DocumentsPanel({ caseId, docs, mode, canEdit, maxMb }: { caseId:
                   <div key={i} className="flex gap-1.5">
                     <dt className="text-slate-500">{f.label}:</dt>
                     <dd className="bidi-auto font-medium text-slate-800">
-                      {f.value} <span className="text-[10px] font-normal text-slate-400">({f.confidence})</span>
+                      {f.value} <span className="text-[10px] font-normal text-slate-500">({f.confidence})</span>
                     </dd>
                   </div>
                 ))}

@@ -30,6 +30,7 @@ ENV NODE_ENV=production \
     PGLITE_DIR=/var/data/pglite
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY docker/start.cjs ./start.cjs
 RUN mkdir -p /var/data && chown -R node:node /app /var/data

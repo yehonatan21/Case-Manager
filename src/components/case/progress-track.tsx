@@ -24,14 +24,14 @@ export function ProgressTrack({ status }: { status: CaseStatus }) {
               <span
                 className={cn(
                   "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                  done ? "bg-brand-700 text-white" : current ? "bg-white text-brand-800 ring-2 ring-brand-600" : "bg-slate-100 text-slate-400",
+                  done ? "bg-brand-700 text-white" : current ? "bg-white text-brand-800 ring-2 ring-brand-600" : "bg-slate-100 text-slate-500",
                 )}
               >
                 {done ? <Check className="size-4" aria-label={d.caseView.stepDone} /> : i + 1}
               </span>
               <span className={cn("h-0.5 flex-1", i === CLIENT_TRACK.length - 1 ? "bg-transparent" : i < idx ? "bg-brand-600" : "bg-slate-200")} />
             </div>
-            <span className={cn("mt-1.5 text-[11px] leading-tight sm:text-xs", current ? "font-semibold text-brand-800" : done ? "text-slate-700" : "text-slate-400")}>
+            <span className={cn("mt-1.5 text-[11px] leading-tight sm:text-xs", current ? "font-semibold text-brand-800" : done ? "text-slate-700" : "text-slate-500")}>
               {d.status.client[s]}
               {current && <span className="sr-only"> ({d.caseView.stepCurrent})</span>}
             </span>

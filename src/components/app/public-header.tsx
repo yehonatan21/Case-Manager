@@ -11,7 +11,7 @@ export async function PublicHeader() {
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Logo name={d.common.appName} />
-        <nav className="flex items-center gap-2">
+        <nav aria-label={d.nav.accountMenu} className="flex items-center gap-2">
           <LanguageSwitcher />
           {user ? (
             <ButtonLink href={isStaffRole(user.role) ? "/admin" : "/portal"} variant="outline" size="md">
@@ -36,7 +36,10 @@ export async function PublicFooter() {
         <p>
           © {new Date().getFullYear()} {d.common.appName}. {d.home.footer}
         </p>
-        <nav className="flex gap-4">
+        <nav aria-label={d.nav.footerMenu} className="flex flex-wrap gap-x-4 gap-y-2">
+          <a href="/accessibility" className="hover:text-slate-800">
+            {d.home.accessibility}
+          </a>
           <a href="/privacy" className="hover:text-slate-800">
             {d.home.privacy}
           </a>

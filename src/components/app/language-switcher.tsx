@@ -28,11 +28,23 @@ export function LanguageSwitcher({ className, compact }: { className?: string; c
         className,
       )}
       disabled={pending}
-      aria-label={`${d.lang.label}: ${d.lang.switchTo}`}
-      lang={next}
     >
       <Languages className="size-4" aria-hidden />
-      <span>{compact ? d.lang.switchToShort : d.lang.switchTo}</span>
+      {/* The accessible name starts with the visible text (WCAG 2.5.3), so "click English / EN" works with voice control. */}
+      {compact ? (
+        <span lang={next}>{d.lang.switchToShort}</span>
+      ) : (
+        <>
+          {/* Very narrow screens (under 360px) get the short label so the header doesn't overflow (WCAG 1.4.10). */}
+          <span lang={next} className="max-[359px]:hidden">
+            {d.lang.switchTo}
+          </span>
+          <span lang={next} className="hidden max-[359px]:inline">
+            {d.lang.switchToShort}
+          </span>
+        </>
+      )}
+      <span className="sr-only"> – {d.lang.label}</span>
     </button>
   );
 }

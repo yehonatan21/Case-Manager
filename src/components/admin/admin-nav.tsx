@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
@@ -55,10 +54,11 @@ function NavList({ role, inboxCount, devMailbox, onNavigate }: { role: UserRole;
 }
 
 export function AdminSidebar(props: { role: UserRole; inboxCount: number; devMailbox: boolean; header: React.ReactNode; footer: React.ReactNode }) {
+  const { d } = useI18n();
   return (
     <aside className="fixed inset-y-0 start-0 z-30 hidden w-60 flex-col border-e border-slate-200 bg-white lg:flex">
       <div className="flex h-16 items-center px-5">{props.header}</div>
-      <nav className="flex-1 overflow-y-auto px-3 py-2">
+      <nav aria-label={d.nav.staffMenu} className="flex-1 overflow-y-auto px-3 py-2">
         <NavList {...props} />
       </nav>
       <div className="border-t border-slate-100 p-3">{props.footer}</div>
@@ -70,31 +70,54 @@ export function AdminMobileMenu(props: { role: UserRole; inboxCount: number; dev
   const { d } = useI18n();
   const [open, setOpen] = useState(false);
   const path = usePathname();
+  const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => setOpen(false), [path]);
+  // A native modal <dialog>: the browser moves focus into it, keeps Tab inside, makes the page behind inert,
+  // closes it on Esc and returns focus to the menu button.
+  useEffect(() => {
+    const dlg = ref.current;
+    if (!dlg) return;
+    if (open && !dlg.open) dlg.showModal();
+    if (!open && dlg.open) dlg.close();
+  }, [open]);
   return (
     <div className="lg:hidden">
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex size-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100" aria-label={d.nav.menu} aria-expanded={open}>
-        <Menu className="size-5" />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex size-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100"
+        aria-label={d.nav.menu}
+        aria-expanded={open}
+        aria-controls="admin-mobile-menu"
+        aria-haspopup="dialog"
+      >
+        <Menu className="size-5" aria-hidden />
       </button>
-      {open &&
-        createPortal(
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={d.nav.menu}>
-          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
+      <dialog
+        ref={ref}
+        id="admin-mobile-menu"
+        aria-label={d.nav.menu}
+        onClose={() => setOpen(false)}
+        onClick={(e) => {
+          if (e.target === ref.current) setOpen(false); // click on the backdrop
+        }}
+        className="fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
+      >
+        {open && (
+          <div className="flex h-full flex-col">
             <div className="flex h-16 items-center justify-between px-4">
               {props.header}
               <button onClick={() => setOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" aria-label={d.common.close}>
-                <X className="size-5" />
+                <X className="size-5" aria-hidden />
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto px-3 py-2">
+            <nav aria-label={d.nav.staffMenu} className="flex-1 overflow-y-auto px-3 py-2">
               <NavList {...props} onNavigate={() => setOpen(false)} />
             </nav>
             <div className="border-t border-slate-100 p-3">{props.footer}</div>
           </div>
-        </div>,
-          document.body,
         )}
+      </dialog>
     </div>
   );
 }

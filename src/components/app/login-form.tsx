@@ -19,11 +19,22 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noAccount, setNoAccount] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
 
   const registerHref = (addr: string) => `/register?email=${encodeURIComponent(addr)}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
 
   const request = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    // Explain an invalid address next to the field instead of silently disabling the button (WCAG 3.3.1).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setEmailError(d.account.emailInvalid);
+      emailRef.current?.focus();
+      return;
+    }
+    setEmailError(null);
     setBusy(true);
     setError(null);
     setNoAccount(null);
@@ -44,12 +55,19 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setCodeError(null);
     try {
       const r = await api<{ home: string }>("/api/auth/verify", { body: { email: email.trim(), code } });
       router.push(next ?? r.home);
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError && err.code === "signup_required" ? d.login.noAccount : errorText(err, d));
+      const msg = err instanceof ApiClientError && err.code === "signup_required" ? d.login.noAccount : errorText(err, d);
+      // A wrong or expired code is shown on the code field, which gets focus back (WCAG 3.3.1, 2.4.3).
+      if (err instanceof ApiClientError && ["invalid_code", "code_expired", "too_many_attempts"].includes(err.code)) {
+        setCodeError(msg);
+        codeRef.current?.focus();
+        codeRef.current?.select();
+      } else setError(msg);
       setBusy(false);
     }
   };
@@ -67,11 +85,25 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
   return (
     <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
       {!sent ? (
-        <form onSubmit={request} className="space-y-4">
-          <Field label={d.account.email} required>
-            {(p) => <Input {...p} type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoFocus />}
+        <form onSubmit={request} noValidate className="space-y-4">
+          <Field label={d.account.email} required error={emailError}>
+            {(p) => (
+              <Input
+                {...p}
+                ref={emailRef}
+                type="email"
+                dir="ltr"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError(null);
+                }}
+                autoComplete="email"
+                autoFocus
+              />
+            )}
           </Field>
-          <Button type="submit" className="w-full" size="lg" loading={busy} disabled={!email.includes("@")}>
+          <Button type="submit" className="w-full" size="lg" loading={busy}>
             {d.login.sendCode}
           </Button>
         </form>
@@ -79,16 +111,20 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
         <form onSubmit={verify} className="space-y-4">
           <p className="text-sm text-slate-600">{fmt(d.account.codeSentTo, { email })}</p>
           {devCode && <p className="text-xs font-medium text-amber-800">{fmt(d.account.devCode, { code: devCode })}</p>}
-          <Field label={d.account.code} required>
+          <Field label={d.account.code} required error={codeError}>
             {(p) => (
               <Input
                 {...p}
+                ref={codeRef}
                 dir="ltr"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, ""));
+                  if (codeError) setCodeError(null);
+                }}
                 className="text-center text-lg tracking-[0.4em]"
                 autoFocus
               />

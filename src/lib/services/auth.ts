@@ -28,8 +28,8 @@ export async function requestLoginCode(
   input: { email: string; ip: string | null; locale: Locale; purpose?: "login" | "signup" },
 ) {
   const email = normalizeEmail(input.email);
-  await rateLimit(db, `otp:email:${email}`, 5, 15 * 60);
-  if (input.ip) await rateLimit(db, `otp:ip:${input.ip}`, 30, 15 * 60);
+  await rateLimit(db, `otp:email:${email}`, env.otpMaxPerEmail, 15 * 60);
+  if (input.ip) await rateLimit(db, `otp:ip:${input.ip}`, env.otpMaxPerIp, 15 * 60);
 
   const existing = await findUserByEmail(db, email);
   if (existing?.status === "disabled") throw new AppError("account_disabled");

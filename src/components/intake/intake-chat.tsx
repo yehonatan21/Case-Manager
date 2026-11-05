@@ -44,6 +44,8 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
     if (!value || busy) return;
     setBusy(true);
     setError(null);
+    // Quick replies disappear once used: keep keyboard focus in the answer box (WCAG 2.4.3).
+    inputRef.current?.focus();
     setPending(value);
     setText("");
     try {
@@ -126,7 +128,13 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
             </div>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={session.questionLimit} aria-valuenow={session.questionCount}>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100" role="progressbar"
+              aria-label={d.intake.progressLabel}
+              aria-valuemin={0}
+              aria-valuemax={session.questionLimit}
+              aria-valuenow={session.readyForReview ? session.questionLimit : session.questionCount}
+              aria-valuetext={session.readyForReview ? d.intake.progressDone : fmt(d.intake.progress, { n: Math.max(1, session.questionCount), total: session.questionLimit })}
+            >
               <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${(session.readyForReview ? 1 : progress) * 100}%` }} />
             </div>
             <span className="shrink-0 text-xs text-slate-500">
@@ -275,7 +283,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
               {uploading ? <span className="size-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" /> : <Paperclip className="size-5" />}
             </button>
             <label htmlFor="intake-input" className="sr-only">
-              {d.intake.placeholder}
+              {d.intake.answerLabel}
             </label>
             <textarea
               id="intake-input"
@@ -291,15 +299,17 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
               }}
               placeholder={d.intake.placeholder}
               maxLength={4000}
-              disabled={busy}
-              className="bidi-auto max-h-40 min-h-11 flex-1 resize-none rounded-xl border border-slate-300 px-3.5 py-2.5 text-[15px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50"
+              // readOnly, not disabled, while the assistant answers: focus stays in the box (WCAG 2.4.3).
+              readOnly={busy}
+              aria-busy={busy || undefined}
+              className="bidi-auto max-h-40 min-h-11 flex-1 resize-none rounded-xl border border-slate-300 px-3.5 py-2.5 text-[15px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 read-only:bg-slate-50"
             />
             <Button type="submit" size="icon" className="mb-0.5 size-10" disabled={!text.trim() || busy} aria-label={d.intake.send}>
               <Send className="size-4 flip-rtl" />
             </Button>
           </form>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] leading-snug text-slate-400">{d.intake.disclaimer}</p>
+            <p className="text-[11px] leading-snug text-slate-500">{d.intake.disclaimer}</p>
             <div className="flex items-center gap-3">
               <Link href={`/intake/${session.id}/review?manual=1`} className="text-xs font-medium text-slate-500 hover:text-slate-800">
                 {d.intake.switchToManual}

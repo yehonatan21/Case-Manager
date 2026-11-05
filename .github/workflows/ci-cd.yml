@@ -80,6 +80,11 @@ jobs:
           PGLITE_DIR: .data/ci
           # e2e/grow.cjs runs a stand-in for Grow's API here.
           GROW_API_URL: http://localhost:4010
+          # e2e/push.cjs runs a stand-in push service here.
+          PUSH_EXTRA_HOSTS: localhost:4012
+          # Many test scripts sign in to the same demo accounts on one server.
+          OTP_MAX_PER_EMAIL: "50"
+          OTP_MAX_PER_IP: "500"
       - name: HTTP API tests (auth, permissions, CSRF, headers)
         run: npm run test:api
         env:

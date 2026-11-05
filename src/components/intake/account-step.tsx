@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Bot } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
@@ -54,13 +54,17 @@ export function AccountStep({
   const [fieldErr, setFieldErr] = useState<Record<string, string>>({});
 
   const isOrg = type === "business" || type === "company";
+  const termsErrorId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  /** After a failed check, move focus to the first field with an error so it is announced (WCAG 3.3.1). */
+  const focusFirstError = () => requestAnimationFrame(() => rootRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
 
   const completeGoogle = async () => {
     const fe: Record<string, string> = {};
     if (!name.trim()) fe.name = d.account.nameRequired;
     if (!terms) fe.terms = d.account.termsRequired;
     setFieldErr(fe);
-    if (Object.keys(fe).length) return;
+    if (Object.keys(fe).length) return focusFirstError();
     setBusy(true);
     setError(null);
     try {
@@ -89,7 +93,7 @@ export function AccountStep({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fe.email = d.account.emailInvalid;
     if (!terms) fe.terms = d.account.termsRequired;
     setFieldErr(fe);
-    if (Object.keys(fe).length) return;
+    if (Object.keys(fe).length) return focusFirstError();
     setBusy(true);
     setError(null);
     try {
@@ -148,6 +152,7 @@ export function AccountStep({
   })();
 
   return (
+    <div ref={rootRef}>
     <Card className="mt-6 border-brand-200">
       <CardHeader className="flex-col items-stretch">
         <CardTitle>{mode === "request" ? d.account.title : mode === "google" ? d.register.googleTitle : d.register.title}</CardTitle>
@@ -157,7 +162,7 @@ export function AccountStep({
         {google && mode !== "google" && !codeSent && (
           <div>
             <GoogleButton next={googleNext} />
-            <div className="mt-5 flex items-center gap-3 text-xs text-slate-400">
+            <div className="mt-5 flex items-center gap-3 text-xs text-slate-500">
               <span className="h-px flex-1 bg-slate-200" />
               {d.register.orEmail}
               <span className="h-px flex-1 bg-slate-200" />
@@ -204,8 +209,18 @@ export function AccountStep({
           </div>
 
           <div>
-            <Checkbox label={termsLabel} checked={terms} onChange={(e) => setTerms(e.target.checked)} />
-            {fieldErr.terms && <p className="mt-1 text-xs text-red-600">{fieldErr.terms}</p>}
+            <Checkbox
+              label={termsLabel}
+              checked={terms}
+              onChange={(e) => setTerms(e.target.checked)}
+              aria-invalid={fieldErr.terms ? true : undefined}
+              aria-describedby={fieldErr.terms ? termsErrorId : undefined}
+            />
+            {fieldErr.terms && (
+              <p id={termsErrorId} role="alert" className="mt-1 text-xs text-red-600">
+                {fieldErr.terms}
+              </p>
+            )}
           </div>
         </fieldset>
 
@@ -268,5 +283,6 @@ export function AccountStep({
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
