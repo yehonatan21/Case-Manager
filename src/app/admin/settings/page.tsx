@@ -12,6 +12,8 @@ import { getWhatsAppStatus } from "@/lib/services/whatsapp";
 import { GrowConnect } from "@/components/admin/grow-connect";
 import { ServiceTypes } from "@/components/admin/settings/service-types";
 import { CalendarConnect } from "@/components/admin/meetings/calendar-connect";
+import { InvoicesConnect } from "@/components/admin/invoices-connect";
+import { getInvoiceStatus } from "@/lib/services/invoices";
 import { getCalendarStatus } from "@/lib/services/calendar";
 import { googleEnabled } from "@/lib/services/google";
 import { listServiceCategories } from "@/lib/services/categories";
@@ -36,7 +38,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getWhatsAppStatus(db),
     getPaymentProviderStatus(db),
   ]);
-  const [categories, calendarStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id)]);
+  const [categories, calendarStatus, invoiceStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id), getInvoiceStatus(db)]);
   return (
     <>
       <PageHeader title={d.settingsPage.title} />
@@ -50,6 +52,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         integrations={
           <>
             <GrowConnect status={payments} canEdit className="" />
+            <InvoicesConnect status={invoiceStatus} />
             <WhatsAppConnect status={whatsapp} canTest={!!user.whatsappOptInAt && !!user.whatsappPhone} />
             <CalendarConnect status={calendarStatus} available={googleEnabled()} result={calendar} returnTo="/admin/settings?tab=integrations" />
           </>

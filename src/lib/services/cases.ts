@@ -8,6 +8,7 @@ import {
   customers,
   documentFiles,
   signatures,
+  caseFeedback,
   documents,
   intakeSessions,
   messages,
@@ -194,6 +195,13 @@ export async function applyStatus(
       vars: { number: c.number, status: dictionaries[loc].status.client[CLIENT_STATUS[to]] },
       link: portalCaseLink(c.id),
     });
+  }
+  // A completed case: ask the client for a short rating (once; reopening and completing again doesn't ask twice).
+  if (to === "completed") {
+    const [done] = await tx.select({ id: caseFeedback.id }).from(caseFeedback).where(eq(caseFeedback.caseId, c.id));
+    if (!done) {
+      await notify(tx, { userIds: [await customerUserIdOf(tx, c.customerId)], type: "feedback_requested", caseId: c.id, vars: { number: c.number }, link: `${portalCaseLink(c.id)}#feedback` });
+    }
   }
   return updated!;
 }

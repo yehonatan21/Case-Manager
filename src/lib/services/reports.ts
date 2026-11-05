@@ -6,7 +6,7 @@
  */
 import { and, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import type { DbOrTx } from "../db";
-import { caseEvents, cases, customers, meetings, payments, quotes, tasks, users, type User } from "../db/schema";
+import { caseEvents, caseFeedback, cases, customers, meetings, payments, quotes, tasks, users, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { OPEN_STATUSES, STAFF_ROLES } from "../domain";
 import { zonedDay, zonedToUtc, DEFAULT_TZ } from "../meetings";
@@ -215,8 +215,33 @@ export async function buildReport(db: DbOrTx, actor: User, period: Period) {
   const byStatus = new Map<string, number>();
   for (const r of rows) byStatus.set(r.status, (byStatus.get(r.status) ?? 0) + 1);
 
+  // ---- Client satisfaction (ratings given in the period) ----
+  const ratings = await db
+    .select({ rating: caseFeedback.rating, comment: caseFeedback.comment, createdAt: caseFeedback.createdAt, staffId: caseFeedback.staffId, caseNumber: cases.number, caseId: cases.id })
+    .from(caseFeedback)
+    .innerJoin(cases, eq(cases.id, caseFeedback.caseId))
+    .where(and(gte(caseFeedback.createdAt, start), lt(caseFeedback.createdAt, end)));
+  const [{ n: completedCount } = { n: 0 }] = await db
+    .select({ n: sql<number>`count(distinct ${caseEvents.caseId})::int` })
+    .from(caseEvents)
+    .where(and(eq(caseEvents.type, "case_completed"), gte(caseEvents.createdAt, start), lt(caseEvents.createdAt, end)));
+  const satisfaction = {
+    count: ratings.length,
+    average: avg(ratings.map((r) => r.rating)),
+    distribution: [5, 4, 3, 2, 1].map((star) => ({ star, count: ratings.filter((r) => r.rating === star).length })),
+    completed: completedCount,
+    responseRate: completedCount ? Math.min(1, ratings.length / completedCount) : null,
+    recent: access.operations
+      ? ratings
+          .filter((r) => r.comment)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, 5)
+          .map((r) => ({ rating: r.rating, comment: r.comment!, caseNumber: r.caseNumber, caseId: r.caseId, createdAt: r.createdAt }))
+      : [],
+  };
+
   // ---- Team workload (now, and during the period) ----
-  let team: null | { id: string; name: string; role: string; openCases: number; newCases: number; completed: number; openTasks: number; overdueTasks: number; meetings: number; medianFirstResponseHours: number | null }[] = null;
+  let team: null | { id: string; name: string; role: string; openCases: number; newCases: number; completed: number; openTasks: number; overdueTasks: number; meetings: number; medianFirstResponseHours: number | null; averageRating: number | null; ratings: number }[] = null;
   if (access.operations) {
     const today = zonedDay(new Date(), DEFAULT_TZ).day;
     const open = await db.select({ assigneeId: cases.assigneeId, n: sql<number>`count(*)::int` }).from(cases).where(inArray(cases.status, OPEN_STATUSES)).groupBy(cases.assigneeId);
@@ -247,6 +272,8 @@ export async function buildReport(db: DbOrTx, actor: User, period: Period) {
           overdueTasks: taskRows.filter((t) => t.assigneeId === s.id && t.dueDate && t.dueDate < today).length,
           meetings: meetingRows.find((m) => m.staffId === s.id)?.n ?? 0,
           medianFirstResponseHours: median(mine.map((r) => r.firstResponseHours).filter((x): x is number => x !== null)),
+          averageRating: avg(ratings.filter((x) => x.staffId === s.id).map((x) => x.rating)),
+          ratings: ratings.filter((x) => x.staffId === s.id).length,
         };
       })
       .filter((s) => s.openCases + s.newCases + s.completed + s.openTasks + s.meetings > 0 || s.role !== "finance")
@@ -264,6 +291,7 @@ export async function buildReport(db: DbOrTx, actor: User, period: Period) {
     byStatus: [...byStatus].map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count),
     unassigned: access.operations ? rows.filter((r) => !r.assignee && OPEN_STATUSES.includes(r.status as (typeof OPEN_STATUSES)[number])).length : null,
     team,
+    satisfaction,
     // The list behind the numbers (for the export); amounts only for those who see revenue.
     cases: rows.map((r) => (access.revenue ? r : { ...r, quoteTotalCents: null, paidCents: 0 })),
   };

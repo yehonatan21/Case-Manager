@@ -77,6 +77,8 @@ export const signatureStatusEnum = pgEnum("signature_status", ["requested", "sig
 export const meetingStatusEnum = pgEnum("meeting_status", ["scheduled", "cancelled"]);
 export const meetingModeEnum = pgEnum("meeting_mode", ["video", "phone", "office"]);
 
+export const invoiceStatusEnum = pgEnum("invoice_status", ["pending", "issued", "failed"]);
+
 export const scanStatusEnum = pgEnum("scan_status", ["pending", "clean", "infected", "skipped", "error"]);
 
 export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "waiting", "done", "cancelled"]);
@@ -410,6 +412,59 @@ export const documentFiles = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("document_files_doc_idx").on(t.documentId)],
+);
+
+/**
+ * The document issued for a payment: a tax document from the connected invoicing service (e.g. Green Invoice's
+ * חשבונית מס קבלה), or, with none connected, the app's own payment confirmation (not a tax document).
+ */
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    paymentId: uuid("payment_id")
+      .notNull()
+      .references(() => payments.id, { onDelete: "cascade" }),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    /** "greeninvoice", or "confirmation" for the built-in payment confirmation. */
+    provider: text("provider").notNull(),
+    /** The provider's document type code (e.g. 320 = חשבונית מס קבלה, 400 = קבלה). */
+    documentType: text("document_type"),
+    status: invoiceStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    number: text("number"),
+    externalId: text("external_id"),
+    url: text("url"),
+    /** The PDF saved to the case's documents. */
+    documentId: uuid("document_id").references(() => documents.id, { onDelete: "set null" }),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    createdById: uuid("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("invoices_payment_idx").on(t.paymentId), index("invoices_status_idx").on(t.status)],
+);
+
+/** A client's rating of a completed case (once per case). */
+export const caseFeedback = pgTable(
+  "case_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The team member who handled the case when it was rated. */
+    staffId: uuid("staff_id").references(() => users.id, { onDelete: "set null" }),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("case_feedback_case_idx").on(t.caseId)],
 );
 
 /** Weekly working hours, in the business time zone: day 0 = Sunday … 6 = Saturday. */
@@ -788,6 +843,8 @@ export type Quote = typeof quotes.$inferSelect;
 export type Signature = typeof signatures.$inferSelect;
 export type ServiceCategoryRow = typeof serviceCategories.$inferSelect;
 export type Meeting = typeof meetings.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type CaseFeedback = typeof caseFeedback.$inferSelect;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type IntakeSession = typeof intakeSessions.$inferSelect;

@@ -33,6 +33,7 @@ Staff can also open requests on a client's behalf.
 - [WhatsApp](#whatsapp)
 - [Electronic signatures](#electronic-signatures)
 - [Meetings](#meetings)
+- [Receipts and invoices](#receipts-and-invoices)
 - [Email](#email)
 - [Google sign-in](#google-sign-in)
 - [Deploy](#deploy)
@@ -94,6 +95,8 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
 | **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
 | **Notifications** | In-app (bell and page), email, [push](#push-notifications) and [WhatsApp](#whatsapp) for every event, localized per recipient, through a retrying outbox. |
+| **Receipts & invoices** | Every successful payment gets its document automatically: a tax invoice-receipt or receipt from [Green Invoice (Morning, חשבונית ירוקה)](#receipts-and-invoices) when connected (Settings → Integrations), emailed by the service and saved as a PDF in the case's documents; otherwise the app's own payment confirmation (not a tax document). Staff issue or retry by hand on the Payments page. |
+| **Client satisfaction** | When a case is completed, the client is asked for a 1–5 rating with an optional comment, once. The team member is notified; staff see the rating on the case; Reports show the average, the spread, the response rate, recent comments and each member's rating. |
 | **Reports** | **Reports** (admins, finance, case managers) for a period: revenue by month and by service type, the request → quote → approval → payment funnel, time to first response (and the share within the SLA), to quote and to completion, requests by service type and status, and each team member's workload. Finance sees revenue only, and case managers see everything except revenue. **Export to Excel** downloads it as an .xlsx with one sheet per section, plus the list of requests. |
 | **Meetings** | Clients book a consultation (video, phone or at the office) from their case, in a free slot of the team member handling it. Staff book any time for themselves or a colleague. Change the time, cancel, add to any calendar (.ics), reminders to both sides. Team members set their hours on **Meetings**, and can connect Google Calendar: busy times are excluded and meetings are added with a Google Meet link. |
 | **Electronic signatures** | Staff ask the client to sign a PDF (a power of attorney, an engagement letter). The client reviews it, types their full name, optionally draws a signature, agrees and signs. The signed copy (each page stamped, plus a signature certificate page) is saved as a new version. Approving a quote is signed too, and a signed quote PDF is saved to the case's documents. |
@@ -239,6 +242,25 @@ The app then saves a new version of the document: the original, unchanged except
 
 PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with the Unicode bidirectional algorithm ([bidi-js](https://github.com/lojjic/bidi-js)) in the [Heebo](https://github.com/OdedEzer/heebo) font (SIL Open Font License, in [`assets/fonts`](assets/fonts)). Code: [`src/lib/services/signatures.ts`](src/lib/services/signatures.ts) and [`src/lib/pdf/`](src/lib/pdf/).
 
+## Receipts and invoices
+
+**Connect (admin).** In Settings → Integrations → **Receipts & invoices**, choose Green Invoice (Morning) and enter an API key. In Green Invoice, keys are under Settings → Developer tools → API keys; the secret is shown only once.
+- **Document type:** חשבונית מס קבלה (320) for VAT-registered businesses, or קבלה (400) for exempt ones.
+- **Issue automatically:** on by default. When it's off, staff issue documents from the Payments page.
+- **Email by the service:** Green Invoice emails the document to the client.
+- **Sandbox:** keys from `sandbox.d.greeninvoice.co.il` produce test documents.
+
+The app checks the keys with Green Invoice before saving them encrypted; afterwards only a hint is shown. Saving again without retyping the secret keeps it.
+
+**What happens on a payment.** Right after a payment succeeds, a document is issued for exactly the amount paid, VAT included (VAT-exempt when the quote had none). It records the case and our payment id as its reference, and the client's or organisation's name and tax id. Its PDF is saved to the case's documents, where the client sees it, and the client is notified.
+- Temporary errors (outages, rate limits) are retried by the jobs.
+- A refusal marks the document as failed and notifies admins and finance. Fix it at Green Invoice, then press **Retry** on the Payments page.
+- Each payment gets at most one document.
+
+**Without a service** each payment gets the app's own **payment confirmation** PDF, which states that it isn't a tax document. In Israel, receipts and tax invoices must come from certified bookkeeping software.
+
+The service sits behind an interface ([`src/lib/invoicing/`](src/lib/invoicing/)), so others (iCount, EZcount, Grow's documents) can be added alongside Green Invoice. Code: [`src/lib/services/invoices.ts`](src/lib/services/invoices.ts).
+
 ## Meetings
 
 **Booking.** On a case's **Meetings** tab the client chooses a length (Settings → General: lengths, break between meetings, minimum notice, how many days ahead, office address), how to meet, a day and a free time. The times offered are the working hours of the team member handling the case (or of the admins and case managers if no one is assigned), minus their other meetings with the break around them, minus their Google Calendar's busy times when connected. Staff book from the same tab at any free time, also outside working hours, for themselves or a colleague. Either side can move or cancel a meeting.
@@ -347,14 +369,14 @@ Merging a release pull request also adds a merge commit that exists only on `mai
 
 | Suite | Command | Covers |
 |---|---|---|
-| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), service types (assistant-created, deduplicated, admin-managed), AI consent, meetings (time zones and daylight saving, slots, booking, moving, cancelling, reminders, .ics, Google Calendar through a fake API), reports (periods, access by role, the numbers, the .xlsx file), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), service types (assistant-created, deduplicated, admin-managed), AI consent, meetings (time zones and daylight saving, slots, booking, moving, cancelling, reminders, .ics, Google Calendar through a fake API), reports (periods, access by role, the numbers, the .xlsx file), receipts and invoices (Green Invoice through a fake API: connecting, issuing, PDFs, retries, manual issuing, the payment confirmation), client satisfaction, the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
 | HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push, WhatsApp and signature endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, meetings (hours, booking a free slot, .ics, moving, cancelling), and reports (sections by role, periods, the Excel export). |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, meetings (hours, booking a free slot, .ics, moving, cancelling), reports (sections by role, periods, the Excel export), and receipts and ratings (with a stand-in Green Invoice API). |
 
-The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014`:
+The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014` (and `INVOICE_API_URL=http://localhost:4016/api/v1` for `e2e/invoices.cjs`):
 
 ```bash
-npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 WHATSAPP_API_URL=http://localhost:4014 npm start
+npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 WHATSAPP_API_URL=http://localhost:4014 INVOICE_API_URL=http://localhost:4016/api/v1 npm start
 ```
 
 [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and push to `main`:
@@ -398,7 +420,7 @@ e2e/                   Playwright browser scripts
 - **Sign-in codes:** hashed, single-use, time-limited, rate-limited and attempt-limited.
 - **Requests:** same-origin checks on all mutations; security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
 - **Files:** encrypted at rest (AES-256-GCM, or S3 server-side encryption); content-type and magic-byte checks; optional malware scan; permission-checked, audited downloads.
-- **Encrypted settings:** payment identifiers, WhatsApp credentials and push keys are stored encrypted with a key derived from `APP_SECRET`.
+- **Encrypted settings:** payment identifiers, invoicing keys, WhatsApp credentials, calendar tokens and push keys are stored encrypted with a key derived from `APP_SECRET`.
 - **Webhooks:**
   - mock and Stripe events are verified by signature;
   - Grow's are checked with a per-payment token and re-read from Grow's API;
