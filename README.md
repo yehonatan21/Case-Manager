@@ -246,7 +246,7 @@ PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with t
 
 **Calendars.** Every meeting has an **Add to calendar** button: an .ics file that works with Google, Outlook and Apple calendars and updates in place when the meeting moves (same UID, increasing SEQUENCE).
 
-**Google Calendar (optional, per team member).** On **Meetings → Connect Google Calendar**, a team member allows access to their calendar. Busy times there aren't offered to clients, and booked meetings are added to it, with a Google Meet link for video meetings. Moving or cancelling updates the event. It uses the same Google OAuth client as Google sign-in, and the same redirect URI. In Google Cloud:
+**Google Calendar (optional, per team member).** On **Meetings → Connect Google Calendar** (or **Settings → Integrations** for admins), a team member allows access to their calendar. Busy times there aren't offered to clients, and booked meetings are added to it, with a Google Meet link for video meetings. Moving or cancelling updates the event. It uses the same Google OAuth client as Google sign-in, and the same redirect URI. In Google Cloud:
 1. Enable the **Google Calendar API** for the project.
 2. On the OAuth consent screen, add the scopes `calendar.events` and `calendar.freebusy`.
 3. While the app is in testing, add the team members as test users. Publishing an app with these scopes needs Google's verification.
