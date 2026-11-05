@@ -403,6 +403,18 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("reports (e2e/reports.cjs covers the page)", () => {
+    it("the Excel export is for admins, finance and case managers only", async () => {
+      expect((await fetch(`${BASE}/api/admin/reports/export`)).status).toBe(401);
+      expect((await call("/api/admin/reports/export", { cookie: (await session("client@example.com")).cookie })).status).toBe(403);
+      expect((await call("/api/admin/reports/export", { cookie: (await session("staff@example.com")).cookie })).status).toBe(403);
+      const ok = await fetch(`${BASE}/api/admin/reports/export?from=2026-01-01&to=2026-01-31`, { headers: { Cookie: (await session("admin@example.com")).cookie } });
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get("content-disposition")).toContain("report-2026-01-01-2026-01-31.xlsx");
+      expect(Buffer.from(await ok.arrayBuffer()).subarray(0, 2).toString()).toBe("PK");
+    });
+  });
+
   describe("meetings (e2e/meetings.cjs covers booking in the browser)", () => {
     it("slots, booking, the .ics file and availability check who is asking and what they send", async () => {
       const manager = await session("manager@example.com");
