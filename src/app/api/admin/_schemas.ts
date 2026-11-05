@@ -16,6 +16,10 @@ export const TemplateBody = z.object({
       }),
     )
     .max(40),
+  documents: z
+    .array(z.object({ title: z.string().max(200), note: z.string().max(1000).optional(), required: z.boolean().optional() }))
+    .max(30)
+    .optional(),
 });
 
 export const PriceBody = z.object({

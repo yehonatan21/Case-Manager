@@ -18,6 +18,10 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
   quote_validity_days: 14,
   first_response_sla_hours: 24,
   intake_question_limit: 7,
+  /** Remind the client about documents still missing every N days (0 = never). */
+  document_reminder_days: 3,
+  /** Stop reminding about a document after this many reminders. */
+  document_reminder_max: 3,
 };
 
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */
@@ -82,6 +86,10 @@ export async function seedBase(db: Database) {
         { title: "הכנת המלצות", dueInDays: 9 },
         { title: "שליחת סיכום ללקוח", dueInDays: 10 },
       ],
+      documents: [
+        { title: "תעודת התאגדות או תעודת עוסק", required: true },
+        { title: "דוחות כספיים אחרונים", required: false, note: "אם יש" },
+      ],
     },
     {
       name: "הכנת בקשת ויזה",
@@ -94,6 +102,12 @@ export async function seedBase(db: Database) {
         { title: "בדיקה פנימית", dueInDays: 9, priority: "high" },
         { title: "העברת התיק ללקוח", dueInDays: 10 },
       ],
+      documents: [
+        { title: "צילום דרכון בתוקף", required: true, note: "עמוד התמונה, באיכות טובה" },
+        { title: "תמונת פספורט", required: true },
+        { title: "אישור העסקה או הזמנה מהמעסיק", required: true },
+        { title: "קורות חיים", required: false },
+      ],
     },
     {
       name: "בדיקת זכאות לאזרחות",
@@ -103,6 +117,12 @@ export async function seedBase(db: Database) {
         { title: "איסוף פרטי שושלת משפחתית", dueInDays: 3, requiresClientAction: true },
         { title: "בדיקת זכאות מול הקריטריונים", dueInDays: 7 },
         { title: "הכנת חוות דעת ללקוח", dueInDays: 10 },
+      ],
+      documents: [
+        { title: "צילום דרכון או תעודת זהות", required: true },
+        { title: "תעודת לידה", required: true },
+        { title: "תעודת לידה של ההורה או הסב/סבתא שדרכם הזכאות", required: true },
+        { title: "תעודות נישואין או שינוי שם במשפחה", required: false, note: "אם רלוונטי" },
       ],
     },
     {

@@ -275,6 +275,7 @@ export type ClientAction =
   | { type: "quote_expired"; quoteId: string }
   | { type: "pay"; quoteId: string }
   | { type: "upload"; documentId: string; title: string; note: string | null }
+  | { type: "upload_many"; count: number; titles: string[] }
   | { type: "reply" }
   | { type: "task"; title: string };
 
@@ -285,7 +286,7 @@ export function isQuoteExpired(q: { status: string; validUntil: string | null })
 export function computeClientActions(input: {
   status: CaseStatus;
   openQuote: { id: string; status: string; serviceName: string; validUntil: string | null } | null;
-  requestedDocs: { id: string; title: string; requestNote: string | null }[];
+  requestedDocs: { id: string; title: string; requestNote: string | null; required?: boolean }[];
   clientTasks: { title: string }[];
 }): ClientAction[] {
   const actions: ClientAction[] = [];
@@ -295,7 +296,10 @@ export function computeClientActions(input: {
   }
   if (q && q.status === "expired" && input.status === "quote_sent") actions.push({ type: "quote_expired", quoteId: q.id });
   if (q && q.status === "approved" && input.status === "awaiting_payment") actions.push({ type: "pay", quoteId: q.id });
-  for (const d of input.requestedDocs) actions.push({ type: "upload", documentId: d.id, title: d.title, note: d.requestNote });
+  // Required documents only (optional ones are listed in the documents tab); several become one action.
+  const required = input.requestedDocs.filter((d) => d.required !== false);
+  if (required.length === 1) actions.push({ type: "upload", documentId: required[0]!.id, title: required[0]!.title, note: required[0]!.requestNote });
+  else if (required.length > 1) actions.push({ type: "upload_many", count: required.length, titles: required.map((d) => d.title) });
   if ((input.status === "awaiting_information" || input.status === "awaiting_client") && input.requestedDocs.length === 0) actions.push({ type: "reply" });
   for (const t of input.clientTasks) actions.push({ type: "task", title: t.title });
   return actions;
@@ -310,7 +314,7 @@ async function clientActionsForCases(db: DbOrTx, rows: Pick<Case, "id" | "status
     .where(and(inArray(quotes.caseId, ids), inArray(quotes.status, ["sent", "clarification_requested", "approved", "expired"])))
     .orderBy(desc(quotes.version));
   const docs = await db
-    .select({ id: documents.id, caseId: documents.caseId, title: documents.title, requestNote: documents.requestNote })
+    .select({ id: documents.id, caseId: documents.caseId, title: documents.title, requestNote: documents.requestNote, required: documents.required })
     .from(documents)
     .where(and(inArray(documents.caseId, ids), inArray(documents.status, ["requested", "needs_new_version"]), eq(documents.visibility, "client")));
   const ts = await db

@@ -372,6 +372,37 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("document checklists", () => {
+    it("staff request a template's checklist; customers can't; bad bodies are rejected", async () => {
+      const admin = await session("admin@example.com");
+      const manager = await session("manager@example.com");
+      const created = await call("/api/admin/cases", { body: { customer: { email: "client@example.com", name: "x", customerType: "private", locale: "he" }, title: "Checklist", description: "d", serviceCategory: "immigration_visa", urgency: "normal" }, cookie: manager.cookie });
+      const caseId = created.json!.data.id as string;
+      const tpl = await call("/api/admin/templates", { body: { name: `HTTP checklist ${Date.now()}`, category: "immigration_visa", tasks: [], documents: [{ title: "Passport" }, { title: "CV", required: false }] }, cookie: admin.cookie });
+      expect(tpl.status).toBe(200);
+      const templateId = tpl.json!.data.id as string;
+
+      const client = await session("client@example.com");
+      expect((await call(`/api/cases/${caseId}/documents`, { body: { templateId }, cookie: client.cookie })).status).toBe(403);
+      for (const bad of [{ templateId: "nope" }, { items: [] }, { items: [{ title: "" }] }, { items: Array.from({ length: 31 }, (_, i) => ({ title: `D${i}` })) }, {}]) {
+        expect((await call(`/api/cases/${caseId}/documents`, { body: bad, cookie: manager.cookie })).status, JSON.stringify(bad).slice(0, 60)).toBe(400);
+      }
+      const r = await call(`/api/cases/${caseId}/documents`, { body: { templateId }, cookie: manager.cookie });
+      expect(r.status).toBe(200);
+      expect(r.json!.data.created).toBe(2);
+      expect((await call(`/api/cases/${caseId}/documents`, { body: { templateId }, cookie: manager.cookie })).json!.data.created).toBe(0);
+      const bundle = (await call(`/api/cases/${caseId}`, { cookie: client.cookie })).json!.data;
+      expect(bundle.documents.map((d: { title: string; required: boolean }) => [d.title, d.required]).sort()).toEqual([["CV", false], ["Passport", true]]);
+    });
+
+    it("the reminder settings are validated", async () => {
+      const admin = await session("admin@example.com");
+      expect((await call("/api/admin/settings", { method: "PATCH", body: { document_reminder_days: -1 }, cookie: admin.cookie })).status).toBe(400);
+      expect((await call("/api/admin/settings", { method: "PATCH", body: { document_reminder_max: 0 }, cookie: admin.cookie })).status).toBe(400);
+      expect((await call("/api/admin/settings", { method: "PATCH", body: { document_reminder_days: 3, document_reminder_max: 3 }, cookie: admin.cookie })).status).toBe(200);
+    });
+  });
+
   it("finance can't read case messages or documents", async () => {
     const fin = await session("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];

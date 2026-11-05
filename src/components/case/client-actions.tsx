@@ -18,6 +18,8 @@ export function useActionText() {
         return { icon: CreditCard, title: d.caseView.actionPay, text: d.caseView.actionPayText, cta: d.caseView.goToPay, tab: "quote" };
       case "upload":
         return { icon: FileUp, title: d.caseView.actionUpload, text: fmt(d.caseView.actionUploadText, { title: a.title }), cta: d.caseView.goToUpload, tab: "documents" };
+      case "upload_many":
+        return { icon: FileUp, title: fmt(d.caseView.actionUploadMany, { n: a.count }), text: a.titles.join(", "), cta: d.caseView.goToUploadMany, tab: "documents" };
       case "reply":
         return { icon: MessageSquareReply, title: d.caseView.actionReply, text: d.caseView.actionReplyText, cta: d.caseView.goToMessages, tab: "messages" };
       case "task":

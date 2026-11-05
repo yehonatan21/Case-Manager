@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import type { DbOrTx } from "../db";
-import { priceListItems, serviceTemplates, type ServiceTemplateTask, type User } from "../db/schema";
+import { priceListItems, serviceTemplates, type ServiceTemplateDocument, type ServiceTemplateTask, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { audit } from "./audit";
 import { normalizeCategory } from "../domain";
@@ -22,7 +22,7 @@ export async function listPriceList(db: DbOrTx, activeOnly = false) {
 export async function upsertTemplate(
   db: DbOrTx,
   actor: User,
-  input: { id?: string; name: string; category: string; description?: string; tasks: ServiceTemplateTask[]; active?: boolean },
+  input: { id?: string; name: string; category: string; description?: string; tasks: ServiceTemplateTask[]; documents?: ServiceTemplateDocument[]; active?: boolean },
 ) {
   adminOnly(actor);
   const values = {
@@ -30,6 +30,8 @@ export async function upsertTemplate(
     category: normalizeCategory(input.category),
     description: input.description?.trim() ?? "",
     tasks: input.tasks.filter((t) => t.title.trim()),
+    // Keep the existing checklist when a caller doesn't send one.
+    ...(input.documents ? { documents: input.documents.map((x) => ({ title: x.title.trim(), note: x.note?.trim() || undefined, required: x.required ?? true })).filter((x) => x.title) } : {}),
     active: input.active ?? true,
     updatedAt: new Date(),
   };

@@ -14,7 +14,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "jobs:run": "tsx scripts/run-jobs.ts",
-    "e2e": "node e2e/a11y.cjs && node e2e/walkthrough.cjs && node e2e/accounts.cjs && node e2e/new-case.cjs && node e2e/team.cjs && node e2e/grow.cjs && node e2e/push.cjs",
+    "e2e": "node e2e/a11y.cjs && node e2e/walkthrough.cjs && node e2e/accounts.cjs && node e2e/new-case.cjs && node e2e/team.cjs && node e2e/grow.cjs && node e2e/push.cjs && node e2e/checklist.cjs",
     "vercel-build": "tsx scripts/migrate.ts && next build",
     "test:api": "vitest run tests/http",
     "db:remove-demo": "tsx scripts/remove-demo-data.ts"

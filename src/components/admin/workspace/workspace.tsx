@@ -254,7 +254,16 @@ export function CaseWorkspace({
                   )}
                 </TabPanel>
                 <TabPanel id="documents" active={tab === "documents"}>
-                  <DocumentsPanel caseId={c.id} docs={c.documents} mode="staff" canEdit={a.edit} maxMb={maxMb} />
+                  <DocumentsPanel
+                    caseId={c.id}
+                    docs={c.documents}
+                    mode="staff"
+                    canEdit={a.edit}
+                    maxMb={maxMb}
+                    checklistTemplates={templates
+                      .filter((t) => t.documents?.length)
+                      .sort((x, y) => Number(y.category === c.serviceCategory) - Number(x.category === c.serviceCategory))}
+                  />
                 </TabPanel>
                 <TabPanel id="timeline" active={tab === "timeline"}>
                   <Timeline events={c.events} audience="staff" />
