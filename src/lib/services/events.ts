@@ -12,6 +12,8 @@ export type EventType =
   | "info_requested"
   | "client_responded"
   | "document_requested"
+  | "documents_requested"
+  | "documents_reminder"
   | "document_uploaded"
   | "document_reviewed"
   | "quote_sent"

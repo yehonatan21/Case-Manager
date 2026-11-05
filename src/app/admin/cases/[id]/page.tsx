@@ -34,7 +34,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
         initialTab={tab}
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}
         staff={staff}
-        templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category }))}
+        templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, documents: t.documents }))}
         c={{
           id: b.case.id,
           number: b.case.number,
@@ -67,6 +67,9 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
             title: doc.title,
             status: doc.status,
             visibility: doc.visibility,
+            required: doc.required,
+            requested: doc.requestedById !== null,
+            reminderCount: doc.reminderCount,
             requestNote: doc.requestNote,
             reviewNote: doc.reviewNote,
             aiAnalysis: doc.aiAnalysis,

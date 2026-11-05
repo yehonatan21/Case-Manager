@@ -15,6 +15,8 @@ export const PATCH = route(async (req) => {
       quote_validity_days: z.number().int().min(1).max(365).optional(),
       first_response_sla_hours: z.number().int().min(1).max(720).optional(),
       intake_question_limit: z.number().int().min(1).max(20).optional(),
+      document_reminder_days: z.number().int().min(0).max(60).optional(),
+      document_reminder_max: z.number().int().min(1).max(10).optional(),
     }),
   );
   await updateSettings(await getDb(), user, body);

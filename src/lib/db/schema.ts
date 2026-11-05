@@ -145,6 +145,14 @@ export type CaseAiSummary = {
 
 export type EventData = Record<string, string | number | boolean | null | undefined>;
 
+/** A document a service usually needs from the client (part of a service template's checklist). */
+export type ServiceTemplateDocument = {
+  title: string;
+  note?: string;
+  /** Optional documents are requested too, but don't count toward "all required documents provided". */
+  required?: boolean;
+};
+
 export type ServiceTemplateTask = {
   title: string;
   description?: string;
@@ -355,6 +363,11 @@ export const documents = pgTable(
     requestedById: uuid("requested_by_id").references(() => users.id),
     createdById: uuid("created_by_id").references(() => users.id),
     currentVersion: integer("current_version").notNull().default(0),
+    /** For requested documents: does the client have to provide it (counts toward checklist progress)? */
+    required: boolean("required").notNull().default(true),
+    /** Automatic reminders sent to the client for this request, and when the last one went out. */
+    reminderCount: integer("reminder_count").notNull().default(0),
+    lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
     aiAnalysis: jsonb("ai_analysis").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -589,6 +602,7 @@ export const serviceTemplates = pgTable("service_templates", {
   category: text("category").notNull().default("other"),
   description: text("description").notNull().default(""),
   tasks: jsonb("tasks").$type<ServiceTemplateTask[]>().notNull().default([]),
+  documents: jsonb("documents").$type<ServiceTemplateDocument[]>().notNull().default([]),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
