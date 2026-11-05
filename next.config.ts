@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_REALTIME: process.env.NEXT_PUBLIC_REALTIME || (process.env.VERCEL ? "poll" : "sse"),
   },
   serverExternalPackages: ["@electric-sql/pglite", "pg", "nodemailer"],
+  // Fonts for signed PDFs are read from disk at run time, which tracing can't see.
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./assets/fonts/**/*"],
+  },
   poweredByHeader: false,
   async headers() {
     return [

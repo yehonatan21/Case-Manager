@@ -31,6 +31,7 @@ Staff can also open requests on a client's behalf.
 - [Payments: Grow, Stripe, test checkout](#payments)
 - [Push notifications](#push-notifications)
 - [WhatsApp](#whatsapp)
+- [Electronic signatures](#electronic-signatures)
 - [Email](#email)
 - [Google sign-in](#google-sign-in)
 - [Deploy](#deploy)
@@ -91,6 +92,7 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
 | **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
 | **Notifications** | In-app (bell and page), email, [push](#push-notifications) and [WhatsApp](#whatsapp) for every event, localized per recipient, through a retrying outbox. |
+| **Electronic signatures** | Staff ask the client to sign a PDF (a power of attorney, an engagement letter). The client reviews it, types their full name, optionally draws a signature, agrees and signs. The signed copy (each page stamped, plus a signature certificate page) is saved as a new version. Approving a quote is signed too, and a signed quote PDF is saved to the case's documents. |
 | **WhatsApp** | Clients (and staff) who opt in on their profile get updates on WhatsApp. Client replies land in the case's messages, labelled "WhatsApp", and files they send are added to the case's documents. "STOP" opts out. |
 | **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
 | **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit); service templates; price list; payment provider. |
@@ -212,6 +214,26 @@ Web Push reaches browsers and phones even when the site is closed.
   - [`src/app/manifest.ts`](src/app/manifest.ts): the web app manifest.
   - [`src/lib/services/push.ts`](src/lib/services/push.ts): sending.
 
+## Electronic signatures
+
+**Documents.** On a case's Documents tab, staff press **Request signature** on a client-visible PDF (optionally with a note). The client is notified and gets a to-do; the case waits for them. The client opens **Review and sign**:
+1. They open the document (it opens in the browser).
+2. They type their full name (prefilled), and can also draw a signature with a mouse, finger or stylus. Drawing is optional, so keyboard and screen reader users can sign by name alone.
+3. They agree to sign electronically, and press **Sign**.
+
+The app then saves a new version of the document: the original, unchanged except for a one-line "signed electronically by …" stamp in each page's bottom margin, followed by a **signature certificate** page. The certificate lists the document, case, signer and email, the time (Israel time and UTC), IP address, browser and device, the method, the original's SHA-256 fingerprint and the signature ID, with the drawn signature or typed name. The previous version is kept. Staff see the same details under **Signature details**, plus the signed file's fingerprint.
+
+- A request is for one exact version: if staff upload a newer version, the old request can't be signed. Request again.
+- Staff can cancel a request that hasn't been signed. A document can't have two open requests.
+- The client's to-do disappears, and the case goes back to the team, once nothing else is waiting on them.
+- PDFs that can't be processed (password-protected or damaged) are refused with a clear message.
+
+**Quotes.** The approval box asks for the same signature (full name, optional drawing). After approval, a PDF of the approved version with the certificate page is saved to the case's documents as "Signed quote (version N)". The approval itself is recorded as before (version, identity, time, IP, content hash).
+
+**Legal standing.** This is an *electronic signature* under Israel's Electronic Signature Law, 5761-2001: the signer is identified by their sign-in (a one-time code to their email or Google), and the evidence above is kept. It is not a *certified* electronic signature (which needs a certification authority and a smart card or similar). For documents that legally require one, use a certified provider.
+
+PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with the Unicode bidirectional algorithm ([bidi-js](https://github.com/lojjic/bidi-js)) in the [Heebo](https://github.com/OdedEzer/heebo) font (SIL Open Font License, in [`assets/fonts`](assets/fonts)). Code: [`src/lib/services/signatures.ts`](src/lib/services/signatures.ts) and [`src/lib/pdf/`](src/lib/pdf/).
+
 ## WhatsApp
 
 Updates go out through the [WhatsApp Business Platform (Meta Cloud API)](https://developers.facebook.com/docs/whatsapp/cloud-api), and client replies come back into the case. The provider sits behind an interface ([`src/lib/whatsapp/`](src/lib/whatsapp/)), so another provider (e.g. Twilio) can replace Meta without changing the rest of the app.
@@ -303,9 +325,9 @@ Merging a release pull request also adds a merge commit that exists only on `mai
 
 | Suite | Command | Covers |
 |---|---|---|
-| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
-| HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push and WhatsApp endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists and WhatsApp (with a stand-in Meta API). |
+| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push, WhatsApp and signature endpoints. |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) and electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes). |
 
 The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014`:
 

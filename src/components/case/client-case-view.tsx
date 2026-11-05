@@ -207,7 +207,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                 </Card>
               </TabPanel>
               <TabPanel id="documents" active={tab === "documents"}>
-                <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} />
+                <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} signerName={c.checkout?.payerName ?? ""} />
               </TabPanel>
               <TabPanel id="quote" active={tab === "quote"}>
                 <ClientQuotePanel caseId={c.id} caseStatus={c.status} quotes={c.quotes} payments={c.payments} customerName={c.customerName} checkout={c.checkout} />

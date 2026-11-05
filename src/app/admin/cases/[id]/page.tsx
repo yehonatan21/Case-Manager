@@ -73,7 +73,9 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
             requestNote: doc.requestNote,
             reviewNote: doc.reviewNote,
             aiAnalysis: doc.aiAnalysis,
-            files: doc.files.map((f) => ({ id: f.id, version: f.version, filename: f.filename, sizeBytes: f.sizeBytes, scanStatus: f.scanStatus, createdAt: f.createdAt, uploaderName: f.uploaderName })),
+            files: doc.files.map((f) => ({ id: f.id, version: f.version, filename: f.filename, mimeType: f.mimeType, sizeBytes: f.sizeBytes, scanStatus: f.scanStatus, createdAt: f.createdAt, uploaderName: f.uploaderName })),
+            // The latest signature request on the document (cancelled ones are hidden from clients by the bundle).
+            signature: b.signatures.find((x) => x.documentId === doc.id && x.status !== "cancelled") ?? null,
           })),
           tasks: b.tasks.map((t) => ({ id: t.id, title: t.title, description: t.description, assigneeId: t.assigneeId, dueDate: t.dueDate, status: t.status, priority: t.priority, requiresClientAction: t.requiresClientAction })),
           quotes: b.quotes.map((q) => ({ id: q.id, version: q.version, status: q.status, expired: q.expired, serviceName: q.serviceName, totalCents: q.totalCents, currency: q.currency, sentAt: q.sentAt, approvedAt: q.approvedAt, updatedAt: q.updatedAt })),
