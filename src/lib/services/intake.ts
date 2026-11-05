@@ -9,7 +9,7 @@ import { rateLimit } from "./rate-limit";
 import { getSettings } from "./settings";
 import { dictionaries } from "../i18n/dictionaries";
 import type { Locale } from "../i18n/config";
-import { normalizeCategory } from "../domain";
+import { categoriesForPrompt, categoryFromProposal, isKnownCategory, resolveCategory } from "./categories";
 
 export const INTAKE_OWNER_COOKIE = "cm_intake_owner";
 const MAX_TURNS = 40;
@@ -62,8 +62,16 @@ async function runTurn(db: Database, session: IntakeSession, messages: IntakeCha
       limit: session.questionLimit,
       finishNow,
       skippedLabel: dictionaries[locale].intake.dontKnow,
+      categories: await categoriesForPrompt(db),
     });
-    const summary: IntakeSummary = { ...emptySummary(), ...turn.summary, service_category: normalizeCategory(turn.summary.service_category) };
+    // A new kind of service (no existing type fits): the proposed type is created, or matched to one with that name.
+    const category =
+      turn.summary.service_category === "new" || (turn.summary.new_service_type && !(await isKnownCategory(db, turn.summary.service_category)))
+        ? await categoryFromProposal(db, turn.summary.new_service_type)
+        : await resolveCategory(db, turn.summary.service_category);
+    const { new_service_type: _proposal, ...rest } = turn.summary;
+    void _proposal;
+    const summary: IntakeSummary = { ...emptySummary(), ...rest, service_category: category };
     const assistantMsg: IntakeChatMessage = {
       id: newId(),
       role: "assistant",

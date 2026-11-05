@@ -8,6 +8,7 @@ import { PortalActions } from "@/components/portal/portal-actions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { FolderOpen, Plus } from "lucide-react";
+import { AiConsentPrompt } from "@/components/portal/ai-consent-prompt";
 
 export default async function PortalHome() {
   const user = await requirePageCustomer("/portal");
@@ -17,6 +18,8 @@ export default async function PortalHome() {
   return (
     <>
       <PageHeader title={fmt(d.portal.welcome, { name: user.name.split(" ")[0] ?? user.name })} subtitle={d.portal.welcomeSub} />
+      {/* Never asked about AI (an account the team opened for them). */}
+      {!user.aiConsentAt && !user.aiConsentDeclinedAt && <AiConsentPrompt />}
       {cases.length === 0 ? (
         <EmptyState
           icon={<FolderOpen className="size-10" />}

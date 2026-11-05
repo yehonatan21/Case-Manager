@@ -13,7 +13,7 @@ import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { TabList, TabPanel } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { SERVICE_CATEGORIES } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 import type { AppSettings } from "@/lib/services/settings";
 import type { ServiceTemplateDocument, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
 
@@ -56,6 +56,7 @@ export function SettingsTabs({
   templates,
   prices,
   integrations,
+  serviceTypes,
 }: {
   initialTab?: string;
   currentUserId: string;
@@ -65,11 +66,14 @@ export function SettingsTabs({
   prices: Price[];
   /** Rendered in the Integrations tab (WhatsApp). */
   integrations?: React.ReactNode;
+  /** Rendered in the Service types tab. */
+  serviceTypes?: React.ReactNode;
 }) {
+  const categories = useCategories();
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState(["general", "users", "templates", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
+  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [invite, setInvite] = useState({ email: "", name: "", role: "case_manager" as UserRole });
@@ -101,11 +105,17 @@ export function SettingsTabs({
           { id: "general", label: d.settingsPage.tabs.general },
           { id: "users", label: d.settingsPage.tabs.users },
           { id: "templates", label: d.settingsPage.tabs.templates },
+          ...(serviceTypes ? [{ id: "serviceTypes", label: d.settingsPage.tabs.serviceTypes }] : []),
           { id: "priceList", label: d.settingsPage.tabs.priceList },
           ...(integrations ? [{ id: "integrations", label: d.settingsPage.tabs.integrations }] : []),
         ]}
       />
       <div className="pt-5">
+        {serviceTypes && (
+          <TabPanel id="serviceTypes" active={tab === "serviceTypes"} className="max-w-3xl">
+            {serviceTypes}
+          </TabPanel>
+        )}
         {integrations && (
           <TabPanel id="integrations" active={tab === "integrations"} className="max-w-3xl space-y-4">
             {integrations}
@@ -244,7 +254,7 @@ export function SettingsTabs({
                   <div>
                     <p className="bidi-auto font-semibold">{t.name}</p>
                     <p className="text-xs text-slate-500">
-                      {d.categories[t.category as "other"] ?? t.category} {!t.active && <Badge tone="muted">{d.settingsPage.inactive}</Badge>}
+                      {categories.label(t.category)} {!t.active && <Badge tone="muted">{d.settingsPage.inactive}</Badge>}
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -295,9 +305,9 @@ export function SettingsTabs({
               <Field label={d.workspace.category}>
                 {(p) => (
                   <Select {...p} value={tpl.category} onChange={(e) => setTpl({ ...tpl, category: e.target.value })}>
-                    {SERVICE_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {d.categories[c]}
+                    {categories.list.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {categories.label(c.key)}
                       </option>
                     ))}
                   </Select>
@@ -353,9 +363,9 @@ export function SettingsTabs({
               <Field label={d.workspace.category}>
                 {(p) => (
                   <Select {...p} value={price.category} onChange={(e) => setPrice({ ...price, category: e.target.value })}>
-                    {SERVICE_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {d.categories[c]}
+                    {categories.list.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {categories.label(c.key)}
                       </option>
                     ))}
                   </Select>
@@ -395,7 +405,7 @@ export function SettingsTabs({
                   <tr key={p.id}>
                     <td className="px-4 py-3 font-mono text-xs" dir="ltr">{p.code}</td>
                     <td className="bidi-auto px-4 py-3">{p.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{d.categories[p.category as "other"] ?? p.category}</td>
+                    <td className="px-4 py-3 text-slate-600">{categories.label(p.category)}</td>
                     <td className="px-4 py-3 text-end tabular-nums">{formatMoney(p.unitPriceCents, p.currency, locale)}</td>
                     <td className="px-4 py-3">
                       <Checkbox

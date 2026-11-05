@@ -33,7 +33,13 @@ type ChatResponse = {
 export function jsonSchemaFor(schema: z.ZodType): Record<string, unknown> {
   const js = z.toJSONSchema(schema, { target: "draft-7" }) as Record<string, unknown>;
   delete js.$schema;
-  return js;
+  // Strict structured-output modes reject "default"; the field stays required, and missing values are filled on parse.
+  const strip = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(strip);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).filter(([k]) => k !== "default").map(([k, x]) => [k, strip(x)]));
+    return v;
+  };
+  return strip(js) as Record<string, unknown>;
 }
 
 /** Pulls the JSON object out of a model reply: plain JSON, a ```json fence, or text around one object. */
@@ -56,6 +62,32 @@ export function extractJson(text: string): unknown {
     } catch {}
   }
   throw new AiProviderError("Model reply was not valid JSON", true);
+}
+
+/**
+ * Some models put the rest of the reply inside the first text field, e.g.
+ * {"message": "Hi…?\",\"quick_replies\":[…],\"ready_for_review\":false"} — valid JSON, but the user would see
+ * the other fields as text. When a string field contains `","<another field>":`, rebuild the object from it;
+ * if that isn't possible, cut the leaked part off.
+ */
+export function repairLeakedFields<T>(value: T, schema: z.ZodType): T {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj);
+  for (const [field, v] of Object.entries(obj)) {
+    if (typeof v !== "string") continue;
+    const others = keys.filter((k) => k !== field);
+    const leak = new RegExp(`"\\s*,\\s*"(${others.map((k) => k.replace(/[^\w]/g, "")).join("|")})"\\s*:`);
+    const m = leak.exec(v);
+    if (!m) continue;
+    try {
+      const rebuilt = JSON.parse(`{${JSON.stringify(field)}:"${v.replace(/\n/g, "\\n")}}`);
+      const merged = schema.safeParse({ ...obj, ...rebuilt });
+      if (merged.success) return merged.data as T;
+    } catch {}
+    obj[field] = v.slice(0, m.index).trim();
+  }
+  return obj as T;
 }
 
 export function createOpenAICompatibleProvider(cfg: OpenAICompatibleConfig): AiProvider {
@@ -122,7 +154,7 @@ export function createOpenAICompatibleProvider(cfg: OpenAICompatibleConfig): AiP
         }
         try {
           const parsed = req.schema.safeParse(extractJson(choice?.message?.content ?? ""));
-          if (parsed.success) return { output: parsed.data as z.infer<S>, model: res.model ?? cfg.model, inputTokens: inputTokens || null, outputTokens: outputTokens || null };
+          if (parsed.success) return { output: repairLeakedFields(parsed.data as z.infer<S>, req.schema), model: res.model ?? cfg.model, inputTokens: inputTokens || null, outputTokens: outputTokens || null };
           lastError = parsed.error.issues
             .slice(0, 5)
             .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)

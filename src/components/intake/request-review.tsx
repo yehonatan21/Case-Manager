@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Notice } from "@/components/ui/misc";
-import { SERVICE_CATEGORIES, normalizeCategory } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 import type { IntakeSummary } from "@/lib/db/schema";
 import { AccountStep } from "./account-step";
 import { fmt } from "@/lib/i18n/config";
@@ -27,6 +27,7 @@ const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 
 export function RequestReview({ intakeId, summary, mode, user, googleEnabled }: Props) {
   const { d } = useI18n();
+  const categories = useCategories();
   const router = useRouter();
   const [title, setTitle] = useState(summary.request_title);
   const [goal, setGoal] = useState(summary.customer_goal);
@@ -34,7 +35,7 @@ export function RequestReview({ intakeId, summary, mode, user, googleEnabled }: 
   const [facts, setFacts] = useState(summary.known_facts.length ? summary.known_facts : []);
   const [constraints, setConstraints] = useState(summary.constraints.join("\n"));
   const [missing, setMissing] = useState(summary.missing_information.join("\n"));
-  const [category, setCategory] = useState(normalizeCategory(summary.service_category));
+  const [category, setCategory] = useState(summary.service_category || "other");
   const [urgency, setUrgency] = useState(summary.urgency);
   const [notes, setNotes] = useState(summary.additional_notes ?? "");
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({});
@@ -132,10 +133,11 @@ export function RequestReview({ intakeId, summary, mode, user, googleEnabled }: 
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label={d.review.category}>
               {(p) => (
-                <Select {...p} value={category} onChange={(e) => setCategory(normalizeCategory(e.target.value))} disabled={stage === "account"}>
-                  {SERVICE_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {d.categories[c]}
+                <Select {...p} value={category} onChange={(e) => setCategory(e.target.value)} disabled={stage === "account"}>
+                  {!categories.list.some((x) => x.key === category) && <option value={category}>{categories.label(category)}</option>}
+                  {categories.list.map((c) => (
+                    <option key={c.key} value={c.key}>
+                      {categories.label(c.key)}
                     </option>
                   ))}
                 </Select>

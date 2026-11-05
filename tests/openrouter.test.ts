@@ -6,7 +6,7 @@ import * as s from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { aiCaseSummary, aiDocAnalysis, aiIntakeTurn, aiProviderName, type CaseContext } from "@/lib/ai";
 import { OPENROUTER_URL, openrouterProvider } from "@/lib/ai/providers/openrouter";
-import { extractJson, jsonSchemaFor } from "@/lib/ai/providers/openai-compatible";
+import { extractJson, jsonSchemaFor, repairLeakedFields } from "@/lib/ai/providers/openai-compatible";
 import { getAiProvider, AI_PROVIDER_IDS, type AiProvider } from "@/lib/ai/providers";
 
 const callOpenRouterStructured: AiProvider["structured"] = (req) => openrouterProvider().structured(req);
@@ -178,6 +178,22 @@ describe("OpenRouter requests", () => {
     expect(js.$schema).toBeUndefined();
     expect(js).toMatchObject({ type: "object", properties: { reply: { type: "string" }, summary: { type: "object" } } });
   });
+
+  it("recovers a reply whose text swallowed the other fields (seen with some models)", () => {
+    const summary = { request_title: "הגשת תביעת ביטוח דירה", request_description: "d", service_category: "other", customer_goal: "g", known_facts: [], constraints: [], missing_information: [], suggested_next_questions: [], urgency: "normal", needs_human_review: false, assumptions: [] };
+    const leaked = `קיבלתי את בקשתך. מה קרה בדירה?","quick_replies":["נזק מים","שריפה"],"ready_for_review":false,"summary":${JSON.stringify({ ...summary, request_title: "נכון" })}`;
+    const raw = { reply: leaked, quick_replies: [], ready_for_review: false, summary };
+    const fixed = repairLeakedFields(IntakeTurnSchema.parse(raw), IntakeTurnSchema);
+    expect(fixed.reply).toBe("קיבלתי את בקשתך. מה קרה בדירה?");
+    expect(fixed.quick_replies).toEqual(["נזק מים", "שריפה"]);
+    expect(fixed.summary.request_title).toBe("נכון");
+    // Not rebuildable: the leaked part is cut off.
+    const broken = repairLeakedFields(IntakeTurnSchema.parse({ ...raw, reply: 'שאלה?","quick_replies":["x"' }), IntakeTurnSchema);
+    expect(broken.reply).toBe("שאלה?");
+    // Ordinary text with quotes and commas is left alone.
+    const fine = repairLeakedFields(IntakeTurnSchema.parse({ ...raw, reply: 'He said "yes", then left.' }), IntakeTurnSchema);
+    expect(fine.reply).toBe('He said "yes", then left.');
+  });
 });
 
 describe("replacing OpenRouter with another OpenAI-compatible service (no code)", () => {
@@ -221,7 +237,7 @@ describe("the app's AI features through OpenRouter", () => {
       messages: [{ role: "user", content: "אני רוצה לעבור לפורטוגל. הטלפון שלי 050-1234567 והמייל dana@example.com", at: new Date().toISOString() } as s.IntakeChatMessage],
       asked: 0,
       limit: 7,
-      skippedLabel: "(skipped)",
+      categories: "other — Other / אחר", skippedLabel: "(skipped)",
     });
     expect(out.reply).toBe("מה האזרחות הנוכחית שלך?");
     expect(out.summary.service_category).toBe("relocation");
@@ -238,7 +254,7 @@ describe("the app's AI features through OpenRouter", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     let err: unknown;
     try {
-      await aiIntakeTurn(db, { intakeSessionId, locale: "en", company: "X", messages: [{ role: "user", content: "hi", at: new Date().toISOString() } as s.IntakeChatMessage], asked: 0, limit: 7, skippedLabel: "-" });
+      await aiIntakeTurn(db, { intakeSessionId, locale: "en", company: "X", messages: [{ role: "user", content: "hi", at: new Date().toISOString() } as s.IntakeChatMessage], asked: 0, limit: 7, categories: "other — Other / אחר", skippedLabel: "-" });
     } catch (e) {
       err = e;
     }

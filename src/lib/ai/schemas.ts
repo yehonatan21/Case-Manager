@@ -1,12 +1,17 @@
 import { z } from "zod";
-import { SERVICE_CATEGORIES } from "../domain";
 
 // All fields are required (nullable where optional) to fit structured-output constraints.
 
 export const IntakeSummarySchema = z.object({
   request_title: z.string().describe("Short title, max ~10 words"),
   request_description: z.string().describe("Detailed description of the request, in the customer's language"),
-  service_category: z.enum(SERVICE_CATEGORIES),
+  service_category: z.string().describe('Key of the best-fitting service type from the list, or "new" when none fits'),
+  new_service_type: z
+    .object({ name_he: z.string(), name_en: z.string() })
+    .nullable()
+    // Required in the JSON schema sent to the model; replies that leave it out still parse.
+    .default(null)
+    .describe('Only when service_category is "new": a short name (1–3 words) for the new service type, in Hebrew and English'),
   customer_goal: z.string().describe("The outcome the customer wants"),
   known_facts: z.array(z.object({ label: z.string(), value: z.string() })).describe("Only facts the customer actually stated"),
   constraints: z.array(z.string()).describe("Deadlines, budget and other constraints the customer mentioned"),

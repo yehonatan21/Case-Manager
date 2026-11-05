@@ -30,6 +30,7 @@ export async function createCustomerAccount(
       locale: input.locale,
       termsAcceptedAt: new Date(),
       aiConsentAt: input.aiConsent ? new Date() : null,
+      aiConsentDeclinedAt: input.aiConsent ? null : new Date(),
     })
     .returning();
   let organizationId: string | null = null;
@@ -57,17 +58,23 @@ export async function getCustomerForUser(db: DbOrTx, userId: string) {
 export async function updateProfile(
   db: DbOrTx,
   user: User,
-  patch: { name?: string; phone?: string | null; locale?: Locale; emailNotifications?: boolean },
+  patch: { name?: string; phone?: string | null; locale?: Locale; emailNotifications?: boolean; aiConsent?: boolean },
 ) {
   const set = {
     ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
     ...(patch.phone !== undefined ? { phone: patch.phone?.trim() || null } : {}),
     ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
     ...(patch.emailNotifications !== undefined ? { emailNotifications: patch.emailNotifications } : {}),
+    // Agreeing keeps the original time; changing the answer records when.
+    ...(patch.aiConsent === true && !user.aiConsentAt ? { aiConsentAt: new Date(), aiConsentDeclinedAt: null } : {}),
+    ...(patch.aiConsent === false ? { aiConsentAt: null, aiConsentDeclinedAt: user.aiConsentDeclinedAt ?? new Date() } : {}),
   };
   // Nothing to change (e.g. only the WhatsApp setting was sent).
   if (Object.keys(set).length === 0) return;
   await db.update(users).set(set).where(eq(users.id, user.id));
+  if (patch.aiConsent !== undefined && patch.aiConsent !== !!user.aiConsentAt) {
+    await audit(db, { actorId: user.id, action: patch.aiConsent ? "user.ai_consent_given" : "user.ai_consent_withdrawn", entityType: "user", entityId: user.id });
+  }
 }
 
 export async function listStaff(db: DbOrTx, opts: { includeDisabled?: boolean } = {}) {

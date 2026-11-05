@@ -6,6 +6,9 @@ import { I18nProvider } from "@/lib/i18n/client";
 import { ToastProvider } from "@/components/ui/toast";
 import { env } from "@/lib/env";
 import { WebAnalytics } from "@/components/app/web-analytics";
+import { CategoriesProvider } from "@/components/app/categories";
+import { getDb } from "@/lib/db";
+import { listServiceCategories } from "@/lib/services/categories";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { d } = await getDict();
@@ -23,6 +26,8 @@ export const viewport: Viewport = { themeColor: "#4338ca", width: "device-width"
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, d } = await getDict();
+  // Service types for labels and pickers everywhere (custom ones live in the database).
+  const categories = await listServiceCategories(await getDb()).catch(() => []);
   return (
     <html lang={locale} dir={dirOf(locale)} suppressHydrationWarning>
       <body className="min-h-dvh">
@@ -35,7 +40,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         )}
         <I18nProvider locale={locale}>
-          <ToastProvider>{children}</ToastProvider>
+          <CategoriesProvider categories={categories}>
+            <ToastProvider>{children}</ToastProvider>
+          </CategoriesProvider>
         </I18nProvider>
         {env.isVercel && <WebAnalytics />}
       </body>

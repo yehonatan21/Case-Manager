@@ -17,6 +17,7 @@ export const PATCH = route(async (req) => {
       locale: z.enum(["he", "en"]).optional(),
       emailNotifications: z.boolean().optional(),
       whatsapp: z.boolean().optional(),
+      aiConsent: z.boolean().optional(),
     }),
   );
   const db = await getDb();

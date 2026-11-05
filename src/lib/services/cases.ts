@@ -27,8 +27,9 @@ import {
 } from "../db/schema";
 import { AppError } from "../errors";
 import { canCreateCasesForClients, caseAccess, type CaseAccess } from "../auth/permissions";
-import { CLIENT_STATUS, OPEN_STATUSES, canTransition, isStaffRole, normalizeCategory } from "../domain";
+import { CLIENT_STATUS, OPEN_STATUSES, canTransition, isStaffRole } from "../domain";
 import { addEvent } from "./events";
+import { resolveCategory } from "./categories";
 import { audit } from "./audit";
 import { notify, staffRecipients, markCaseNotificationsRead } from "./notifications";
 import { dictionaries } from "../i18n/dictionaries";
@@ -105,7 +106,7 @@ export async function submitIntakeAsCase(db: Database, opts: { user: User; sessi
     request_title: edits.request_title.trim(),
     request_description: edits.request_description.trim(),
     customer_goal: edits.customer_goal.trim(),
-    service_category: normalizeCategory(edits.service_category),
+    service_category: await resolveCategory(db, edits.service_category),
     urgency: edits.urgency,
     known_facts: edits.known_facts.filter((f) => f.label.trim() || f.value.trim()),
     constraints: edits.constraints.filter((x) => x.trim()),
@@ -244,7 +245,7 @@ export async function updateCaseFields(db: Database, actor: User, caseId: string
       set.urgency = patch.urgency;
       await addEvent(tx, { caseId: c.id, type: "urgency_changed", actor, visibility: "internal", data: { urgency: patch.urgency } });
     }
-    if (patch.serviceCategory) set.serviceCategory = normalizeCategory(patch.serviceCategory);
+    if (patch.serviceCategory) set.serviceCategory = await resolveCategory(tx, patch.serviceCategory);
     if (patch.title?.trim()) set.title = patch.title.trim();
     await tx.update(cases).set(set).where(eq(cases.id, c.id));
     await audit(tx, { actorId: actor.id, action: "case.update", entityType: "case", entityId: c.id, details: patch });
@@ -646,7 +647,7 @@ export async function createCaseForCustomer(db: Database, actor: User, input: St
         title: input.title.trim(),
         description: input.description.trim(),
         goal: input.goal?.trim() ?? "",
-        serviceCategory: normalizeCategory(input.serviceCategory),
+        serviceCategory: await resolveCategory(tx, input.serviceCategory),
         urgency: input.urgency,
         // Assigned straight away means the manager is already handling it, as after a normal assignment.
         status: assignToMe ? "under_review" : "submitted",
