@@ -25,7 +25,7 @@ export function TabList({ tabs, value, onChange, className, label }: { tabs: Tab
     }
   };
   return (
-    <div role="tablist" aria-label={label} className={cn("flex gap-1 overflow-x-auto border-b border-slate-200", className)}>
+    <div role="tablist" aria-label={label} className={cn("no-scrollbar flex gap-1 overflow-x-auto overflow-y-hidden border-b border-slate-200", className)}>
       {tabs.map((t, i) => {
         const selected = t.id === value;
         return (
@@ -39,7 +39,11 @@ export function TabList({ tabs, value, onChange, className, label }: { tabs: Tab
             aria-selected={selected}
             aria-controls={`panel-${t.id}`}
             tabIndex={selected ? 0 : -1}
-            onClick={() => onChange(t.id)}
+            onClick={(e) => {
+              onChange(t.id);
+              // The bar scrolls without a visible scrollbar, so bring a partly hidden tab fully into view.
+              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+            }}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
               "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2.5 text-sm font-medium transition-colors",
