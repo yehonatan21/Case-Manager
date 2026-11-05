@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, CheckCircle2, ClipboardList, Download, FilePlus2, FileText, Lock, Upload } from "lucide-react";
+import { Bot, CheckCircle2, ClipboardList, Download, FilePlus2, FileText, Lock, PenLine, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime } from "@/lib/i18n/format";
@@ -17,8 +17,24 @@ import { useToast } from "@/components/ui/toast";
 import { ACCEPT_ATTRIBUTE } from "@/lib/domain";
 import { documentChecklist, sameTitle } from "@/lib/checklist";
 import type { DocumentStatus, ScanStatusT } from "./types";
+import { SignDialog } from "./signature";
 
-export type DocFile = { id: string; version: number; filename: string; sizeBytes: number; scanStatus: ScanStatusT; createdAt: Date | string; uploaderName: string | null };
+export type DocFile = { id: string; version: number; filename: string; mimeType?: string; sizeBytes: number; scanStatus: ScanStatusT; createdAt: Date | string; uploaderName: string | null };
+export type DocSignature = {
+  id: string;
+  status: "requested" | "signed" | "cancelled";
+  note: string | null;
+  requestedAt: Date | string;
+  fileVersion: number | null;
+  signerName: string | null;
+  signedAt: Date | string | null;
+  method: "typed" | "drawn" | null;
+  originalSha256: string | null;
+  signedSha256: string | null;
+  /** Staff only. */
+  ip: string | null;
+  userAgent: string | null;
+};
 export type Doc = {
   id: string;
   title: string;
@@ -31,6 +47,7 @@ export type Doc = {
   reviewNote: string | null;
   aiAnalysis: Record<string, unknown> | null;
   files: DocFile[];
+  signature?: DocSignature | null;
 };
 
 const kb = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
@@ -123,6 +140,7 @@ export function DocumentsPanel({
   canEdit,
   maxMb,
   checklistTemplates = [],
+  signerName = "",
 }: {
   caseId: string;
   docs: Doc[];
@@ -131,6 +149,8 @@ export function DocumentsPanel({
   maxMb: number;
   /** Staff: service templates with a document checklist, the case's category first. */
   checklistTemplates?: ChecklistTemplate[];
+  /** Client: their name, prefilled when signing. */
+  signerName?: string;
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -143,6 +163,9 @@ export function DocumentsPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [staffVisibility, setStaffVisibility] = useState<"client" | "internal">("client");
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const [sigDoc, setSigDoc] = useState<Doc | null>(null);
+  const [sigNote, setSigNote] = useState("");
+  const [signDoc, setSignDoc] = useState<Doc | null>(null);
   const [templateId, setTemplateId] = useState(checklistTemplates[0]?.id ?? "");
   const [picked, setPicked] = useState<number[] | null>(null);
   const tpl = checklistTemplates.find((t) => t.id === templateId);
@@ -210,8 +233,43 @@ export function DocumentsPanel({
     }
   };
 
+  const requestSignature = async () => {
+    if (!sigDoc) return;
+    setBusy("signature");
+    try {
+      await api(`/api/cases/${caseId}/signatures`, { body: { documentId: sigDoc.id, note: sigNote || null } });
+      toast("success", d.signatures.requested);
+      setSigDoc(null);
+      setSigNote("");
+      router.refresh();
+    } catch (e) {
+      toast("error", errorText(e, d));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const cancelSignature = async (doc: Doc) => {
+    if (!doc.signature || !window.confirm(d.signatures.cancelConfirm)) return;
+    setBusy(doc.id + "cancel-sig");
+    try {
+      await api(`/api/signatures/${doc.signature.id}`, { method: "DELETE" });
+      toast("success", d.signatures.cancelled);
+      router.refresh();
+    } catch (e) {
+      toast("error", errorText(e, d));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const renderDoc = (doc: Doc) => {
     const latest = doc.files[0];
+    const sig = doc.signature ?? null;
+    const awaitingSignature = sig?.status === "requested";
+    // The current file is the signed copy itself: nothing more to request on it.
+    const showsSignedCopy = sig?.status === "signed" && !!latest && latest.version === (sig.fileVersion ?? 0) + 1;
+    const canRequestSignature = mode === "staff" && canEdit && !!latest && latest.mimeType === "application/pdf" && doc.visibility === "client" && !awaitingSignature && !showsSignedCopy;
     const analysis = doc.aiAnalysis as null | { readable?: boolean; summary?: string; fields?: { label: string; value: string; confidence: string }[]; notes?: string };
     return (
       <li key={doc.id} className="rounded-lg border border-slate-200 bg-white p-4">
@@ -236,7 +294,23 @@ export function DocumentsPanel({
                 {latest && mode === "staff" && (
                   <Badge tone={latest.scanStatus === "clean" ? "success" : "muted"}>{d.scanStatus[latest.scanStatus]}</Badge>
                 )}
+                {awaitingSignature && (
+                  <Badge tone="warning">
+                    <PenLine className="size-3" aria-hidden />
+                    {mode === "client" ? d.signatures.awaitingClient : d.signatures.awaiting}
+                  </Badge>
+                )}
+                {sig?.status === "signed" && (
+                  <Badge tone="success">
+                    <PenLine className="size-3" aria-hidden />
+                    {d.signatures.signed}
+                  </Badge>
+                )}
               </div>
+              {awaitingSignature && sig.note && <p className="bidi-auto mt-1.5 text-sm text-slate-600">{fmt(d.documents.requestNote, { note: sig.note })}</p>}
+              {sig?.status === "signed" && sig.signedAt && (
+                <p className="bidi-auto mt-1.5 text-sm text-emerald-800">{fmt(d.signatures.signedBy, { name: sig.signerName ?? "", date: formatDateTime(sig.signedAt, locale) })}</p>
+              )}
               {doc.requestNote && <p className="bidi-auto mt-1.5 text-sm text-slate-600">{fmt(d.documents.requestNote, { note: doc.requestNote })}</p>}
               {doc.status === "needs_new_version" && doc.reviewNote && (
                 <p className="bidi-auto mt-1.5 text-sm text-red-700">{fmt(d.documents.reviewNote, { note: doc.reviewNote })}</p>
@@ -256,6 +330,23 @@ export function DocumentsPanel({
                 <Download className="size-4" aria-hidden />
                 {d.common.download}
               </a>
+            )}
+            {mode === "client" && awaitingSignature && latest && (
+              <Button size="sm" onClick={() => setSignDoc(doc)}>
+                <PenLine className="size-4" aria-hidden />
+                {d.signatures.review}
+              </Button>
+            )}
+            {canRequestSignature && (
+              <Button size="sm" variant="outline" onClick={() => setSigDoc(doc)}>
+                <PenLine className="size-4" aria-hidden />
+                {d.signatures.request}
+              </Button>
+            )}
+            {mode === "staff" && canEdit && awaitingSignature && (
+              <Button size="sm" variant="ghost" loading={busy === doc.id + "cancel-sig"} onClick={() => cancelSignature(doc)}>
+                {d.signatures.cancel}
+              </Button>
             )}
             {mode === "client" && (doc.status === "requested" || doc.status === "needs_new_version") && (
               <UploadButton caseId={caseId} documentId={doc.id} label={doc.status === "requested" ? d.documents.upload : d.documents.uploadNewVersion} />
@@ -278,6 +369,25 @@ export function DocumentsPanel({
             )}
           </div>
         </div>
+        {mode === "staff" && sig?.status === "signed" && (
+          <details className="mt-3 text-xs text-slate-600">
+            <summary className="cursor-pointer font-medium">{d.signatures.evidence}</summary>
+            <dl className="mt-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-[auto_1fr]">
+              <dt className="text-slate-500">{d.signatures.method}</dt>
+              <dd>{sig.method === "drawn" ? d.signatures.methodDrawn : d.signatures.methodTyped}</dd>
+              <dt className="text-slate-500">{d.signatures.ip}</dt>
+              <dd dir="ltr" className="text-start font-mono">{sig.ip ?? "—"}</dd>
+              <dt className="text-slate-500">{d.signatures.device}</dt>
+              <dd dir="ltr" className="break-all text-start">{sig.userAgent ?? "—"}</dd>
+              <dt className="text-slate-500">{d.signatures.originalFingerprint}</dt>
+              <dd dir="ltr" className="break-all text-start font-mono">{sig.originalSha256}</dd>
+              <dt className="text-slate-500">{d.signatures.signedFingerprint}</dt>
+              <dd dir="ltr" className="break-all text-start font-mono">{sig.signedSha256}</dd>
+              <dt className="text-slate-500">{d.signatures.reference}</dt>
+              <dd dir="ltr" className="text-start font-mono">{sig.id}</dd>
+            </dl>
+          </details>
+        )}
         {mode === "staff" && doc.files.length > 1 && (
           <details className="mt-3 text-xs text-slate-500">
             <summary className="cursor-pointer">{d.documents.versions} ({doc.files.length})</summary>
@@ -460,6 +570,38 @@ export function DocumentsPanel({
         </div>
       </Dialog>
 
+      <Dialog
+        open={!!sigDoc}
+        onClose={() => setSigDoc(null)}
+        title={fmt(d.signatures.requestTitle, { title: sigDoc?.title ?? "" })}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSigDoc(null)}>
+              {d.common.cancel}
+            </Button>
+            <Button loading={busy === "signature"} onClick={requestSignature}>
+              <PenLine className="size-4" aria-hidden /> {d.signatures.requestSend}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <p className="text-sm text-slate-600">{d.signatures.requestHint}</p>
+          <Field label={d.signatures.requestNote}>{(p) => <Textarea {...p} rows={3} value={sigNote} onChange={(e) => setSigNote(e.target.value)} />}</Field>
+        </div>
+      </Dialog>
+      {signDoc?.signature && signDoc.files[0] && (
+        <SignDialog
+          key={signDoc.signature.id}
+          open
+          onClose={() => setSignDoc(null)}
+          signatureId={signDoc.signature.id}
+          title={signDoc.title}
+          fileId={signDoc.files[0].id}
+          note={signDoc.signature.note}
+          defaultName={signerName}
+        />
+      )}
       <Dialog
         open={!!reviewDoc}
         onClose={() => setReviewDoc(null)}
