@@ -14,7 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description: d.meta.description,
     // Home-screen app on iPhone (required there for push notifications).
     appleWebApp: { capable: true, title: d.common.appName, statusBarStyle: "default" },
-    icons: { apple: "/icons/apple-touch-icon.png" },
+    // No `icons` here: setting it replaces the icons Next.js generates from the files in src/app
+    // (icon.svg = browser-tab icon, apple-icon.png = iPhone home screen). Change those files instead.
   };
 }
 
