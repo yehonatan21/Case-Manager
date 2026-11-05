@@ -59,15 +59,15 @@ export async function updateProfile(
   user: User,
   patch: { name?: string; phone?: string | null; locale?: Locale; emailNotifications?: boolean },
 ) {
-  await db
-    .update(users)
-    .set({
-      ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
-      ...(patch.phone !== undefined ? { phone: patch.phone?.trim() || null } : {}),
-      ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
-      ...(patch.emailNotifications !== undefined ? { emailNotifications: patch.emailNotifications } : {}),
-    })
-    .where(eq(users.id, user.id));
+  const set = {
+    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.phone !== undefined ? { phone: patch.phone?.trim() || null } : {}),
+    ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
+    ...(patch.emailNotifications !== undefined ? { emailNotifications: patch.emailNotifications } : {}),
+  };
+  // Nothing to change (e.g. only the WhatsApp setting was sent).
+  if (Object.keys(set).length === 0) return;
+  await db.update(users).set(set).where(eq(users.id, user.id));
 }
 
 export async function listStaff(db: DbOrTx, opts: { includeDisabled?: boolean } = {}) {

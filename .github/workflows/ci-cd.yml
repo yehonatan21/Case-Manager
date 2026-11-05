@@ -82,6 +82,8 @@ jobs:
           GROW_API_URL: http://localhost:4010
           # e2e/push.cjs runs a stand-in push service here.
           PUSH_EXTRA_HOSTS: localhost:4012
+          # e2e/whatsapp.cjs runs a stand-in for Meta's WhatsApp API here.
+          WHATSAPP_API_URL: http://localhost:4014
           # Many test scripts sign in to the same demo accounts on one server.
           OTP_MAX_PER_EMAIL: "50"
           OTP_MAX_PER_IP: "500"

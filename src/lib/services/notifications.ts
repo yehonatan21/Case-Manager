@@ -7,6 +7,7 @@ import { fmt, type Locale } from "../i18n/config";
 import { env } from "../env";
 import { renderEmail, sendEmail } from "../email";
 import { schedulePushDispatch, usersWithPush } from "./push";
+import { scheduleWhatsAppDispatch, whatsappRecipients } from "./whatsapp";
 
 export type NotifyType = keyof (typeof dictionaries)["he"]["notify"];
 
@@ -26,6 +27,7 @@ export async function notify(
     .where(inArray(users.id, ids));
   const rows: (typeof notifications.$inferInsert)[] = [];
   const pushUsers = await usersWithPush(db, recipients.map((r) => r.id));
+  const whatsapp = await whatsappRecipients(db, recipients.map((r) => r.id));
   for (const r of recipients) {
     if (r.status === "disabled") continue;
     const tpl = dictionaries[(r.locale as Locale) ?? "he"].notify[opts.type];
@@ -38,11 +40,16 @@ export async function notify(
     if (pushUsers.has(r.id)) {
       rows.push({ userId: r.id, caseId: opts.caseId ?? null, type: opts.type, channel: "push", title, body, link: opts.link ?? null, status: "pending" });
     }
+    const phone = whatsapp.get(r.id);
+    if (phone) {
+      rows.push({ userId: r.id, caseId: opts.caseId ?? null, type: opts.type, channel: "whatsapp", toPhone: phone, title, body, link: opts.link ?? null, status: "pending" });
+    }
   }
   if (rows.length) {
     await db.insert(notifications).values(rows);
     scheduleEmailDispatch();
     if (rows.some((r) => r.channel === "push")) schedulePushDispatch();
+    if (rows.some((r) => r.channel === "whatsapp")) scheduleWhatsAppDispatch();
   }
 }
 
