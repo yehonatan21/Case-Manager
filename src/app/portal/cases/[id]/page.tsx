@@ -8,6 +8,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { RealtimeRefresher } from "@/components/app/realtime";
 import { env } from "@/lib/env";
 import { activePaymentProvider } from "@/lib/services/payment-settings";
+import { listCaseMeetings } from "@/lib/services/meetings";
+import { getSettings } from "@/lib/services/settings";
 
 export default async function CustomerCasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; submitted?: string; payment?: string }> }) {
   const { id } = await params;
@@ -21,6 +23,7 @@ export default async function CustomerCasePage({ params, searchParams }: { param
   } catch {
     return <EmptyState title={d.caseView.notFound} text={d.states.notFoundText} action={<ButtonLink href="/portal/cases">{d.portal.casesTitle}</ButtonLink>} />;
   }
+  const [meetingList, settings] = await Promise.all([listCaseMeetings(db, user, id), getSettings(db)]);
   return (
     <>
       <RealtimeRefresher caseId={id} />
@@ -41,6 +44,8 @@ export default async function CustomerCasePage({ params, searchParams }: { param
           updatedAt: b.case.updatedAt,
           assignee: b.assignee ? { name: b.assignee.name } : null,
           customerName: b.customer?.user.name ?? "",
+          meetings: meetingList,
+          meetingDurations: settings.meeting_durations,
           checkout: { provider: await activePaymentProvider(db), payerName: user.name, payerPhone: user.phone ?? "" },
           actions: b.actions,
           events: b.events.map((e) => ({ id: e.id, type: e.type, visibility: e.visibility, actorKind: e.actorKind, actorName: e.actorName, data: e.data, createdAt: e.createdAt })),

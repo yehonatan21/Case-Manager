@@ -32,6 +32,7 @@ Staff can also open requests on a client's behalf.
 - [Push notifications](#push-notifications)
 - [WhatsApp](#whatsapp)
 - [Electronic signatures](#electronic-signatures)
+- [Meetings](#meetings)
 - [Email](#email)
 - [Google sign-in](#google-sign-in)
 - [Deploy](#deploy)
@@ -93,6 +94,7 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
 | **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
 | **Notifications** | In-app (bell and page), email, [push](#push-notifications) and [WhatsApp](#whatsapp) for every event, localized per recipient, through a retrying outbox. |
+| **Meetings** | Clients book a consultation (video, phone or at the office) from their case, in a free slot of the team member handling it. Staff book any time for themselves or a colleague. Change the time, cancel, add to any calendar (.ics), reminders to both sides. Team members set their hours on **Meetings**, and can connect Google Calendar: busy times are excluded and meetings are added with a Google Meet link. |
 | **Electronic signatures** | Staff ask the client to sign a PDF (a power of attorney, an engagement letter). The client reviews it, types their full name, optionally draws a signature, agrees and signs. The signed copy (each page stamped, plus a signature certificate page) is saved as a new version. Approving a quote is signed too, and a signed quote PDF is saved to the case's documents. |
 | **WhatsApp** | Clients (and staff) who opt in on their profile get updates on WhatsApp. Client replies land in the case's messages, labelled "WhatsApp", and files they send are added to the case's documents. "STOP" opts out. |
 | **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
@@ -236,6 +238,23 @@ The app then saves a new version of the document: the original, unchanged except
 
 PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with the Unicode bidirectional algorithm ([bidi-js](https://github.com/lojjic/bidi-js)) in the [Heebo](https://github.com/OdedEzer/heebo) font (SIL Open Font License, in [`assets/fonts`](assets/fonts)). Code: [`src/lib/services/signatures.ts`](src/lib/services/signatures.ts) and [`src/lib/pdf/`](src/lib/pdf/).
 
+## Meetings
+
+**Booking.** On a case's **Meetings** tab the client chooses a length (Settings → General: lengths, break between meetings, minimum notice, how many days ahead, office address), how to meet, a day and a free time. The times offered are the working hours of the team member handling the case (or of the admins and case managers if no one is assigned), minus their other meetings with the break around them, minus their Google Calendar's busy times when connected. Staff book from the same tab at any free time, also outside working hours, for themselves or a colleague. Either side can move or cancel a meeting.
+
+**Notifications and reminders.** The other side is notified when a meeting is booked, moved or cancelled (in-app, email, push, WhatsApp). The daily job reminds both sides before a meeting, and again within 90 minutes of it when the job runs often enough. Vercel Hobby runs the job once a day, so the "starting soon" reminder needs a more frequent cron: an external scheduler calling `POST /api/jobs/run` with `Authorization: Bearer $CRON_SECRET`, or `JOBS_INTERVAL_MINUTES` on Docker or Render.
+
+**Calendars.** Every meeting has an **Add to calendar** button: an .ics file that works with Google, Outlook and Apple calendars and updates in place when the meeting moves (same UID, increasing SEQUENCE).
+
+**Google Calendar (optional, per team member).** On **Meetings → Connect Google Calendar**, a team member allows access to their calendar. Busy times there aren't offered to clients, and booked meetings are added to it, with a Google Meet link for video meetings. Moving or cancelling updates the event. It uses the same Google OAuth client as Google sign-in, and the same redirect URI. In Google Cloud:
+1. Enable the **Google Calendar API** for the project.
+2. On the OAuth consent screen, add the scopes `calendar.events` and `calendar.freebusy`.
+3. While the app is in testing, add the team members as test users. Publishing an app with these scopes needs Google's verification.
+
+The refresh token is stored encrypted. If Google refuses or is unreachable, bookings still work and the problem is shown on the Meetings page.
+
+Code: [`src/lib/services/meetings.ts`](src/lib/services/meetings.ts), [`src/lib/services/calendar.ts`](src/lib/services/calendar.ts), and the time zone and slot logic in [`src/lib/meetings.ts`](src/lib/meetings.ts). Times are computed in Israel time, `Asia/Jerusalem`, including the daylight-saving changes.
+
 ## WhatsApp
 
 Updates go out through the [WhatsApp Business Platform (Meta Cloud API)](https://developers.facebook.com/docs/whatsapp/cloud-api), and client replies come back into the case. The provider sits behind an interface ([`src/lib/whatsapp/`](src/lib/whatsapp/)), so another provider (e.g. Twilio) can replace Meta without changing the rest of the app.
@@ -327,9 +346,9 @@ Merging a release pull request also adds a merge commit that exists only on `mai
 
 | Suite | Command | Covers |
 |---|---|---|
-| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), service types (assistant-created, deduplicated, admin-managed) and AI consent, the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), service types (assistant-created, deduplicated, admin-managed), AI consent, meetings (time zones and daylight saving, slots, booking, moving, cancelling, reminders, .ics, Google Calendar through a fake API), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
 | HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push, WhatsApp and signature endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), and service types and AI consent. |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, and meetings (hours, booking a free slot, .ics, moving, cancelling). |
 
 The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014`:
 

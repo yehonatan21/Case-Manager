@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, CheckCircle2, MessageSquare, PartyPopper, UserRound } from "lucide-react";
+import { ArrowRight, CalendarPlus, CheckCircle2, MessageSquare, PartyPopper, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDate } from "@/lib/i18n/format";
@@ -16,6 +16,7 @@ import { api } from "@/lib/client-api";
 import { ProgressTrack } from "./progress-track";
 import { MessageThread, type ThreadMessage } from "./message-thread";
 import { DocumentsPanel, type Doc } from "./documents-panel";
+import { MeetingsPanel, type MeetingItem } from "./meetings-panel";
 import { ClientQuotePanel, type ClientQuote, type ClientPayment, type CheckoutInfo } from "./client-quote-panel";
 import { useActionText } from "./client-actions";
 import type { ClientAction } from "@/lib/services/cases";
@@ -39,9 +40,11 @@ export type ClientCaseData = {
   documents: Doc[];
   quotes: ClientQuote[];
   payments: ClientPayment[];
+  meetings: MeetingItem[];
+  meetingDurations: number[];
 };
 
-const TABS = ["overview", "messages", "documents", "quote"] as const;
+const TABS = ["overview", "messages", "documents", "meetings", "quote"] as const;
 type Tab = (typeof TABS)[number];
 
 export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxMb }: { c: ClientCaseData; userId: string; initialTab?: string; submitted: boolean; payment?: string; maxMb: number }) {
@@ -171,6 +174,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                 { id: "overview", label: d.caseView.tabs.overview },
                 { id: "messages", label: d.caseView.tabs.messages },
                 { id: "documents", label: d.caseView.tabs.documents },
+                { id: "meetings", label: d.meetings.tab },
                 { id: "quote", label: d.caseView.tabs.quote },
               ]}
             />
@@ -209,6 +213,16 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
               <TabPanel id="documents" active={tab === "documents"}>
                 <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} signerName={c.checkout?.payerName ?? ""} />
               </TabPanel>
+              <TabPanel id="meetings" active={tab === "meetings"}>
+                <MeetingsPanel
+                  caseId={c.id}
+                  mode="client"
+                  meetings={c.meetings}
+                  durations={c.meetingDurations}
+                  canBook={!["completed", "closed", "cancelled", "declined"].includes(c.status)}
+                  currentUserId={userId}
+                />
+              </TabPanel>
               <TabPanel id="quote" active={tab === "quote"}>
                 <ClientQuotePanel caseId={c.id} caseStatus={c.status} quotes={c.quotes} payments={c.payments} customerName={c.customerName} checkout={c.checkout} />
               </TabPanel>
@@ -233,6 +247,11 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                   <UserRound className="size-4" aria-hidden />
                   {d.caseView.noContactYet}
                 </p>
+              )}
+              {!["completed", "closed", "cancelled", "declined"].includes(c.status) && (
+                <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => go("meetings")}>
+                  <CalendarPlus className="size-4" aria-hidden /> {d.meetings.book}
+                </Button>
               )}
               <Button variant="outline" className="mt-4 w-full" onClick={() => go("messages")}>
                 <MessageSquare className="size-4" aria-hidden />
