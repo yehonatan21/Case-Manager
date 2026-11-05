@@ -25,6 +25,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).
 
 ### Fixed
+- Google sign-in no longer fails with "the Google sign-in attempt expired" when it was started in more than one tab (or the button was clicked twice): each attempt now has its own check cookie.
 - The intake assistant no longer shows raw JSON when a model puts the other fields inside its reply text.
 - The notifications bell's unread badge is no longer read twice by screen readers (WCAG 2.5.3).
 - Tab bars no longer show horizontal and vertical scrollbars; they still scroll.
