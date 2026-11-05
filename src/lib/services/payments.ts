@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { queueInvoiceForPayment, scheduleInvoiceDispatch } from "./invoices";
 import type { Database, DbOrTx } from "../db";
 import { cases, customers, paymentEvents, payments, quotes, users, type User } from "../db/schema";
 import { AppError } from "../errors";
@@ -150,6 +151,19 @@ export async function handleGrowCallback(db: Database, paymentId: string, token:
  * out-of-order event can never double-activate a case or re-notify.
  */
 export async function applyPaymentEvent(db: Database, evt: NormalizedPaymentEvent): Promise<{ result: "duplicate" | "ignored" | "applied" | "rejected" }> {
+  const res = await applyPaymentEventTx(db, evt);
+  // A successful payment gets its receipt / tax invoice (or payment confirmation) right after.
+  if (res.result === "applied" && evt.kind === "succeeded" && evt.paymentId) {
+    try {
+      if (await queueInvoiceForPayment(db, evt.paymentId)) scheduleInvoiceDispatch();
+    } catch (err) {
+      console.error("[invoices] couldn't queue", err);
+    }
+  }
+  return res;
+}
+
+async function applyPaymentEventTx(db: Database, evt: NormalizedPaymentEvent): Promise<{ result: "duplicate" | "ignored" | "applied" | "rejected" }> {
   return db.transaction(async (tx) => {
     const inserted = await tx
       .insert(paymentEvents)

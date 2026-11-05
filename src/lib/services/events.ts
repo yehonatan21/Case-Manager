@@ -22,6 +22,8 @@ export type EventType =
   | "meeting_booked"
   | "meeting_cancelled"
   | "meeting_moved"
+  | "receipt_issued"
+  | "feedback_given"
   | "quote_sent"
   | "quote_approved"
   | "quote_declined"

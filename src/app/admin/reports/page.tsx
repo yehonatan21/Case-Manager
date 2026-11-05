@@ -177,6 +177,54 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </section>
         </div>
 
+        <section aria-labelledby="sat-title" className="space-y-4">
+          <h2 id="sat-title" className="text-lg font-semibold">
+            {d.feedback.reportTitle}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatTile label={d.feedback.average} value={r.satisfaction.average === null ? "—" : `${num(r.satisfaction.average, locale, 1)} / 5`} hint={fmt(d.feedback.count, { n: r.satisfaction.count })} />
+            <StatTile label={d.feedback.responseRate} value={pct(r.satisfaction.responseRate, locale)} hint={fmt(d.feedback.responseRateHint, { n: r.satisfaction.completed })} />
+            <StatTile label={fmt(d.feedback.stars, { n: 5 })} value={num(r.satisfaction.distribution[0]!.count, locale)} hint={fmt(d.feedback.count, { n: r.satisfaction.count })} />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardContent className="py-5">
+                <h3 className="mb-3 text-sm font-semibold">{d.feedback.distribution}</h3>
+                <HBarChart
+                  labelHeader={d.feedback.rating}
+                  valueHeader={t.requests}
+                  empty={d.feedback.noRatings}
+                  data={r.satisfaction.distribution.map((x) => ({ key: String(x.star), label: `${fmt(d.feedback.stars, { n: x.star })} · ${d.feedback.labels[x.star - 1]}`, value: x.count, display: num(x.count, locale), detail: pct(r.satisfaction.count ? x.count / r.satisfaction.count : null, locale) }))}
+                />
+              </CardContent>
+            </Card>
+            {r.access.operations && (
+              <Card>
+                <CardContent className="py-5">
+                  <h3 className="mb-3 text-sm font-semibold">{d.feedback.recent}</h3>
+                  {r.satisfaction.recent.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-slate-500">{d.feedback.noRatings}</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {r.satisfaction.recent.map((x) => (
+                        <li key={x.caseId} className="text-sm">
+                          <p className="font-medium text-slate-800">
+                            {fmt(d.feedback.stars, { n: x.rating })} ·{" "}
+                            <a href={`/admin/cases/${x.caseId}`} className="text-brand-700 hover:underline" dir="ltr">
+                              {x.caseNumber}
+                            </a>
+                          </p>
+                          <p className="bidi-auto text-slate-600">{x.comment}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+
         {r.team && (
           <section aria-labelledby="team-title" className="space-y-3">
             <h2 id="team-title" className="text-lg font-semibold">
@@ -187,7 +235,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {r.unassigned ? ` ${fmt(t.unassigned, { n: r.unassigned })}` : ""}
             </p>
             <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-[44rem] text-sm">
+              <table className="w-full min-w-[50rem] text-sm">
                 <caption className="sr-only">{t.team}</caption>
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
                   <tr>
@@ -199,6 +247,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                     <th scope="col" className="px-4 py-3 text-end font-medium">{t.overdueTasks}</th>
                     <th scope="col" className="px-4 py-3 text-end font-medium">{t.meetings}</th>
                     <th scope="col" className="px-4 py-3 text-end font-medium">{t.firstResponse}</th>
+                    <th scope="col" className="px-4 py-3 text-end font-medium">{d.feedback.memberRating}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -214,6 +263,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                       <td className={m.overdueTasks ? "px-4 py-3 text-end font-semibold tabular-nums text-red-700" : "px-4 py-3 text-end tabular-nums"}>{num(m.overdueTasks, locale)}</td>
                       <td className="px-4 py-3 text-end tabular-nums">{num(m.meetings, locale)}</td>
                       <td className="px-4 py-3 text-end tabular-nums">{dur(m.medianFirstResponseHours)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums">{m.averageRating === null ? "—" : `${num(m.averageRating, locale, 1)} (${m.ratings})`}</td>
                     </tr>
                   ))}
                 </tbody>
