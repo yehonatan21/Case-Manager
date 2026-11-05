@@ -189,13 +189,18 @@ const fakeGrow = http.createServer(async (req, res) => {
     assert.match(await admin.locator("tbody").innerText(), /grow/i);
     log("payment listed for the admin");
 
-    // ---- Disconnect: checkout goes back to the previous provider ----
+    // ---- Disconnect from Settings → Integrations: checkout goes back to the previous provider ----
+    await admin.goto(BASE + "/admin/settings?tab=integrations");
+    const growCard = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "תשלומים מקוונים" }) }).first();
+    await growCard.getByText("Grow מחובר (מצב בדיקה)").waitFor();
+    await growCard.getByText("••••4243").waitFor();
     admin.once("dialog", (dlg) => dlg.accept());
-    await admin.click("button:has-text('ניתוק')");
-    await admin.getByText("Grow לא מחובר").waitFor();
+    await growCard.locator("button:has-text('ניתוק')").click();
+    await growCard.getByText("Grow לא מחובר").waitFor();
+    await growCard.locator("button:has-text('חיבור Grow')").waitFor();
     const health = await (await fetch(BASE + "/api/health")).json();
     assert.notEqual(health.payments, "grow");
-    log("disconnected; health reports", health.payments);
+    log("Grow shown in Settings → Integrations, disconnected there; health reports", health.payments);
 
     assert.deepEqual(errors, [], "no page errors");
     console.log("\nGROW: all passed");

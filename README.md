@@ -177,7 +177,7 @@ While Grow is connected it's used for every checkout. Otherwise `PAYMENT_PROVIDE
 
 [Grow](https://grow.business) takes credit card, Bit, Apple Pay and Google Pay, in shekels.
 
-**Connect.** As an admin, open **Payments → Connect Grow** and enter the `userId` and `pageCode` from Grow, plus `apiKey` only if Grow gave you one.
+**Connect.** As an admin, open **Payments → Connect Grow** (or **Settings → Integrations**) and enter the `userId` and `pageCode` from Grow, plus `apiKey` only if Grow gave you one.
 - **Test mode** uses Grow's sandbox.
 - The identifiers are stored encrypted, and only their last 4 characters are ever shown.
 - Alternatively, set `GROW_USER_ID`, `GROW_PAGE_CODE` and `GROW_SANDBOX`.
@@ -296,6 +296,8 @@ The image runs as a non-root user and keeps data under `/var/data`. Migrations r
 | `dev` | Preview, with its own `dev`-scoped variables (`DEMO_MODE=true`, own secrets, `APP_URL`) | https://case-manager-git-dev-yehonatan21.vercel.app | Neon `dev` branch (separate) |
 
 Feature branches open pull requests into `dev`, and `dev` is then released to `main`. Merging `dev` into `main` through a pull request makes GitHub delete `dev`, because "Automatically delete head branches" is on. Either protect `dev` with a ruleset ("Restrict deletions"), or fast-forward `main` to `dev` instead of using a pull request.
+
+Merging a release pull request also adds a merge commit that exists only on `main`. The [`Sync dev with main`](.github/workflows/sync-dev.yml) workflow runs after every push to `main` and brings `dev` level again: it fast-forwards `dev` to `main`, or merges `main` into `dev` when `dev` already has unreleased work. So `main` is never ahead of `dev`. It needs `dev`'s ruleset to allow normal pushes (blocking only deletion and force pushes is fine).
 
 ## Testing and CI/CD
 

@@ -1,0 +1,46 @@
+# Keep dev up to date with main.
+#   Merging a release PR (dev → main) adds a merge commit that exists only on main, so main would be
+#   "ahead" of dev. After every push to main this brings dev level again:
+#   - dev has nothing main lacks → fast-forward dev to main (both end on the same commit);
+#   - dev has unreleased work      → merge main into dev (dev then contains everything on main).
+#   A merge conflict (only possible after a direct fix on main) fails the run so a person resolves it.
+name: Sync dev with main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Bring dev up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: dev
+      - name: Fast-forward or merge main into dev
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          if git merge-base --is-ancestor origin/main origin/dev; then
+            echo "dev already contains main; nothing to do."
+          elif git merge-base --is-ancestor origin/dev origin/main; then
+            echo "Fast-forwarding dev to main."
+            git push origin origin/main:refs/heads/dev
+          else
+            echo "dev has unreleased work; merging main into dev."
+            git merge --no-edit origin/main -m "Sync dev with main"
+            git push origin HEAD:refs/heads/dev
+          fi
