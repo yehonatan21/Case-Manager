@@ -13,7 +13,18 @@ import { Notice } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 
 /** Connect or disconnect the signed-in team member's Google Calendar. */
-export function CalendarConnect({ status, available, result }: { status: { connected: boolean; email: string | null; lastError: string | null }; available: boolean; result?: string }) {
+export function CalendarConnect({
+  status,
+  available,
+  result,
+  returnTo = "/admin/meetings",
+}: {
+  status: { connected: boolean; email: string | null; lastError: string | null };
+  available: boolean;
+  result?: string;
+  /** Page to come back to after Google's consent screen. */
+  returnTo?: string;
+}) {
   const { d } = useI18n();
   const t = d.meetings;
   const router = useRouter();
@@ -61,7 +72,7 @@ export function CalendarConnect({ status, available, result }: { status: { conne
           </div>
         ) : (
           <div>
-            <a href="/api/integrations/google-calendar/connect" className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+            <a href={`/api/integrations/google-calendar/connect?next=${encodeURIComponent(returnTo)}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
               <CalendarCheck2 className="size-4" aria-hidden /> {t.calendarConnect}
             </a>
           </div>

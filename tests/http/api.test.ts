@@ -431,6 +431,14 @@ describe.skipIf(!BASE)("HTTP API", () => {
       expect((await call("/api/me/availability", { cookie: client.cookie })).status).toBe(403);
       expect((await call("/api/me/availability", { method: "PUT", body: { bookable: true, weekly: { "0": [{ start: "17:00", end: "09:00" }] } }, cookie: manager.cookie })).status).toBe(400);
       expect((await call("/api/integrations/google-calendar", { cookie: client.cookie })).status).toBe(403);
+      // Connecting returns to the page it started from, but only to a staff page of this site.
+      const back = async (next: string) => (await fetch(`${BASE}/api/integrations/google-calendar/connect?next=${encodeURIComponent(next)}`, { headers: { Cookie: manager.cookie }, redirect: "manual" })).headers.get("location") ?? "";
+      const fromSettings = await back("/admin/settings?tab=integrations");
+      if (!fromSettings.includes("accounts.google.com")) {
+        // Google sign-in isn't configured on the test server: it comes straight back.
+        expect(new URL(fromSettings).pathname + new URL(fromSettings).search).toBe("/admin/settings?tab=integrations&calendar=failed");
+        for (const evil of ["//evil.example.com", "https://evil.example.com/admin/", "/portal"]) expect(new URL(await back(evil)).pathname).toBe("/admin/meetings");
+      }
       expect((await call("/api/admin/settings", { method: "PATCH", body: { meeting_durations: [5] }, cookie: (await session("admin@example.com")).cookie })).status).toBe(400);
     });
   });
