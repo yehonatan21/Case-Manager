@@ -30,6 +30,7 @@ Staff can also open requests on a client's behalf.
 - [AI providers](#ai-providers)
 - [Payments: Grow, Stripe, test checkout](#payments)
 - [Push notifications](#push-notifications)
+- [WhatsApp](#whatsapp)
 - [Email](#email)
 - [Google sign-in](#google-sign-in)
 - [Deploy](#deploy)
@@ -89,7 +90,8 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Document checklists** | Each service template lists the documents it needs (required or optional, with a note for the client). Staff request a whole checklist in one step: one message to the client, nothing requested twice. The client sees "3 of 5 required documents provided"; the case keeps waiting for the client until every required document is in. Automatic reminders go out every N days for missing required documents, up to a maximum (Settings → General). |
 | **Documents** | Staff request documents and customers upload versioned files. Statuses: requested → uploaded → in review → approved, or a new version requested. Type and magic-byte validation, size limit, optional ClamAV scan, encryption at rest, permission-checked and audited downloads. |
 | **Tasks** | Owner, due date, status, priority, client-action flag; service templates; AI-suggested plans reviewed before creation; "my tasks" and overdue views. |
-| **Notifications** | In-app (bell and page), email, and [push](#push-notifications) for every event, localized per recipient, through a retrying outbox. |
+| **Notifications** | In-app (bell and page), email, [push](#push-notifications) and [WhatsApp](#whatsapp) for every event, localized per recipient, through a retrying outbox. |
+| **WhatsApp** | Clients (and staff) who opt in on their profile get updates on WhatsApp. Client replies land in the case's messages, labelled "WhatsApp", and files they send are added to the case's documents. "STOP" opts out. |
 | **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
 | **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit); service templates; price list; payment provider. |
 
@@ -134,6 +136,7 @@ All settings are environment variables; see [`.env.example`](.env.example) for t
 | `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, … | See [AI providers](#ai-providers). |
 | `PAYMENT_PROVIDER`, `STRIPE_*`, `GROW_*` | See [Payments](#payments). |
 | `VAPID_*` | Optional; see [Push notifications](#push-notifications). |
+| `WHATSAPP_*` | Optional; see [WhatsApp](#whatsapp). |
 | `SMTP_URL`, `EMAIL_FROM`, `EMAIL_FROM_NAME` | See [Email](#email). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | See [Google sign-in](#google-sign-in). |
 | `STORAGE_PROVIDER` (`local`, `database`, `s3`, `vercel-blob`), `S3_*`, `BLOB_READ_WRITE_TOKEN` | Where uploads are stored. Auto-selected when unset. |
@@ -209,6 +212,28 @@ Web Push reaches browsers and phones even when the site is closed.
   - [`src/app/manifest.ts`](src/app/manifest.ts): the web app manifest.
   - [`src/lib/services/push.ts`](src/lib/services/push.ts): sending.
 
+## WhatsApp
+
+Updates go out through the [WhatsApp Business Platform (Meta Cloud API)](https://developers.facebook.com/docs/whatsapp/cloud-api), and client replies come back into the case. The provider sits behind an interface ([`src/lib/whatsapp/`](src/lib/whatsapp/)), so another provider (e.g. Twilio) can replace Meta without changing the rest of the app.
+
+**Set up (once).**
+1. In [Meta for Developers](https://developers.facebook.com/apps), create a Business app and add the WhatsApp product. Add your business number, and create a permanent System User access token with the `whatsapp_business_messaging` permission.
+2. In WhatsApp Manager, create a **Utility** template named `case_update` (or any name) in Hebrew (`he`) and English (`en`), with four body variables: business name, update title, update text and link. The exact text is shown in the app under Settings → Integrations → WhatsApp. Wait for approval.
+3. In the app, as an admin: **Settings → Integrations → Connect WhatsApp**. Enter the phone number ID, the access token, the app secret (App settings → Basic), the template name and its language codes. The app checks them with WhatsApp before saving them encrypted.
+4. Copy the **Callback URL** and **Verify token** shown there into the Meta app (WhatsApp → Configuration → Webhook), and subscribe to the `messages` field.
+5. Turn on WhatsApp updates on your own profile and press **Send me a test message**.
+
+Alternatively, set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_TEMPLATE` (the template's languages are then `he` and `en`).
+
+**How it works.**
+- **Opt-in:** users turn on "Get updates on WhatsApp" on their profile with a mobile number (Israeli local numbers are converted to international format). WhatsApp requires an opt-in; nothing is sent without it.
+- **Sending:** every notification for an opted-in user also gets a WhatsApp row in the outbox. Within 24 hours of the user's last WhatsApp message it's sent as plain text (WhatsApp's customer-service window); otherwise with the approved template. Temporary failures are retried; permanent ones (and failures WhatsApp reports later) are recorded on the row.
+- **Replies:** `/api/webhooks/whatsapp` accepts only deliveries signed with the app secret (`X-Hub-Signature-256`), and each message is added once even if delivered twice. A reply to an update goes to that update's case; any other message goes to the client's most recently updated open case. A client with no open case gets a link to the portal. Messages from unknown numbers and from staff are ignored.
+- **Files:** images and documents a client sends are downloaded (only from WhatsApp's own hosts) and added to the case's documents through the usual upload checks. A file that can't be added (e.g. a voice note) is noted in the case, and the client is sent the upload link.
+- **Opting out:** "STOP" (or "הסר") turns WhatsApp off for that user and confirms; the profile setting does the same.
+- **Cost:** Meta charges per template message (utility conversations). Replies within the 24-hour window are free.
+- Code: [`src/lib/services/whatsapp.ts`](src/lib/services/whatsapp.ts) (opt-in, sending, webhook) and [`src/lib/whatsapp/meta.ts`](src/lib/whatsapp/meta.ts) (the Meta API).
+
 ## Email
 
 Set `SMTP_URL` (for example Gmail with an app password: `smtps://you%40gmail.com:app-password@smtp.gmail.com:465`). `EMAIL_FROM` sets the sender address, and `EMAIL_FROM_NAME` the name recipients see.
@@ -276,14 +301,14 @@ Feature branches open pull requests into `dev`, and `dev` is then released to `m
 
 | Suite | Command | Covers |
 |---|---|---|
-| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
-| HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow and push endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service) and document checklists. |
+| Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
+| HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push and WhatsApp endpoints. |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists and WhatsApp (with a stand-in Meta API). |
 
-The HTTP and browser suites need the server in demo mode (codes on screen). The Grow and push scripts also need `GROW_API_URL=http://localhost:4010` and `PUSH_EXTRA_HOSTS=localhost:4012`:
+The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014`:
 
 ```bash
-npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 npm start
+npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 WHATSAPP_API_URL=http://localhost:4014 npm start
 ```
 
 [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and push to `main`:
@@ -327,12 +352,13 @@ e2e/                   Playwright browser scripts
 - **Sign-in codes:** hashed, single-use, time-limited, rate-limited and attempt-limited.
 - **Requests:** same-origin checks on all mutations; security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
 - **Files:** encrypted at rest (AES-256-GCM, or S3 server-side encryption); content-type and magic-byte checks; optional malware scan; permission-checked, audited downloads.
-- **Encrypted settings:** payment identifiers and push keys are stored encrypted with a key derived from `APP_SECRET`.
+- **Encrypted settings:** payment identifiers, WhatsApp credentials and push keys are stored encrypted with a key derived from `APP_SECRET`.
 - **Webhooks:**
   - mock and Stripe events are verified by signature;
   - Grow's are checked with a per-payment token and re-read from Grow's API;
   - all of them are applied idempotently.
 - **Push endpoints:** limited to the browser push services.
+- **WhatsApp webhook:** only deliveries signed with the app secret are accepted; received files are fetched only from WhatsApp's hosts.
 - **Audit log:** covers sign-in, team, settings, payment and case actions.
 
 ## Scripts
@@ -346,7 +372,7 @@ e2e/                   Playwright browser scripts
 | `npm run db:migrate` | Apply migrations (also automatic on start unless `AUTO_MIGRATE=false`) |
 | `npm run db:seed -- --demo` | Insert demo data |
 | `npm run db:remove-demo` | Preview removing the demo accounts and sample requests; add `-- --apply` to remove them (one transaction; real data kept) |
-| `npm run jobs:run` | Run maintenance once: expire quotes, send document reminders, send pending emails and pushes, prune old push rows |
+| `npm run jobs:run` | Run maintenance once: expire quotes, send document reminders, send pending emails, pushes and WhatsApp messages, prune old push and WhatsApp rows |
 
 ## Out of scope
 

@@ -403,6 +403,37 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("WhatsApp (not connected; e2e/whatsapp.cjs covers a connected number)", () => {
+    it("only admins see or change the connection; bad bodies are rejected", async () => {
+      const manager = await session("manager@example.com");
+      const admin = await session("admin@example.com");
+      expect((await call("/api/admin/whatsapp")).status).toBe(401);
+      expect((await call("/api/admin/whatsapp", { cookie: manager.cookie })).status).toBe(403);
+      expect((await call("/api/admin/whatsapp", { method: "DELETE", cookie: manager.cookie })).status).toBe(403);
+      const st = await call("/api/admin/whatsapp", { cookie: admin.cookie });
+      expect(st.status).toBe(200);
+      expect(st.json!.data).toMatchObject({ connected: false, verifyToken: null });
+      expect(st.json!.data.webhookUrl).toMatch(/\/api\/webhooks\/whatsapp$/);
+      for (const bad of [{}, { phoneNumberId: "abc", accessToken: "x".repeat(30), appSecret: "a".repeat(20), template: "t", templateLanguages: { he: "he", en: "en" } }, { phoneNumberId: "123456", accessToken: "short", appSecret: "a".repeat(20), template: "t", templateLanguages: { he: "he", en: "en" } }]) {
+        expect((await call("/api/admin/whatsapp", { method: "PUT", body: bad, cookie: admin.cookie })).status).toBe(400);
+      }
+      expect((await call("/api/admin/whatsapp/test", { body: {}, cookie: admin.cookie })).status).toBe(400);
+    });
+
+    it("the webhook refuses verification and deliveries while nothing is connected", async () => {
+      const v = await fetch(`${BASE}/api/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=guess&hub.challenge=123`);
+      expect(v.status).toBe(403);
+      expect(await v.text()).not.toContain("123");
+      expect((await call("/api/webhooks/whatsapp", { raw: JSON.stringify({ entry: [] }), headers: { "x-hub-signature-256": "sha256=00" } })).status).toBe(404);
+    });
+
+    it("a user can't opt in to WhatsApp while it isn't available", async () => {
+      const client = await session("client@example.com");
+      expect((await call("/api/profile", { method: "PATCH", body: { phone: "050-1234567", whatsapp: true }, cookie: client.cookie })).status).toBe(400);
+      expect((await call("/api/profile", { method: "PATCH", body: { whatsapp: false }, cookie: client.cookie })).status).toBe(200);
+    });
+  });
+
   it("finance can't read case messages or documents", async () => {
     const fin = await session("finance@example.com");
     const cases = (await call("/api/cases?status=all", { cookie: fin.cookie })).json!.data as { id: string }[];

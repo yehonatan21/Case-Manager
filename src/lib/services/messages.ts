@@ -12,7 +12,7 @@ export async function postMessage(
   db: Database,
   actor: User,
   caseId: string,
-  input: { body: string; kind: "thread" | "internal_note"; isInfoRequest?: boolean; aiRunId?: string | null },
+  input: { body: string; kind: "thread" | "internal_note"; isInfoRequest?: boolean; aiRunId?: string | null; via?: "whatsapp"; externalId?: string },
 ) {
   const body = input.body.trim();
   if (!body) throw new AppError("validation");
@@ -24,7 +24,7 @@ export async function postMessage(
 
     const [m] = await tx
       .insert(messages)
-      .values({ caseId: c.id, senderId: actor.id, kind: input.kind, body: body.slice(0, 10000), isInfoRequest, aiRunId: input.aiRunId ?? null })
+      .values({ caseId: c.id, senderId: actor.id, kind: input.kind, body: body.slice(0, 10000), isInfoRequest, aiRunId: input.aiRunId ?? null, via: input.via ?? null, externalId: input.externalId ?? null })
       .returning();
 
     if (input.aiRunId) {

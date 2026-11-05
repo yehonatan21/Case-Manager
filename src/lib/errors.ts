@@ -26,6 +26,10 @@ export type ErrorCode =
   | "currency_not_supported"
   | "payer_name_invalid"
   | "payer_phone_invalid"
+  | "whatsapp_refused"
+  | "whatsapp_unavailable"
+  | "whatsapp_phone_invalid"
+  | "whatsapp_needs_opt_in"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -60,6 +64,10 @@ const STATUS: Record<ErrorCode, number> = {
   currency_not_supported: 400,
   payer_name_invalid: 400,
   payer_phone_invalid: 400,
+  whatsapp_refused: 400,
+  whatsapp_unavailable: 400,
+  whatsapp_phone_invalid: 400,
+  whatsapp_needs_opt_in: 400,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,
