@@ -16,6 +16,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Client replies arrive on a signed webhook and are added to the right case's messages, labelled "WhatsApp". Files they send are added to the case's documents. "STOP" opts out.
 
 ### Changed
+- Grow can also be connected and disconnected from Settings → Integrations, next to WhatsApp.
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).
 
 ### Fixed

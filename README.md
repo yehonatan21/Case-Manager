@@ -177,7 +177,7 @@ While Grow is connected it's used for every checkout. Otherwise `PAYMENT_PROVIDE
 
 [Grow](https://grow.business) takes credit card, Bit, Apple Pay and Google Pay, in shekels.
 
-**Connect.** As an admin, open **Payments → Connect Grow** and enter the `userId` and `pageCode` from Grow, plus `apiKey` only if Grow gave you one.
+**Connect.** As an admin, open **Payments → Connect Grow** (or **Settings → Integrations**) and enter the `userId` and `pageCode` from Grow, plus `apiKey` only if Grow gave you one.
 - **Test mode** uses Grow's sandbox.
 - The identifiers are stored encrypted, and only their last 4 characters are ever shown.
 - Alternatively, set `GROW_USER_ID`, `GROW_PAGE_CODE` and `GROW_SANDBOX`.
