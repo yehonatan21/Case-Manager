@@ -17,6 +17,7 @@ import { ProgressTrack } from "./progress-track";
 import { MessageThread, type ThreadMessage } from "./message-thread";
 import { DocumentsPanel, type Doc } from "./documents-panel";
 import { MeetingsPanel, type MeetingItem } from "./meetings-panel";
+import { FeedbackCard } from "./feedback-card";
 import { ClientQuotePanel, type ClientQuote, type ClientPayment, type CheckoutInfo } from "./client-quote-panel";
 import { useActionText } from "./client-actions";
 import type { ClientAction } from "@/lib/services/cases";
@@ -42,6 +43,7 @@ export type ClientCaseData = {
   payments: ClientPayment[];
   meetings: MeetingItem[];
   meetingDurations: number[];
+  feedback: { rating: number; comment: string | null } | null;
 };
 
 const TABS = ["overview", "messages", "documents", "meetings", "quote"] as const;
@@ -180,6 +182,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
             />
             <div className="pt-5">
               <TabPanel id="overview" active={tab === "overview"} className="space-y-6">
+                {(c.status === "completed" || c.status === "closed") && <FeedbackCard caseId={c.id} existing={c.feedback} />}
                 <Card>
                   <CardHeader>
                     <CardTitle>{d.caseView.requestDetails}</CardTitle>

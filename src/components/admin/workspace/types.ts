@@ -44,6 +44,8 @@ export type WorkspaceData = {
   intakeSummary: IntakeSummary | null;
   aiSummary: CaseAiSummary | null;
   customer: { name: string; email: string; phone: string | null; type: string; organization: string | null; customerId: string; aiConsent: boolean } | null;
+  /** The client's rating, once the case is completed. */
+  feedback?: { rating: number; comment: string | null; createdAt: Date | string } | null;
   access: CaseAccess;
   events: TimelineEvent[];
   messages: ThreadMessage[];

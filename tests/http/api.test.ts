@@ -403,6 +403,25 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("receipts and ratings (e2e/invoices.cjs covers them with a stand-in Green Invoice)", () => {
+    it("only admins manage the invoicing service; only admins and finance issue documents; ratings are validated", async () => {
+      const manager = await session("manager@example.com");
+      const admin = await session("admin@example.com");
+      const client = await session("client@example.com");
+      expect((await call("/api/admin/invoices")).status).toBe(401);
+      expect((await call("/api/admin/invoices", { cookie: manager.cookie })).status).toBe(403);
+      expect((await call("/api/admin/invoices", { cookie: admin.cookie })).json!.data).toMatchObject({ connected: false });
+      for (const bad of [{}, { provider: "acme", apiKeyId: "x".repeat(10), apiSecret: "y".repeat(10), sandbox: true, documentType: "320", autoIssue: true, emailClient: true }, { provider: "greeninvoice", apiKeyId: "has spaces!", apiSecret: "y".repeat(10), sandbox: true, documentType: "320", autoIssue: true, emailClient: true }, { provider: "greeninvoice", apiKeyId: "x".repeat(10), apiSecret: "y".repeat(10), sandbox: true, documentType: "999", autoIssue: true, emailClient: true }]) {
+        expect((await call("/api/admin/invoices", { method: "PUT", body: bad, cookie: admin.cookie })).status).toBe(400);
+      }
+      const fake = "00000000-0000-4000-8000-000000000000";
+      expect((await call(`/api/admin/payments/${fake}/invoice`, { body: {}, cookie: manager.cookie })).status).toBe(403);
+      expect((await call(`/api/cases/${fake}/feedback`, { body: { rating: 5 } })).status).toBe(401);
+      expect((await call(`/api/cases/${fake}/feedback`, { body: { rating: 9 }, cookie: client.cookie })).status).toBe(400);
+      expect((await call(`/api/cases/${fake}/feedback`, { body: { rating: 5 }, cookie: client.cookie })).status).toBe(404);
+    });
+  });
+
   describe("reports (e2e/reports.cjs covers the page)", () => {
     it("the Excel export is for admins, finance and case managers only", async () => {
       expect((await fetch(`${BASE}/api/admin/reports/export`)).status).toBe(401);

@@ -41,6 +41,9 @@ export type ErrorCode =
   | "meeting_slot_taken"
   | "meeting_limit"
   | "meeting_in_past"
+  | "invoices_refused"
+  | "feedback_exists"
+  | "feedback_not_ready"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -90,6 +93,9 @@ const STATUS: Record<ErrorCode, number> = {
   meeting_slot_taken: 409,
   meeting_limit: 400,
   meeting_in_past: 400,
+  invoices_refused: 400,
+  feedback_exists: 409,
+  feedback_not_ready: 400,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,

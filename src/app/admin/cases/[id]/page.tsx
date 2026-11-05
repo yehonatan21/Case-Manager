@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { ButtonLink } from "@/components/ui/button";
 import { env } from "@/lib/env";
 import { listCaseMeetings } from "@/lib/services/meetings";
+import { getCaseFeedback } from "@/lib/services/feedback";
 import { getSettings } from "@/lib/services/settings";
 
 export default async function CaseWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
@@ -27,6 +28,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
   }
   await markCaseRead(db, user, id);
   const [staff, templates, meetingList, settings] = await Promise.all([listAssignableStaff(db), listTemplates(db, true), listCaseMeetings(db, user, id), getSettings(db)]);
+  const feedback = await getCaseFeedback(db, id);
   return (
     <>
       <RealtimeRefresher caseId={id} />
@@ -63,6 +65,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
                 aiConsent: !!b.customer.user.aiConsentAt,
               }
             : null,
+          feedback: feedback ? { rating: feedback.rating, comment: feedback.comment, createdAt: feedback.createdAt } : null,
           access: b.access,
           events: b.events.map((e) => ({ id: e.id, type: e.type, visibility: e.visibility, actorKind: e.actorKind, actorName: e.actorName, data: e.data, createdAt: e.createdAt })),
           messages: b.messages.map((m) => ({ id: m.id, senderId: m.senderId, senderName: m.senderName, senderRole: m.senderRole, kind: m.kind, body: m.body, isInfoRequest: m.isInfoRequest, via: m.via, aiRunId: m.aiRunId, createdAt: m.createdAt })),

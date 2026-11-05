@@ -13,7 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { CaseStatusBadge } from "@/components/app/status";
 import { MANUAL_TRANSITIONS } from "@/lib/domain";
+import { fmt } from "@/lib/i18n/config";
 import { useCategories } from "@/components/app/categories";
+import { Stars } from "@/components/case/feedback-card";
 import type { CaseStatus, Urgency } from "@/lib/db/schema";
 import type { StaffOption, WorkspaceData } from "./types";
 
@@ -89,6 +91,21 @@ export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; sta
                 <Badge tone="warning">
                   <ShieldOff className="size-3" aria-hidden /> {d.copilot.noConsentShort}
                 </Badge>
+              )}
+              {(c.status === "completed" || c.status === "closed") && (
+                <div className="mt-2 border-t border-slate-100 pt-2">
+                  <p className="text-xs font-medium text-slate-500">{d.feedback.staffTitle}</p>
+                  {c.feedback ? (
+                    <>
+                      <p className="flex items-center gap-1.5 text-sm text-slate-800">
+                        <Stars value={c.feedback.rating} /> <span>{fmt(d.feedback.stars, { n: c.feedback.rating })}</span>
+                      </p>
+                      {c.feedback.comment && <p className="bidi-auto mt-0.5 text-sm text-slate-600">{c.feedback.comment}</p>}
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-500">{d.feedback.noFeedback}</p>
+                  )}
+                </div>
               )}
             </>
           ) : (

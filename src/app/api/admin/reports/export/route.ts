@@ -45,6 +45,8 @@ export async function GET(req: Request) {
           [t.withinSla.replace("{h}", String(r.times.slaHours)), r.times.withinSlaShare === null ? null : Math.round(r.times.withinSlaShare * 1000) / 10],
           [`${t.timeToQuote} (${t.hoursUnit})`, h(r.times.medianHoursToQuote)],
           [`${t.timeToComplete} (${t.daysUnit})`, h(r.times.medianDaysToComplete)],
+          [d.feedback.average, r.satisfaction.average === null ? null : Math.round(r.satisfaction.average * 100) / 100],
+          [d.feedback.count.replace("{n}", "").trim() || d.feedback.rating, r.satisfaction.count],
         ],
       },
     ];
@@ -59,8 +61,8 @@ export async function GET(req: Request) {
         rtl,
         widths: [24, 14, 12, 12, 12, 12, 12, 12, 16],
         rows: [
-          [t.member, t.role, t.openCases, t.newCases, t.completed, t.openTasks, t.overdueTasks, t.meetings, `${t.firstResponse} (${t.hoursUnit})`],
-          ...r.team.map((m) => [m.name, (d.roles as Record<string, string>)[m.role] ?? m.role, m.openCases, m.newCases, m.completed, m.openTasks, m.overdueTasks, m.meetings, h(m.medianFirstResponseHours)]),
+          [t.member, t.role, t.openCases, t.newCases, t.completed, t.openTasks, t.overdueTasks, t.meetings, `${t.firstResponse} (${t.hoursUnit})`, d.feedback.memberRating],
+          ...r.team.map((m) => [m.name, (d.roles as Record<string, string>)[m.role] ?? m.role, m.openCases, m.newCases, m.completed, m.openTasks, m.overdueTasks, m.meetings, h(m.medianFirstResponseHours), m.averageRating === null ? null : Math.round(m.averageRating * 100) / 100]),
         ],
       });
     }
