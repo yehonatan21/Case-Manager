@@ -88,7 +88,7 @@ const wrap = (tag: string, text: string) => `<${tag}>\n${redactPII(text)}\n</${t
 
 export async function aiIntakeTurn(
   db: DbOrTx,
-  opts: { intakeSessionId: string; userId?: string | null; locale: L; company: string; messages: IntakeChatMessage[]; asked: number; limit: number; finishNow?: boolean; skippedLabel: string },
+  opts: { intakeSessionId: string; userId?: string | null; locale: L; company: string; messages: IntakeChatMessage[]; asked: number; limit: number; finishNow?: boolean; skippedLabel: string; categories: string },
 ): Promise<{ turn: IntakeTurn & { questionId?: string }; runId: string }> {
   const apiMessages: AiMessage[] = opts.messages.map((m) =>
     m.role === "assistant"
@@ -101,7 +101,7 @@ export async function aiIntakeTurn(
       content: "(The customer pressed “finish & review”. Set ready_for_review=true, ask no further question, and return the complete summary.)",
     });
   }
-  const system = prompts.intakeSystemPrompt({ company: opts.company, locale: opts.locale, asked: opts.asked, limit: opts.limit });
+  const system = prompts.intakeSystemPrompt({ company: opts.company, locale: opts.locale, asked: opts.asked, limit: opts.limit, categories: opts.categories });
   const { output, runId } = await run<typeof IntakeTurnSchema>(
     db,
     { action: "intake_turn", promptVersion: prompts.PROMPT_VERSIONS.intake, intakeSessionId: opts.intakeSessionId, userId: opts.userId },

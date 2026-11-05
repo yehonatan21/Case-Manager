@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
-import { SERVICE_CATEGORIES } from "@/lib/domain";
+import { useCategories } from "@/components/app/categories";
 import type { CustomerType, Urgency } from "@/lib/db/schema";
 
 export type ClientOption = {
@@ -35,6 +35,7 @@ export function NewCaseForm({
   initialClientId?: string;
 }) {
   const { d, locale } = useI18n();
+  const categories = useCategories();
   const t = d.newCase;
   const router = useRouter();
   const toast = useToast();
@@ -295,9 +296,9 @@ export function NewCaseForm({
                     setReq({ ...req, serviceCategory: e.target.value })
                   }
                 >
-                  {SERVICE_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {d.categories[c]}
+                  {categories.list.map((c) => (
+                    <option key={c.key} value={c.key}>
+                      {categories.label(c.key)}
                     </option>
                   ))}
                 </Select>

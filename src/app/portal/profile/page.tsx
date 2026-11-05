@@ -22,7 +22,7 @@ export default async function ProfilePage() {
     <div className="max-w-2xl">
       <PageHeader title={d.portal.profileTitle} actions={<LogoutButton className="sm:hidden" />} />
       <ProfileForm
-        user={{ name: user.name, email: user.email, phone: user.phone, locale: user.locale, emailNotifications: user.emailNotifications, whatsapp: !!user.whatsappOptInAt }}
+        user={{ name: user.name, email: user.email, phone: user.phone, locale: user.locale, emailNotifications: user.emailNotifications, whatsapp: !!user.whatsappOptInAt, aiConsent: user.role === "customer" ? !!user.aiConsentAt : null }}
         whatsappAvailable={whatsappAvailable}
         customerType={cust?.customer.type ?? null}
         organization={cust?.organization?.name ?? null}

@@ -36,6 +36,7 @@ export type ErrorCode =
   | "signature_name_invalid"
   | "signature_outdated"
   | "signature_pdf_unsupported"
+  | "category_exists"
   | "file_too_large"
   | "file_type_not_allowed"
   | "file_infected"
@@ -80,6 +81,7 @@ const STATUS: Record<ErrorCode, number> = {
   signature_name_invalid: 400,
   signature_outdated: 409,
   signature_pdf_unsupported: 400,
+  category_exists: 409,
   file_too_large: 413,
   file_type_not_allowed: 415,
   file_infected: 422,
