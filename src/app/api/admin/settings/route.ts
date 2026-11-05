@@ -17,6 +17,11 @@ export const PATCH = route(async (req) => {
       intake_question_limit: z.number().int().min(1).max(20).optional(),
       document_reminder_days: z.number().int().min(0).max(60).optional(),
       document_reminder_max: z.number().int().min(1).max(10).optional(),
+      meeting_durations: z.array(z.number().int().min(15).max(240)).min(1).max(4).optional(),
+      meeting_buffer_minutes: z.number().int().min(0).max(120).optional(),
+      meeting_min_notice_hours: z.number().int().min(0).max(168).optional(),
+      meeting_horizon_days: z.number().int().min(1).max(90).optional(),
+      meeting_office_address: z.string().max(300).optional(),
     }),
   );
   await updateSettings(await getDb(), user, body);

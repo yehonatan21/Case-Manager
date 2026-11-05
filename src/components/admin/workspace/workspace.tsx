@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/form";
 import { Notice, EmptyState } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { TabList, TabPanel } from "@/components/ui/tabs";
+import { MeetingsPanel, type MeetingItem } from "@/components/case/meetings-panel";
 import { useToast } from "@/components/ui/toast";
 import { CaseStatusBadge, QuoteStatusBadge, UrgencyBadge } from "@/components/app/status";
 import { Timeline } from "@/components/app/timeline";
@@ -25,7 +26,7 @@ import { CopilotPane } from "./copilot-pane";
 import type { StaffOption, TemplateOption, WorkspaceData } from "./types";
 import { cn } from "@/lib/utils";
 
-type WorkTab = "messages" | "notes" | "tasks" | "quotes" | "documents" | "timeline";
+type WorkTab = "messages" | "notes" | "tasks" | "quotes" | "documents" | "meetings" | "timeline";
 type Pane = "details" | "work" | "copilot";
 
 export function CaseWorkspace({
@@ -36,6 +37,8 @@ export function CaseWorkspace({
   aiMock,
   initialTab,
   maxMb,
+  meetings = [],
+  meetingDurations = [30, 60],
 }: {
   c: WorkspaceData;
   staff: StaffOption[];
@@ -44,6 +47,8 @@ export function CaseWorkspace({
   aiMock: boolean;
   initialTab?: string;
   maxMb: number;
+  meetings?: MeetingItem[];
+  meetingDurations?: number[];
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -54,6 +59,7 @@ export function CaseWorkspace({
     ...(a.edit ? (["tasks"] as WorkTab[]) : []),
     ...(a.viewQuotes ? (["quotes"] as WorkTab[]) : []),
     ...(a.documents ? (["documents"] as WorkTab[]) : []),
+    "meetings",
     "timeline",
   ];
   const [tab, setTab] = useState<WorkTab>(available.includes(initialTab as WorkTab) ? (initialTab as WorkTab) : available[0]!);
@@ -127,6 +133,7 @@ export function CaseWorkspace({
     tasks: d.workspace.tabs.tasks,
     quotes: d.workspace.tabs.quotes,
     documents: d.workspace.tabs.documents,
+    meetings: d.meetings.tab,
     timeline: d.workspace.tabs.timeline,
   };
   const openTasks = c.tasks.filter((t) => !["done", "cancelled"].includes(t.status)).length;
@@ -264,6 +271,9 @@ export function CaseWorkspace({
                       .filter((t) => t.documents?.length)
                       .sort((x, y) => Number(y.category === c.serviceCategory) - Number(x.category === c.serviceCategory))}
                   />
+                </TabPanel>
+                <TabPanel id="meetings" active={tab === "meetings"}>
+                  <MeetingsPanel caseId={c.id} mode="staff" meetings={meetings} durations={meetingDurations} canBook={a.edit} staff={staff} currentUserId={currentUserId} />
                 </TabPanel>
                 <TabPanel id="timeline" active={tab === "timeline"}>
                   <Timeline events={c.events} audience="staff" />

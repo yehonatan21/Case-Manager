@@ -22,6 +22,11 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
   document_reminder_days: 3,
   /** Stop reminding about a document after this many reminders. */
   document_reminder_max: 3,
+  meeting_durations: [30, 60],
+  meeting_buffer_minutes: 10,
+  meeting_min_notice_hours: 12,
+  meeting_horizon_days: 21,
+  meeting_office_address: "",
 };
 
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */

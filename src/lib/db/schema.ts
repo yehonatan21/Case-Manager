@@ -74,6 +74,9 @@ export const documentStatusEnum = pgEnum("document_status", [
 
 export const signatureStatusEnum = pgEnum("signature_status", ["requested", "signed", "cancelled"]);
 
+export const meetingStatusEnum = pgEnum("meeting_status", ["scheduled", "cancelled"]);
+export const meetingModeEnum = pgEnum("meeting_mode", ["video", "phone", "office"]);
+
 export const scanStatusEnum = pgEnum("scan_status", ["pending", "clean", "infected", "skipped", "error"]);
 
 export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "waiting", "done", "cancelled"]);
@@ -409,6 +412,68 @@ export const documentFiles = pgTable(
   (t) => [index("document_files_doc_idx").on(t.documentId)],
 );
 
+/** Weekly working hours, in the business time zone: day 0 = Sunday … 6 = Saturday. */
+export type WeeklyHours = Record<"0" | "1" | "2" | "3" | "4" | "5" | "6", { start: string; end: string }[]>;
+
+/** When a team member can be booked for meetings. */
+export const staffAvailability = pgTable("staff_availability", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** Clients can book this person. */
+  bookable: boolean("bookable").notNull().default(true),
+  weekly: jsonb("weekly").$type<WeeklyHours>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A meeting between a team member and the client of a case. */
+export const meetings = pgTable(
+  "meetings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    staffId: uuid("staff_id")
+      .notNull()
+      .references(() => users.id),
+    clientUserId: uuid("client_user_id").references(() => users.id),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    mode: meetingModeEnum("mode").notNull().default("video"),
+    status: meetingStatusEnum("status").notNull().default("scheduled"),
+    notes: text("notes"),
+    createdById: uuid("created_by_id").references(() => users.id),
+    cancelledById: uuid("cancelled_by_id").references(() => users.id),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: text("cancel_reason"),
+    /** Reminders already sent (a day before, and an hour before). */
+    remindedDayAt: timestamp("reminded_day_at", { withTimezone: true }),
+    remindedHourAt: timestamp("reminded_hour_at", { withTimezone: true }),
+    /** The event in the team member's connected calendar, and its video link. */
+    externalEventId: text("external_event_id"),
+    meetUrl: text("meet_url"),
+    /** Bumped on every change, so calendar apps update the .ics event instead of adding a copy. */
+    sequence: integer("sequence").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("meetings_case_idx").on(t.caseId), index("meetings_staff_idx").on(t.staffId, t.startAt)],
+);
+
+/** A team member's connected calendar (Google). Tokens are stored encrypted. */
+export const calendarConnections = pgTable("calendar_connections", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").$type<"google">().notNull().default("google"),
+  /** AES-256-GCM (app key) of { refreshToken }. */
+  enc: text("enc").notNull(),
+  accountEmail: text("account_email"),
+  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  lastError: text("last_error"),
+});
+
 /**
  * Service types beyond the built-in ones (SERVICE_CATEGORIES): added by an admin, or proposed by the intake AI
  * when no existing type fits a request (e.g. insurance claims, lawsuits). Admins can rename or hide them.
@@ -722,6 +787,7 @@ export type Task = typeof tasks.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;
 export type Signature = typeof signatures.$inferSelect;
 export type ServiceCategoryRow = typeof serviceCategories.$inferSelect;
+export type Meeting = typeof meetings.$inferSelect;
 export type QuoteItem = typeof quoteItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type IntakeSession = typeof intakeSessions.$inferSelect;

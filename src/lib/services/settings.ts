@@ -14,6 +14,15 @@ export type AppSettings = {
   intake_question_limit: number;
   document_reminder_days: number;
   document_reminder_max: number;
+  /** Meeting lengths clients can choose, in minutes. */
+  meeting_durations: number[];
+  /** Free time kept between meetings. */
+  meeting_buffer_minutes: number;
+  /** How soon a meeting can be booked, and how far ahead. */
+  meeting_min_notice_hours: number;
+  meeting_horizon_days: number;
+  /** Shown for "at the office" meetings. */
+  meeting_office_address: string;
 };
 
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {

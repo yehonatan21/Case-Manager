@@ -50,6 +50,13 @@
       "when": 1793879787266,
       "tag": "0006_service_types_ai_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793884493498,
+      "tag": "0007_meetings",
+      "breakpoints": true
     }
   ]
 }
