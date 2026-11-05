@@ -23,7 +23,8 @@ export async function GET(req: Request) {
     if (calendar) {
       // A team member connecting their Google Calendar (not a sign-in): must still be signed in as themselves.
       const me = await getCurrentUser();
-      const back = (q: string) => NextResponse.redirect(new URL(`/admin/meetings?calendar=${q}`, env.appUrl));
+      const target = next && next.startsWith("/admin/") ? next : "/admin/meetings";
+      const back = (q: string) => NextResponse.redirect(new URL(`${target}${target.includes("?") ? "&" : "?"}calendar=${q}`, env.appUrl));
       if (!me || me.id !== calendar.userId) return back("wrong_user");
       try {
         await saveCalendarConnection(await getDb(), me, { refreshToken: calendar.refreshToken, email: profile.email, scopesGranted: calendar.scopesGranted });

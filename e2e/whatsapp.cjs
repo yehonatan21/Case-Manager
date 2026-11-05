@@ -112,6 +112,8 @@ const inbound = (from, message) =>
     const verifyToken = (await admin.locator("dt:has-text('Verify token') + dd code").innerText()).trim();
     const callbackUrl = (await admin.locator("dt:has-text('Callback URL') + dd code").innerText()).trim();
     assert.match(callbackUrl, /\/api\/webhooks\/whatsapp$/);
+    // The Google Calendar card is here too (Google sign-in isn't configured on the test server).
+    await admin.getByRole("heading", { name: "יומן Google" }).waitFor();
     await axe(admin, "settings → integrations (connected)");
     await admin.screenshot({ path: OUT + "/settings.png", fullPage: true });
     log("admin connected WhatsApp; the number and webhook details are shown");
