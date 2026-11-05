@@ -297,6 +297,8 @@ The image runs as a non-root user and keeps data under `/var/data`. Migrations r
 
 Feature branches open pull requests into `dev`, and `dev` is then released to `main`. Merging `dev` into `main` through a pull request makes GitHub delete `dev`, because "Automatically delete head branches" is on. Either protect `dev` with a ruleset ("Restrict deletions"), or fast-forward `main` to `dev` instead of using a pull request.
 
+Merging a release pull request also adds a merge commit that exists only on `main`. The [`Sync dev with main`](.github/workflows/sync-dev.yml) workflow runs after every push to `main` and brings `dev` level again: it fast-forwards `dev` to `main`, or merges `main` into `dev` when `dev` already has unreleased work. So `main` is never ahead of `dev`. It needs `dev`'s ruleset to allow normal pushes (blocking only deletion and force pushes is fine).
+
 ## Testing and CI/CD
 
 | Suite | Command | Covers |
