@@ -41,4 +41,4 @@ First release.
 - Security: hashed single-use sign-in codes, rate limits, same-origin checks, encrypted files and secrets, verified idempotent webhooks, audit log.
 - CI: type check, 173 unit and integration tests on PGlite and PostgreSQL, HTTP tests, and seven browser test scripts (journey, accounts, staff requests, team, Grow, push, accessibility).
 
-[1.0.0]: https://github.com/yehonatan21/Case-Manager/releases/tag/v1.0.0
+[1.0.0]: https://github.com/yehonatan21/Case-Manager/releases/tag/1.0.0
