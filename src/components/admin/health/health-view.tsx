@@ -81,7 +81,7 @@ export function HealthView({ level, checks, checkedAt }: { level: HealthLevel; c
               <Card className="h-full">
                 <CardContent className="space-y-3 py-4">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-base font-semibold text-slate-900">{t.checks[c.id]}</h2>
+                    <h3 className="text-base font-semibold text-slate-900">{t.checks[c.id]}</h3>
                     <Badge tone={TONE[c.level]}>
                       <Icon className="size-3.5" aria-hidden />
                       {t.level[c.level]}

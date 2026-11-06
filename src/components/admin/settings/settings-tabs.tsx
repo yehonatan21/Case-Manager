@@ -47,6 +47,7 @@ export function SettingsTabs({
   integrations,
   serviceTypes,
   automation,
+  health,
 }: {
   initialTab?: string;
   currentUserId: string;
@@ -60,12 +61,14 @@ export function SettingsTabs({
   serviceTypes?: React.ReactNode;
   /** Rendered in the Automation tab. */
   automation?: React.ReactNode;
+  /** Rendered in the System health tab. */
+  health?: React.ReactNode;
 }) {
   const categories = useCategories();
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
+  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations", "health"].includes(initialTab ?? "") ? initialTab! : "general");
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [durationsText, setDurationsText] = useState(settings.meeting_durations.join(", "));
@@ -102,12 +105,18 @@ export function SettingsTabs({
           ...(automation ? [{ id: "automation", label: d.automation.tab }] : []),
           { id: "priceList", label: d.settingsPage.tabs.priceList },
           ...(integrations ? [{ id: "integrations", label: d.settingsPage.tabs.integrations }] : []),
+          ...(health ? [{ id: "health", label: d.health.title }] : []),
         ]}
       />
       <div className="pt-5">
         {serviceTypes && (
           <TabPanel id="serviceTypes" active={tab === "serviceTypes"} className="max-w-3xl">
             {serviceTypes}
+          </TabPanel>
+        )}
+        {health && (
+          <TabPanel id="health" active={tab === "health"} className="max-w-5xl">
+            {health}
           </TabPanel>
         )}
         {automation && (

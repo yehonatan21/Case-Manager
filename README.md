@@ -107,7 +107,7 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Meetings** | Clients book a consultation (video, phone or at the office) from their case, in a free slot of the team member handling it. Staff book any time for themselves or a colleague. Change the time, cancel, add to any calendar (.ics), reminders to both sides. Team members set their hours on **Meetings**, and can connect Google Calendar: busy times are excluded and meetings are added with a Google Meet link. |
 | **Electronic signatures** | Staff ask the client to sign a PDF (a power of attorney, an engagement letter). The client reviews it, types their full name, optionally draws a signature, agrees and signs. The signed copy (each page stamped, plus a signature certificate page) is saved as a new version. Approving a quote is signed too, and a signed quote PDF is saved to the case's documents. |
 | **WhatsApp** | Clients (and staff) who opt in on their profile get updates on WhatsApp. Client replies land in the case's messages, labelled "WhatsApp", and files they send are added to the case's documents. "STOP" opts out. |
-| **System health** | **System health** (admins) shows whether each part works: AI (provider, model, and whether the provider may keep prompts), email, WhatsApp, push, payments, receipts and invoices, Google Calendar, the scheduled jobs, and setup the public pages need (the accessibility coordinator, the business details). Each card says what is wrong and what to do, with the last success, the last failure and its error. Failed messages (last 7 days) and invoices can be retried from the page. The dashboard shows admins a warning when something isn't working. |
+| **System health** | **Settings → System health** (admins) shows whether each part works: AI (provider, model, and whether the provider may keep prompts), email, WhatsApp, push, payments, receipts and invoices, Google Calendar, the scheduled jobs, and setup the public pages need (the accessibility coordinator, the business details). Each card says what is wrong and what to do, with the last success, the last failure and its error. Failed messages (last 7 days) and invoices can be retried from the page. The dashboard shows admins a warning when something isn't working. |
 | **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
 | **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit, the accessibility coordinator shown on the accessibility statement); service templates; price list; payment provider. |
 
@@ -347,7 +347,7 @@ Vercel Hobby is for personal, non-commercial use. Neon's free compute pauses whe
 1. In GitHub, **Settings → Secrets and variables → Actions → New repository secret**: `CRON_SECRET`, with the same value as on Vercel.
 2. Optional: a repository variable `JOBS_URL` to call another address (default: the production site's `/api/jobs/run`).
 
-Without the secret the workflow only prints a warning. **System health** shows when the jobs last ran. On Docker or Render, `JOBS_INTERVAL_MINUTES` runs them inside the server instead.
+Without the secret the workflow only prints a warning. **Settings → System health** shows when the jobs last ran. On Docker or Render, `JOBS_INTERVAL_MINUTES` runs them inside the server instead.
 
 ### Render (paid, long-running server)
 
