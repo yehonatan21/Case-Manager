@@ -2,7 +2,8 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "./config";
-import { dictionaries } from "./dictionaries";
+import { dictFor } from "./dictionaries";
+import { aiMayKeepData } from "../ai/providers";
 
 /** Locale from cookie, then Accept-Language, then the Hebrew default. */
 export const getLocale = cache(async (): Promise<Locale> => {
@@ -16,5 +17,5 @@ export const getLocale = cache(async (): Promise<Locale> => {
 
 export async function getDict() {
   const locale = await getLocale();
-  return { locale, d: dictionaries[locale] };
+  return { locale, d: dictFor(locale, { aiMayKeepData: aiMayKeepData() }) };
 }

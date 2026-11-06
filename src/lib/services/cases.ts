@@ -28,7 +28,7 @@ import {
 } from "../db/schema";
 import { AppError } from "../errors";
 import { canCreateCasesForClients, caseAccess, type CaseAccess } from "../auth/permissions";
-import { CLIENT_STATUS, OPEN_STATUSES, canTransition, isStaffRole } from "../domain";
+import { CLIENT_STATUS, OPEN_STATUSES, canTransition, isActivationWithoutPayment, isStaffRole, type ActivationReason } from "../domain";
 import { addEvent } from "./events";
 import { resolveCategory } from "./categories";
 import { audit } from "./audit";
@@ -36,6 +36,7 @@ import { notify, staffRecipients, markCaseNotificationsRead } from "./notificati
 import { dictionaries } from "../i18n/dictionaries";
 import type { Locale } from "../i18n/config";
 import { todayIso } from "../utils";
+import { likeTerm, phoneMatches } from "./customers";
 
 export const portalCaseLink = (id: string) => `/portal/cases/${id}`;
 export const adminCaseLink = (id: string) => `/admin/cases/${id}`;
@@ -206,14 +207,32 @@ export async function applyStatus(
   return updated!;
 }
 
-export async function changeStatus(db: Database, actor: User, caseId: string, to: CaseStatus) {
+export type ActivationInput = { reason: ActivationReason; note?: string };
+
+/**
+ * A manual status change. Starting work before the quote-and-payment flow (paid by bank transfer, free of
+ * charge...) is allowed only to admins and case managers, with a reason that is kept in the case history.
+ */
+export async function changeStatus(db: Database, actor: User, caseId: string, to: CaseStatus, opts: { activation?: ActivationInput } = {}) {
   return db.transaction(async (tx) => {
     const { c, access } = await caseWithAccess(tx, actor, caseId);
     if (!access.edit) throw new AppError("forbidden");
     if (!canTransition(c.status, to)) throw new AppError("invalid_transition");
     if (to === "active" && c.status === "awaiting_payment") throw new AppError("invalid_transition");
+    const withoutPayment = isActivationWithoutPayment(c.status, to);
+    let activation: ActivationInput | null = null;
+    if (withoutPayment) {
+      if (actor.role !== "admin" && actor.role !== "case_manager") throw new AppError("forbidden");
+      const note = opts.activation?.note?.trim() ?? "";
+      if (!opts.activation?.reason || (opts.activation.reason === "other" && !note)) throw new AppError("activation_reason_required");
+      activation = { reason: opts.activation.reason, note: note.slice(0, 500) };
+    }
     const updated = await applyStatus(tx, c, to, actor);
-    await audit(tx, { actorId: actor.id, action: "case.status", entityType: "case", entityId: c.id, details: { from: c.status, to } });
+    if (activation) {
+      // Kept apart from the status event, which the client may see: the reason is for the team only.
+      await addEvent(tx, { caseId: c.id, type: "activated_without_payment", actor, visibility: "internal", data: { reason: activation.reason, note: activation.note || null } });
+    }
+    await audit(tx, { actorId: actor.id, action: "case.status", entityType: "case", entityId: c.id, details: { from: c.status, to, ...(activation ? { activation } : {}) } });
     return updated;
   });
 }
@@ -522,7 +541,7 @@ export function staffCaseScope(actor: User): SQL | undefined {
 export async function listStaffCases(
   db: DbOrTx,
   actor: User,
-  filters: { status?: string; assignee?: string; q?: string; customerId?: string; limit?: number } = {},
+  filters: { status?: string; assignee?: string; q?: string; customerId?: string; limit?: number; offset?: number } = {},
 ) {
   const conds: (SQL | undefined)[] = [staffCaseScope(actor)];
   if (filters.status === "open") conds.push(inArray(cases.status, OPEN_STATUSES));
@@ -532,8 +551,19 @@ export async function listStaffCases(
   else if (filters.assignee && isUuid(filters.assignee)) conds.push(eq(cases.assigneeId, filters.assignee));
   if (filters.customerId) conds.push(eq(cases.customerId, filters.customerId));
   if (filters.q?.trim()) {
-    const like = `%${filters.q.trim()}%`;
-    conds.push(or(ilike(cases.number, like), ilike(cases.title, like), ilike(users.name, like), ilike(users.email, like)));
+    const q = filters.q.trim();
+    const like = likeTerm(q);
+    conds.push(
+      or(
+        ilike(cases.number, like),
+        ilike(cases.title, like),
+        ilike(cases.description, like),
+        ilike(users.name, like),
+        ilike(users.email, like),
+        ilike(users.phone, like),
+        phoneMatches(users.phone, q),
+      ),
+    );
   }
   const assignee = sql<string | null>`(select name from ${users} u2 where u2.id = ${cases.assigneeId})`;
   return db
@@ -559,8 +589,9 @@ export async function listStaffCases(
     .innerJoin(customers, eq(customers.id, cases.customerId))
     .innerJoin(users, eq(users.id, customers.userId))
     .where(and(...conds.filter(Boolean)))
-    .orderBy(desc(cases.updatedAt))
-    .limit(filters.limit ?? 200);
+    .orderBy(desc(cases.updatedAt), desc(cases.id))
+    .limit(filters.limit ?? 200)
+    .offset(filters.offset ?? 0);
 }
 
 export async function caseActivityStamp(db: DbOrTx, caseIds: string[], includeInternal: boolean): Promise<string> {

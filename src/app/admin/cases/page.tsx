@@ -10,6 +10,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { canCreateCasesForClients } from "@/lib/auth/permissions";
 import { Plus } from "lucide-react";
 import { toCaseRows } from "../_rows";
+import { Pager } from "@/components/ui/pager";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -19,17 +20,23 @@ export async function generateMetadata() {
 export default async function CasesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignee?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; assignee?: string; q?: string; page?: string }>;
 }) {
   const user = await requirePageStaff("/admin/cases");
   const sp = await searchParams;
   const { d } = await getDict();
   const status = sp.status ?? "open";
-  const rows = await listStaffCases(await getDb(), user, {
+  const page = Math.max(1, Math.floor(Number(sp.page) || 1));
+  const PAGE = 50;
+  // One extra row tells whether there is a next page.
+  const found = await listStaffCases(await getDb(), user, {
     status,
     assignee: sp.assignee,
     q: sp.q,
+    limit: PAGE + 1,
+    offset: (page - 1) * PAGE,
   });
+  const rows = found.slice(0, PAGE);
   return (
     <>
       <PageHeader
@@ -109,6 +116,7 @@ export default async function CasesPage({
         variant="cases"
         empty={d.admin.casesEmpty}
       />
+      <Pager d={d} page={page} hasNext={found.length > PAGE} basePath="/admin/cases" params={{ status: sp.status, assignee: sp.assignee, q: sp.q }} />
     </>
   );
 }

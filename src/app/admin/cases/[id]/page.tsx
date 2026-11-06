@@ -34,6 +34,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
       <RealtimeRefresher caseId={id} />
       <CaseWorkspace
         currentUserId={user.id}
+        currentRole={user.role}
         aiMock={aiIsMock()}
         initialTab={tab}
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}

@@ -7,25 +7,28 @@ import { useI18n } from "@/lib/i18n/client";
 import { formatDate } from "@/lib/i18n/format";
 import { api, errorText } from "@/lib/client-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, Label } from "@/components/ui/form";
+import { Field, Select, Label, Textarea } from "@/components/ui/form";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { CaseStatusBadge } from "@/components/app/status";
-import { MANUAL_TRANSITIONS } from "@/lib/domain";
+import { ACTIVATION_REASONS, MANUAL_TRANSITIONS, isActivationWithoutPayment, type ActivationReason } from "@/lib/domain";
 import { fmt } from "@/lib/i18n/config";
 import { useCategories } from "@/components/app/categories";
 import { Stars } from "@/components/case/feedback-card";
 import type { CaseStatus, Urgency } from "@/lib/db/schema";
 import type { StaffOption, WorkspaceData } from "./types";
 
-export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; staff: StaffOption[]; currentUserId: string }) {
+export function DetailsPane({ c, staff, currentUserId, currentRole }: { c: WorkspaceData; staff: StaffOption[]; currentUserId: string; currentRole?: string }) {
   const { d, locale } = useI18n();
   const categories = useCategories();
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const [activation, setActivation] = useState<{ reason: ActivationReason | ""; note: string } | null>(null);
   const canEdit = c.access.edit;
+  const canStartUnpaid = currentRole === "admin" || currentRole === "case_manager";
 
   const patch = async (key: string, body: Record<string, unknown>) => {
     setBusy(key);
@@ -40,11 +43,16 @@ export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; sta
     }
   };
 
-  const setStatus = async (status: CaseStatus) => {
+  const setStatus = async (status: CaseStatus, act?: { reason: ActivationReason; note: string }) => {
     if (status === "completed" && !confirm(d.workspace.completeConfirm)) return;
+    if (isActivationWithoutPayment(c.status, status) && !act) {
+      if (!canStartUnpaid) return toast("error", d.workspace.activationOnlyManagers);
+      return setActivation({ reason: "", note: "" });
+    }
     setBusy("status");
     try {
-      await api(`/api/cases/${c.id}/status`, { method: "PATCH", body: { status } });
+      await api(`/api/cases/${c.id}/status`, { method: "PATCH", body: { status, ...(act ? { activation: act } : {}) } });
+      setActivation(null);
       toast("success", d.workspace.statusUpdated);
       router.refresh();
     } catch (e) {
@@ -57,8 +65,45 @@ export function DetailsPane({ c, staff, currentUserId }: { c: WorkspaceData; sta
   const transitions = MANUAL_TRANSITIONS[c.status] ?? [];
   const intake = c.intakeSummary;
 
+  const act = activation;
+  const actReady = !!act?.reason && (act.reason !== "other" || act.note.trim().length > 0);
   return (
     <div className="space-y-4">
+      <Dialog
+        open={act !== null}
+        onClose={() => setActivation(null)}
+        title={d.workspace.activationTitle}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setActivation(null)}>
+              {d.common.cancel}
+            </Button>
+            <Button loading={busy === "status"} disabled={!actReady} onClick={() => act?.reason && setStatus("active", { reason: act.reason, note: act.note.trim() })}>
+              {d.workspace.activationConfirm}
+            </Button>
+          </>
+        }
+      >
+        {act && (
+          <div className="grid gap-4">
+            <p className="text-sm text-slate-600">{d.workspace.activationText}</p>
+            <fieldset>
+              <legend className="mb-1.5 text-sm font-medium text-slate-800">{d.workspace.activationReason}</legend>
+              <div className="space-y-1.5">
+                {ACTIVATION_REASONS.map((r) => (
+                  <label key={r} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="radio" name="activation-reason" value={r} checked={act.reason === r} onChange={() => setActivation({ ...act, reason: r })} className="size-4 accent-brand-700" />
+                    {d.workspace.activationReasons[r]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <Field label={d.workspace.activationNote} hint={d.workspace.activationNoteHint} required={act.reason === "other"}>
+              {(p) => <Textarea {...p} rows={2} maxLength={500} value={act.note} onChange={(e) => setActivation({ ...act, note: e.target.value })} />}
+            </Field>
+          </div>
+        )}
+      </Dialog>
       <Card>
         <CardHeader>
           <CardTitle as="h2">{d.workspace.customer}</CardTitle>

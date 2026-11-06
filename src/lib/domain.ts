@@ -104,6 +104,13 @@ export const MANUAL_TRANSITIONS: Record<CaseStatus, CaseStatus[]> = {
   declined: ["under_review"],
 };
 
+/** Statuses from which a case may start work before any online payment (needs a recorded reason). */
+export const PRE_PAYMENT_STATUSES: CaseStatus[] = ["under_review", "quote_preparation"];
+export const ACTIVATION_REASONS = ["paid_offline", "free_of_charge", "other"] as const;
+export type ActivationReason = (typeof ACTIVATION_REASONS)[number];
+/** True when moving to "active" skips the quote-and-payment flow, so a reason must be recorded. */
+export const isActivationWithoutPayment = (from: CaseStatus, to: CaseStatus) => to === "active" && PRE_PAYMENT_STATUSES.includes(from);
+
 export function canTransition(from: CaseStatus, to: CaseStatus): boolean {
   return MANUAL_TRANSITIONS[from]?.includes(to) ?? false;
 }

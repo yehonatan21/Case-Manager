@@ -40,6 +40,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   assigned: UserCheck,
   unassigned: UserCheck,
   status_changed: RefreshCcw,
+  activated_without_payment: CircleDollarSign,
   info_requested: MessageCircleQuestion,
   client_responded: MessageSquareReply,
   document_requested: FileQuestion,
@@ -77,6 +78,7 @@ export function Timeline({ events, audience, empty }: { events: TimelineEvent[];
     if (e.type === "document_reviewed" && data.status) vars.status = d.documentStatus[data.status as DocumentStatus];
     if (e.type === "urgency_changed" && data.urgency) vars.urgency = d.urgency[data.urgency as Urgency];
     if (e.type === "assigned" && !data.assignee) vars.assignee = "—";
+    if (e.type === "activated_without_payment" && data.reason) vars.reason = d.workspace.activationReasons[data.reason as "other"] ?? String(data.reason);
     return fmt(tpl, vars);
   };
 
@@ -96,6 +98,9 @@ export function Timeline({ events, audience, empty }: { events: TimelineEvent[];
                 <Lock className="ms-1.5 inline size-3 text-slate-500" aria-label={d.common.internalOnly} />
               )}
             </p>
+            {e.type === "activated_without_payment" && typeof e.data?.note === "string" && e.data.note && (
+              <p className="bidi-auto mt-1 whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{e.data.note}</p>
+            )}
             {e.type === "client_update" && typeof e.data?.text === "string" && (
               <p className="bidi-auto mt-1 whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{e.data.text}</p>
             )}

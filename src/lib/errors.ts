@@ -16,6 +16,7 @@ export type ErrorCode =
   | "email_is_client"
   | "terms_required"
   | "invalid_transition"
+  | "activation_reason_required"
   | "quote_not_editable"
   | "quote_not_sendable"
   | "quote_not_approvable"
@@ -68,6 +69,7 @@ const STATUS: Record<ErrorCode, number> = {
   email_is_client: 409,
   terms_required: 400,
   invalid_transition: 409,
+  activation_reason_required: 422,
   quote_not_editable: 409,
   quote_not_sendable: 409,
   quote_not_approvable: 409,
