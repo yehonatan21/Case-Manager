@@ -18,10 +18,12 @@ export const PATCH = route<{ id: string }>(async (req, { id }) => {
       urgency: z.enum(["low", "normal", "high", "urgent"]).optional(),
       serviceCategory: z.string().max(60).optional(),
       title: z.string().max(200).optional(),
+      dueDate: z.iso.date().nullable().optional(),
+      waiting: z.object({ thirdParty: z.boolean(), note: z.string().max(200).nullable().optional() }).optional(),
     }),
   );
   const db = await getDb();
   if (body.assigneeId !== undefined) await assignCase(db, user, id, body.assigneeId);
-  if (body.urgency || body.serviceCategory || body.title) await updateCaseFields(db, user, id, body);
+  if (body.urgency || body.serviceCategory || body.title || body.dueDate !== undefined || body.waiting) await updateCaseFields(db, user, id, body);
   return ok();
 });

@@ -2,6 +2,8 @@
 
 import {
   Bot,
+  CalendarClock,
+  Hourglass,
   CheckCircle2,
   CircleDollarSign,
   FileCheck2,
@@ -21,7 +23,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
-import { formatDateTime } from "@/lib/i18n/format";
+import { formatDate, formatDateTime } from "@/lib/i18n/format";
 import { CLIENT_STATUS } from "@/lib/domain";
 import type { CaseStatus, DocumentStatus, Urgency } from "@/lib/db/schema";
 
@@ -41,6 +43,10 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   unassigned: UserCheck,
   status_changed: RefreshCcw,
   activated_without_payment: CircleDollarSign,
+  due_date_set: CalendarClock,
+  due_date_cleared: CalendarClock,
+  waiting_third_party: Hourglass,
+  waiting_third_party_done: Hourglass,
   info_requested: MessageCircleQuestion,
   client_responded: MessageSquareReply,
   document_requested: FileQuestion,
@@ -78,6 +84,8 @@ export function Timeline({ events, audience, empty }: { events: TimelineEvent[];
     if (e.type === "document_reviewed" && data.status) vars.status = d.documentStatus[data.status as DocumentStatus];
     if (e.type === "urgency_changed" && data.urgency) vars.urgency = d.urgency[data.urgency as Urgency];
     if (e.type === "assigned" && !data.assignee) vars.assignee = "—";
+    if (e.type === "due_date_set" && typeof data.dueDate === "string") vars.dueDate = formatDate(data.dueDate, locale);
+    if (e.type === "waiting_third_party") vars.note = typeof data.note === "string" && data.note ? data.note : "—";
     if (e.type === "activated_without_payment" && data.reason) vars.reason = d.workspace.activationReasons[data.reason as "other"] ?? String(data.reason);
     return fmt(tpl, vars);
   };

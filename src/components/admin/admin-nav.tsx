@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, CalendarClock, CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
+import { Activity, BarChart3, ListTodo, CalendarClock, CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/db/schema";
 
-type Item = { href: string; key: "dashboard" | "inbox" | "cases" | "quotes" | "tasks" | "meetings" | "customers" | "payments" | "reports" | "health" | "settings" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
+type Item = { href: string; key: "dashboard" | "queue" | "inbox" | "cases" | "quotes" | "tasks" | "meetings" | "customers" | "payments" | "reports" | "health" | "settings" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
 
 const ITEMS: Item[] = [
   { href: "/admin", key: "dashboard", icon: LayoutDashboard, roles: ["admin", "case_manager", "staff", "finance"], exact: true },
+  { href: "/admin/queue", key: "queue", icon: ListTodo, roles: ["admin", "case_manager", "staff"] },
   { href: "/admin/inbox", key: "inbox", icon: Inbox, roles: ["admin", "case_manager"] },
   { href: "/admin/cases", key: "cases", icon: FolderKanban, roles: ["admin", "case_manager", "staff", "finance"] },
   { href: "/admin/quotes", key: "quotes", icon: FileText, roles: ["admin", "case_manager", "finance"] },

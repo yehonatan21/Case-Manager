@@ -13,6 +13,7 @@ import { env } from "@/lib/env";
 import { listCaseMeetings } from "@/lib/services/meetings";
 import { getCaseFeedback } from "@/lib/services/feedback";
 import { getSettings } from "@/lib/services/settings";
+import { officeToday } from "@/lib/services/queue";
 
 export default async function CaseWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
@@ -53,6 +54,11 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
           serviceCategory: b.case.serviceCategory,
           createdAt: b.case.createdAt,
           assigneeId: b.case.assigneeId,
+          dueDate: b.case.dueDate,
+          waitingOnThirdParty: b.case.waitingOnThirdParty,
+          waitingNote: b.case.waitingNote,
+          lastActivityAt: [b.case.lastClientActivityAt, b.case.lastStaffActivityAt, b.case.createdAt].filter(Boolean).map((x) => new Date(x!)).sort((x, y) => y.getTime() - x.getTime())[0]!,
+          today: officeToday(),
           intakeSummary: b.access.internal ? b.case.intakeSummary : null,
           aiSummary: b.access.internal ? b.case.aiSummary : null,
           customer: b.customer

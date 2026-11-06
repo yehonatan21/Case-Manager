@@ -25,6 +25,7 @@ import { TasksPanel } from "./tasks-panel";
 import { CopilotPane } from "./copilot-pane";
 import type { StaffOption, TemplateOption, WorkspaceData } from "./types";
 import { cn } from "@/lib/utils";
+import { SummaryBar } from "./summary-bar";
 
 type WorkTab = "messages" | "notes" | "tasks" | "quotes" | "documents" | "meetings" | "timeline";
 type Pane = "details" | "work" | "copilot";
@@ -162,6 +163,7 @@ export function CaseWorkspace({
       </div>
 
       {!a.internal && <Notice tone="info" className="mb-4">{d.workspace.financeView}</Notice>}
+      {a.internal && <SummaryBar c={c} staff={staff} />}
 
       {/* On small screens the three areas become switchable panes. */}
       <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 xl:hidden" role="tablist" aria-label={d.workspace.work}>

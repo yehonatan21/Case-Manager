@@ -303,11 +303,20 @@ export const cases = pgTable(
     lastStaffActivityAt: timestamp("last_staff_activity_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    /** The case's deadline (a filing date, a date the client needs it by). Team only. */
+    dueDate: date("due_date", { mode: "string" }),
+    /** The day the handler was last reminded about the deadline, so it's once a day. */
+    dueRemindedOn: date("due_reminded_on", { mode: "string" }),
+    /** Set while the case waits on someone outside (an authority, a court, another office). */
+    waitingOnThirdParty: boolean("waiting_on_third_party").notNull().default(false),
+    /** Who or what it waits for, e.g. "Population Authority". Team only. */
+    waitingNote: text("waiting_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("cases_number_idx").on(t.number),
+    index("cases_due_idx").on(t.dueDate),
     index("cases_customer_idx").on(t.customerId),
     index("cases_status_idx").on(t.status),
     index("cases_assignee_idx").on(t.assigneeId),
@@ -811,6 +820,21 @@ export const priceListItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("price_list_code_idx").on(t.code)],
+);
+
+/** A staff member's saved filters on the Work queue page (the query string of the view). */
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    query: text("query").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("saved_views_user_name_idx").on(t.userId, t.name)],
 );
 
 export const settings = pgTable("settings", {
