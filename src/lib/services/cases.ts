@@ -263,8 +263,18 @@ export async function assignCase(db: Database, actor: User, caseId: string, assi
   });
 }
 
-export async function updateCaseFields(db: Database, actor: User, caseId: string, patch: { urgency?: Urgency; serviceCategory?: string; title?: string }) {
-  return db.transaction(async (tx) => {
+export type CaseFieldsPatch = {
+  urgency?: Urgency;
+  serviceCategory?: string;
+  title?: string;
+  /** YYYY-MM-DD, or null to clear. */
+  dueDate?: string | null;
+  /** Waiting on someone outside the office (an authority, a court), with who. */
+  waiting?: { thirdParty: boolean; note?: string | null };
+};
+
+export async function updateCaseFields(db: DbOrTx, actor: User, caseId: string, patch: CaseFieldsPatch) {
+  return inTx(db, async (tx) => {
     const { c, access } = await caseWithAccess(tx, actor, caseId);
     if (!access.edit) throw new AppError("forbidden");
     const set: Partial<Case> = { updatedAt: new Date() };
@@ -272,11 +282,32 @@ export async function updateCaseFields(db: Database, actor: User, caseId: string
       set.urgency = patch.urgency;
       await addEvent(tx, { caseId: c.id, type: "urgency_changed", actor, visibility: "internal", data: { urgency: patch.urgency } });
     }
+    if (patch.dueDate !== undefined) {
+      if (patch.dueDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(patch.dueDate)) throw new AppError("validation");
+      if (patch.dueDate !== c.dueDate) {
+        set.dueDate = patch.dueDate;
+        set.dueRemindedOn = null;
+        await addEvent(tx, { caseId: c.id, type: patch.dueDate ? "due_date_set" : "due_date_cleared", actor, visibility: "internal", data: { dueDate: patch.dueDate } });
+      }
+    }
+    if (patch.waiting) {
+      const note = patch.waiting.thirdParty ? (patch.waiting.note ?? "").trim().slice(0, 200) || null : null;
+      if (patch.waiting.thirdParty !== c.waitingOnThirdParty || note !== c.waitingNote) {
+        set.waitingOnThirdParty = patch.waiting.thirdParty;
+        set.waitingNote = note;
+        await addEvent(tx, { caseId: c.id, type: patch.waiting.thirdParty ? "waiting_third_party" : "waiting_third_party_done", actor, visibility: "internal", data: { note } });
+      }
+    }
     if (patch.serviceCategory) set.serviceCategory = await resolveCategory(tx, patch.serviceCategory);
     if (patch.title?.trim()) set.title = patch.title.trim();
     await tx.update(cases).set(set).where(eq(cases.id, c.id));
-    await audit(tx, { actorId: actor.id, action: "case.update", entityType: "case", entityId: c.id, details: patch });
+    await audit(tx, { actorId: actor.id, action: "case.update", entityType: "case", entityId: c.id, details: patch as Record<string, unknown> });
   });
+}
+
+/** Runs `fn` in a transaction; inside a caller's transaction it becomes a savepoint. */
+function inTx<T>(db: DbOrTx, fn: (tx: DbOrTx) => Promise<T>): Promise<T> {
+  return (db as Database).transaction(fn as never) as Promise<T>;
 }
 
 /** A staff-authored update shown on the customer's timeline. */

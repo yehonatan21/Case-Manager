@@ -5,6 +5,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Work queue.** One page of open cases, most pressing first (late, then urgency, then deadline), with views and counts: My work, Unassigned, Late, Due in 7 days, Waiting on the client, Waiting on others, No activity for 7 days, All open. Filters, saved views per user, and bulk changes (handler, urgency, status, deadline) for admins and case managers.
+- **Team workload** for admins and case managers: each member's open, urgent, late and due-soon cases, and their late tasks.
+- **Case deadlines and "waiting on others".** Set on the case (team only); the handler is reminded the day before and on the day. A summary bar above each case shows the handler, next step, deadline and last activity.
 - **System health page** for admins: AI (provider, model, whether prompts may be kept), email, WhatsApp, push, payments, receipts and invoices, Google Calendar, the scheduled jobs, and the setup public pages need. Each problem says what to do. Failed messages and invoices can be retried from the page, and the dashboard warns admins when something isn't working.
 - **Accessibility coordinator in Settings → General** (name, phone, email, reply time). The public accessibility statement shows these details instead of placeholders.
 - **Scheduled jobs every 10 minutes** through a GitHub Actions workflow (needs the `CRON_SECRET` repository secret); Vercel's daily cron stays as a fallback.

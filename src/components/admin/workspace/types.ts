@@ -41,6 +41,13 @@ export type WorkspaceData = {
   serviceCategory: string;
   createdAt: Date | string;
   assigneeId: string | null;
+  /** The case deadline (team only), and whether it waits on someone outside the office. */
+  dueDate: string | null;
+  waitingOnThirdParty: boolean;
+  waitingNote: string | null;
+  lastActivityAt: Date | string;
+  /** The office's today (YYYY-MM-DD), for "late" and "due tomorrow". */
+  today: string;
   intakeSummary: IntakeSummary | null;
   aiSummary: CaseAiSummary | null;
   customer: { name: string; email: string; phone: string | null; type: string; organization: string | null; customerId: string; aiConsent: boolean } | null;

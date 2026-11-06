@@ -124,3 +124,8 @@ export function assert(cond: unknown, code: ErrorCode, message?: string): assert
 
 /** Every error code, e.g. for checking that each one has a translated message. */
 export const ERROR_CODES = Object.keys(STATUS) as ErrorCode[];
+
+/** The domain error code of a thrown value ("internal" for anything else). */
+export function errorCodeOf(e: unknown): ErrorCode | "internal" {
+  return e instanceof AppError ? e.code : "internal";
+}

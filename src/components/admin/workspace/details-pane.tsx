@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { formatDate } from "@/lib/i18n/format";
 import { api, errorText } from "@/lib/client-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Select, Label, Textarea } from "@/components/ui/form";
+import { Checkbox, Field, Input, Select, Label, Textarea } from "@/components/ui/form";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ export function DetailsPane({ c, staff, currentUserId, currentRole }: { c: Works
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  const [due, setDue] = useState(c.dueDate ?? "");
+  const [waiting, setWaiting] = useState({ on: c.waitingOnThirdParty, note: c.waitingNote ?? "" });
   const [activation, setActivation] = useState<{ reason: ActivationReason | ""; note: string } | null>(null);
   const canEdit = c.access.edit;
   const canStartUnpaid = currentRole === "admin" || currentRole === "case_manager";
@@ -216,6 +218,42 @@ export function DetailsPane({ c, staff, currentUserId, currentRole }: { c: Works
               </div>
             ) : (
               <p>{staff.find((s) => s.id === c.assigneeId)?.name ?? d.common.unassigned}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="ws-due">{d.queue.dueLabel}</Label>
+            <div className="flex gap-2">
+              <Input id="ws-due" type="date" dir="ltr" value={due} disabled={!canEdit} onChange={(e) => setDue(e.target.value)} aria-describedby="ws-due-hint" />
+              {canEdit && (due || null) !== c.dueDate && (
+                <Button variant="outline" loading={busy === "due"} onClick={() => patch("due", { dueDate: due || null })}>
+                  {d.queue.saveDue}
+                </Button>
+              )}
+            </div>
+            <p id="ws-due-hint" className="mt-1 text-xs text-slate-500">
+              {d.queue.dueHint}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Checkbox
+              checked={waiting.on}
+              disabled={!canEdit}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setWaiting({ ...waiting, on });
+                if (!on && c.waitingOnThirdParty) void patch("waiting", { waiting: { thirdParty: false } });
+              }}
+              label={d.queue.waitingLabel}
+            />
+            {waiting.on && canEdit && (
+              <div className="flex gap-2">
+                <Input aria-label={d.queue.waitingNote} placeholder={d.queue.waitingNote} value={waiting.note} maxLength={200} onChange={(e) => setWaiting({ ...waiting, note: e.target.value })} />
+                {(!c.waitingOnThirdParty || waiting.note.trim() !== (c.waitingNote ?? "")) && (
+                  <Button variant="outline" loading={busy === "waiting"} onClick={() => patch("waiting", { waiting: { thirdParty: true, note: waiting.note.trim() || null } })}>
+                    {d.queue.saveDue}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
