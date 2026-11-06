@@ -169,6 +169,35 @@ export function SettingsTabs({
               <div className="sm:col-span-2">
                 <Field label={d.meetings.officeAddress}>{(p) => <Input {...p} value={s.meeting_office_address} onChange={(e) => setS({ ...s, meeting_office_address: e.target.value })} />}</Field>
               </div>
+              <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.settingsPage.a11yTitle}</h3>
+              <p className="sm:col-span-2 -mt-2 text-xs text-slate-500">
+                {d.settingsPage.a11yHint}{" "}
+                <a href="/accessibility" target="_blank" rel="noopener" className="font-medium text-brand-700 underline">
+                  {d.settingsPage.a11yView}
+                </a>
+              </p>
+              <Field label={d.settingsPage.a11yName}>
+                {(p) => <Input {...p} value={s.accessibility_contact.name} onChange={(e) => setS({ ...s, accessibility_contact: { ...s.accessibility_contact, name: e.target.value } })} />}
+              </Field>
+              <Field label={d.settingsPage.a11yPhone}>
+                {(p) => <Input {...p} dir="ltr" type="tel" value={s.accessibility_contact.phone} onChange={(e) => setS({ ...s, accessibility_contact: { ...s.accessibility_contact, phone: e.target.value } })} />}
+              </Field>
+              <Field label={d.settingsPage.a11yEmail}>
+                {(p) => <Input {...p} dir="ltr" type="email" value={s.accessibility_contact.email} onChange={(e) => setS({ ...s, accessibility_contact: { ...s.accessibility_contact, email: e.target.value } })} />}
+              </Field>
+              <Field label={d.settingsPage.a11yDays} hint={d.settingsPage.a11yDaysHint}>
+                {(p) => (
+                  <Input
+                    {...p}
+                    type="number"
+                    dir="ltr"
+                    min={0}
+                    max={60}
+                    value={s.accessibility_contact.response_days}
+                    onChange={(e) => setS({ ...s, accessibility_contact: { ...s.accessibility_contact, response_days: Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))) } })}
+                  />
+                )}
+              </Field>
               <div className="sm:col-span-2 flex justify-end">
                 <Button loading={busy === "general"} onClick={() => call("general", () => api("/api/admin/settings", { method: "PATCH", body: s }))}>
                   {d.common.save}

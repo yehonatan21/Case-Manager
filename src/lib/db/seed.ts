@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
   meeting_min_notice_hours: 12,
   meeting_horizon_days: 21,
   meeting_office_address: "",
+  accessibility_contact: { name: "", phone: "", email: "", response_days: 0 },
 };
 
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */

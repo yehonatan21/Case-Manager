@@ -5,6 +5,10 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **System health page** for admins: AI (provider, model, whether prompts may be kept), email, WhatsApp, push, payments, receipts and invoices, Google Calendar, the scheduled jobs, and the setup public pages need. Each problem says what to do. Failed messages and invoices can be retried from the page, and the dashboard warns admins when something isn't working.
+- **Accessibility coordinator in Settings → General** (name, phone, email, reply time). The public accessibility statement shows these details instead of placeholders.
+- **Scheduled jobs every 10 minutes** through a GitHub Actions workflow (needs the `CRON_SECRET` repository secret); Vercel's daily cron stays as a fallback.
+- **Customer search and pages.** Customers are searched on the server by name, email, phone (in any format) or organization and filtered by type, 50 per page (the list used to stop at 500). Case search also covers the description and the client's phone, and the case list has pages.
 - **Document checklists per service.** Service templates list the documents a case needs (required or optional, with a note for the client).
   - Staff request a template's checklist on a case in one step, choosing which items to include. The client gets one message with the whole list, and documents already requested are skipped.
   - Clients see the checklist with progress ("3 of 5 required documents provided"), and one to-do for all the required documents still missing.
@@ -25,6 +29,8 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Client replies arrive on a signed webhook and are added to the right case's messages, labelled "WhatsApp". Files they send are added to the case's documents. "STOP" opts out.
 
 ### Changed
+- **Starting work before payment needs a reason.** Moving a case to active from review or quote preparation (paid another way, free of charge) is limited to admins and case managers, who must choose a reason; it's kept in the case history for the team only.
+- **AI privacy by default.** `OPENROUTER_DATA_COLLECTION` now defaults to `deny`, so prompts go only to providers that don't keep or train on them, as the privacy policy says. With a free model, AI requests may fall back to the offline analysis; use a paid model, or set `allow` knowingly.
 - Google Calendar can also be connected from Settings → Integrations; after Google's consent screen you return to the page you started from.
 - Grow can also be connected and disconnected from Settings → Integrations, next to WhatsApp.
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).

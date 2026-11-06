@@ -1,4 +1,7 @@
 import { getDict } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/config";
+import { getDb } from "@/lib/db";
+import { getSettings } from "@/lib/services/settings";
 import { PublicFooter, PublicHeader } from "@/components/app/public-header";
 
 export async function generateMetadata() {
@@ -10,6 +13,9 @@ export async function generateMetadata() {
 export default async function AccessibilityPage() {
   const { d } = await getDict();
   const t = d.accessibilityPage;
+  const { company, accessibility_contact: c } = await getSettings(await getDb());
+  const phone = c.phone || company.phone;
+  const email = c.email || company.email;
   return (
     <>
       <PublicHeader />
@@ -40,11 +46,28 @@ export default async function AccessibilityPage() {
         <h2 className="mt-8 text-xl font-semibold text-slate-900">{t.contactTitle}</h2>
         <p className="mt-2">{t.contactIntro}</p>
         <ul className="mt-3 space-y-1 rounded-xl border border-slate-200 bg-white p-4">
-          <li>{t.contactName}</li>
-          <li>{t.contactPhone}</li>
-          <li>{t.contactEmail}</li>
+          {c.name && <li>{fmt(t.contactName, { name: c.name })}</li>}
+          {phone && (
+            <li>
+              {fmt(t.contactPhone, { phone: "" })}
+              <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} dir="ltr" className="underline">
+                {phone}
+              </a>
+            </li>
+          )}
+          {email && (
+            <li>
+              {fmt(t.contactEmail, { email: "" })}
+              <a href={`mailto:${email}`} dir="ltr" className="underline">
+                {email}
+              </a>
+            </li>
+          )}
         </ul>
-        <p className="mt-3">{t.contactNote}</p>
+        <p className="mt-3">
+          {t.contactNote}
+          {c.response_days > 0 && <> {fmt(t.contactReply, { days: c.response_days })}</>}
+        </p>
 
         <p className="mt-8 text-sm text-slate-500">{t.updated}</p>
       </main>

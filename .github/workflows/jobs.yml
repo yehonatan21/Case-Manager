@@ -1,0 +1,39 @@
+# Runs the app's scheduled jobs (retries for email, WhatsApp, push and invoices; document and meeting
+# reminders; expiring quotes) every 10 minutes. Vercel's own cron on the Hobby plan runs only once a day.
+#
+# Setup: add a repository secret CRON_SECRET with the same value as the app's CRON_SECRET on Vercel.
+# Optional: a repository variable JOBS_URL to call another deployment (default: the production site).
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run the jobs
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOBS_URL: ${{ vars.JOBS_URL || 'https://case-manager-eta.vercel.app/api/jobs/run' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::warning::The CRON_SECRET repository secret isn't set, so the jobs weren't run."
+            exit 0
+          fi
+          code=$(curl -sS -o response.json -w '%{http_code}' --max-time 120 --retry 2 --retry-delay 10 \
+            -X POST -H "Authorization: Bearer $CRON_SECRET" "$JOBS_URL")
+          cat response.json; echo
+          if [ "$code" != "200" ]; then
+            echo "::error::The jobs endpoint answered $code"
+            exit 1
+          fi

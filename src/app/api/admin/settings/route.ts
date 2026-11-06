@@ -22,6 +22,9 @@ export const PATCH = route(async (req) => {
       meeting_min_notice_hours: z.number().int().min(0).max(168).optional(),
       meeting_horizon_days: z.number().int().min(1).max(90).optional(),
       meeting_office_address: z.string().max(300).optional(),
+      accessibility_contact: z
+        .object({ name: z.string().trim().max(120), phone: z.string().trim().max(60), email: z.string().trim().max(200), response_days: z.number().int().min(0).max(60) })
+        .optional(),
     }),
   );
   await updateSettings(await getDb(), user, body);

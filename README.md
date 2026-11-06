@@ -85,7 +85,7 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Accounts** | Passwordless sign-in with an emailed code (rate-limited, attempt-limited, stored hashed) or Google. One page for sign-in and registration. An unknown email is offered registration instead of a code. Customer type (private / business / company / other) with organisation details. Terms acceptance and a separate, plain-language AI-processing consent. A client whose account the team opened is asked once on the portal whether the team may use AI ("Yes, allow" / "No, thanks"); anyone can change it on their profile. |
 | **Service types** | Built-in types plus custom ones. When no type fits a request (for example insurance claims or lawsuits), the intake assistant creates one, reusing a type with the same name if it exists. Admins add, rename or hide types under **Settings → Service types**. |
 | **Customer portal** | My cases (status, last update, required action). The case page shows "What needs to be done now?", a progress track of the real stages, a timeline, messages, documents, the quote and payments, and the contact person. Mobile bottom navigation. |
-| **Staff area** | Dashboard (new, awaiting quote, pending quotes, active, waiting on client, overdue tasks) with "Needs attention now"; incoming-requests inbox; case list with filters; customers; payments; settings. |
+| **Staff area** | Dashboard (new, awaiting quote, pending quotes, active, waiting on client, overdue tasks) with "Needs attention now"; incoming-requests inbox; case list with filters and pages; customers, searched on the server by name, email, phone (in any format) or organization, 50 per page; payments; settings. Case search also covers the description and the client's phone. |
 | **Requests opened by staff** | Admins and case managers open a request for an existing client, or for a new one by email, from **Cases → New request** or a client's profile. It's assigned to the creator by default; the client is notified and can sign in with that email. |
 | **Case workspace** | Three panes (details / work area / AI copilot): assign, validated status changes, urgency, category, client messages, internal notes, info requests, tasks, quotes, documents, history, client-timeline updates, complete/close. |
 | **AI copilot** | Case summary: what the client wants, known facts **linked to their source**, missing info, complexities, next step. Also up to 3 recommended actions, clarifying-question drafts, rewrite / shorten / translate, thread summary, status-update drafts, task plans, quote drafts and document analysis. Anything customer-facing is a draft a person must send. |
@@ -101,15 +101,16 @@ To use real AI, set `ANTHROPIC_API_KEY` (Claude) or `OPENROUTER_API_KEY` (OpenRo
 | **Meetings** | Clients book a consultation (video, phone or at the office) from their case, in a free slot of the team member handling it. Staff book any time for themselves or a colleague. Change the time, cancel, add to any calendar (.ics), reminders to both sides. Team members set their hours on **Meetings**, and can connect Google Calendar: busy times are excluded and meetings are added with a Google Meet link. |
 | **Electronic signatures** | Staff ask the client to sign a PDF (a power of attorney, an engagement letter). The client reviews it, types their full name, optionally draws a signature, agrees and signs. The signed copy (each page stamped, plus a signature certificate page) is saved as a new version. Approving a quote is signed too, and a signed quote PDF is saved to the case's documents. |
 | **WhatsApp** | Clients (and staff) who opt in on their profile get updates on WhatsApp. Client replies land in the case's messages, labelled "WhatsApp", and files they send are added to the case's documents. "STOP" opts out. |
+| **System health** | **System health** (admins) shows whether each part works: AI (provider, model, and whether the provider may keep prompts), email, WhatsApp, push, payments, receipts and invoices, Google Calendar, the scheduled jobs, and setup the public pages need (the accessibility coordinator, the business details). Each card says what is wrong and what to do, with the last success, the last failure and its error. Failed messages (last 7 days) and invoices can be retried from the page. The dashboard shows admins a warning when something isn't working. |
 | **Realtime** | Server-Sent Events update open pages within about 2 seconds; polling on serverless hosts. |
-| **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit); service templates; price list; payment provider. |
+| **Admin** | Team members and roles; general settings (VAT, currency, quote validity, SLA, question limit, the accessibility coordinator shown on the accessibility statement); service templates; price list; payment provider. |
 
 **Status model.** Internal statuses map to simpler customer labels:
 
 - **Internal:** `submitted → under_review ⇄ awaiting_information → quote_preparation → quote_sent → awaiting_payment → active ⇄ awaiting_client → completed → closed`, plus `cancelled` and `declined`.
 - **Customer labels:** received → in review → quote ready → awaiting payment → in progress → completed.
 
-`quote_sent`, `awaiting_payment` and `active` are reached only through the real action: sending a quote, the customer's approval, a verified payment. Every material action writes a case event with time, actor and visibility. Internal events and notes are never shown to customers.
+`quote_sent`, `awaiting_payment` and `active` are reached only through the real action: sending a quote, the customer's approval, a verified payment. The one exception is starting work before any quote (from `under_review` or `quote_preparation`), for work paid another way or free of charge: only admins and case managers can do it, and they must choose a reason ("paid another way", "free of charge", or "other" with details). The reason is kept in the case history for the team only. Every material action writes a case event with time, actor and visibility. Internal events and notes are never shown to customers.
 
 ## Roles and permissions
 
@@ -140,7 +141,7 @@ All settings are environment variables; see [`.env.example`](.env.example) for t
 | `APP_URL`, `APP_NAME` | Public URL (auto-detected on Vercel, Render, Railway, Fly) and name. |
 | `ADMIN_EMAIL` | This address is ensured to be an administrator. |
 | `DEMO_MODE` | Public demo: codes on screen, demo data, a warning banner. **Never with real data.** |
-| `CRON_SECRET` | Protects `POST /api/jobs/run`. |
+| `CRON_SECRET` | Protects `POST /api/jobs/run`. Also add it as a GitHub repository secret, so [the jobs run every 10 minutes](#scheduled-jobs). |
 | `JOBS_INTERVAL_MINUTES` | Runs the jobs inside the server every N minutes instead of external cron. |
 | `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, … | See [AI providers](#ai-providers). |
 | `PAYMENT_PROVIDER`, `STRIPE_*`, `GROW_*` | See [Payments](#payments). |
@@ -167,7 +168,9 @@ The AI features talk to one small interface, `AiProvider` in [`src/lib/ai/provid
 - **Robust replies:** a reply is accepted as plain JSON, inside a code fence, or with text around it. If a model writes the other fields into the first text field (some free models do), the app rebuilds them, or cuts them off, so customers never see raw JSON.
 - **To add a service,** write `src/lib/ai/providers/<name>.ts` exporting an `AiProvider` and add it to `registry` in [`src/lib/ai/providers/index.ts`](src/lib/ai/providers/index.ts).
 
-The default OpenRouter model is free (`nvidia/nemotron-3.5-super-vl:free`, with `google/gemma-4-31b-it:free` as fallback). Free models have daily request limits, and free endpoints may log prompts. Before real clients use the app, switch to a paid model with `OPENROUTER_DATA_COLLECTION=deny`.
+The default OpenRouter model is free (`nvidia/nemotron-3.5-super-vl:free`, with `google/gemma-4-31b-it:free` as fallback). Free models have daily request limits, and free endpoints may log prompts.
+
+`OPENROUTER_DATA_COLLECTION` is `deny` by default: OpenRouter then uses only providers that don't keep or train on prompts, as the privacy policy promises. Most free models aren't available that way, so with a free model AI requests may fall back to the offline analysis; use a paid model for real clients. `allow` makes free models work again, but then the privacy policy's promise no longer holds, and System health shows an error.
 
 **Safety:**
 - Output is validated against Zod schemas.
@@ -326,10 +329,19 @@ Existing accounts sign in directly when the verified Google email matches. A new
 On Vercel the app adapts:
 - Migrations run in the build.
 - Live updates poll instead of streaming.
-- Quote expiry and outbox retries run from the daily cron in [`vercel.json`](vercel.json).
+- Quote expiry, reminders and outbox retries run every 10 minutes from a [GitHub Actions schedule](#scheduled-jobs), and once a day from the cron in [`vercel.json`](vercel.json) as a fallback.
 - Files go to Blob, or to the database if no Blob store is connected.
 
 Vercel Hobby is for personal, non-commercial use. Neon's free compute pauses when idle.
+
+### Scheduled jobs
+
+`POST /api/jobs/run` retries emails, push, WhatsApp messages and invoices, sends document and meeting reminders, and expires old quotes. Vercel Hobby's cron runs it only once a day, so [`.github/workflows/jobs.yml`](.github/workflows/jobs.yml) calls it every 10 minutes:
+
+1. In GitHub, **Settings → Secrets and variables → Actions → New repository secret**: `CRON_SECRET`, with the same value as on Vercel.
+2. Optional: a repository variable `JOBS_URL` to call another address (default: the production site's `/api/jobs/run`).
+
+Without the secret the workflow only prints a warning. **System health** shows when the jobs last ran. On Docker or Render, `JOBS_INTERVAL_MINUTES` runs them inside the server instead.
 
 ### Render (paid, long-running server)
 
@@ -371,7 +383,7 @@ Merging a release pull request also adds a merge commit that exists only on `mai
 |---|---|---|
 | Unit + integration | `npm test` | Roles and permissions, document checklists and reminders, the full request → quote → payment lifecycle, sign-in security, intake ownership, storage encryption, staff-opened requests, team invites, Grow (fake API), AI providers (fake API), push (real encryption to a local push endpoint), WhatsApp (fake Meta API: sending, replies, files, opt-out), electronic signatures (real PDFs: stamping, certificate, evidence, versions, signed quotes), service types (assistant-created, deduplicated, admin-managed), AI consent, meetings (time zones and daylight saving, slots, booking, moving, cancelling, reminders, .ics, Google Calendar through a fake API), reports (periods, access by role, the numbers, the .xlsx file), receipts and invoices (Green Invoice through a fake API: connecting, issuing, PDFs, retries, manual issuing, the payment confirmation), client satisfaction, the service worker, demo-data cleanup, Google sign-in. In-memory PGlite; set `TEST_DATABASE_URL` for PostgreSQL. |
 | HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push, WhatsApp and signature endpoints. |
-| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, meetings (hours, booking a free slot, .ics, moving, cancelling), reports (sections by role, periods, the Excel export), and receipts and ratings (with a stand-in Green Invoice API). |
+| Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, meetings (hours, booking a free slot, .ics, moving, cancelling), reports (sections by role, periods, the Excel export), receipts and ratings (with a stand-in Green Invoice API), and production readiness (the accessibility coordinator, System health, starting work before payment, customer search). |
 
 The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014` (and `INVOICE_API_URL=http://localhost:4016/api/v1` for `e2e/invoices.cjs`):
 

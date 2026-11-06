@@ -23,6 +23,8 @@ export type AppSettings = {
   meeting_horizon_days: number;
   /** Shown for "at the office" meetings. */
   meeting_office_address: string;
+  /** Shown on the accessibility statement (Israeli regulations require a named contact). Empty phone/email fall back to the company's. */
+  accessibility_contact: { name: string; phone: string; email: string; response_days: number };
 };
 
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {
