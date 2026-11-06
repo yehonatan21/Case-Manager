@@ -19,6 +19,8 @@ import { googleEnabled } from "@/lib/services/google";
 import { listServiceCategories } from "@/lib/services/categories";
 import { getPaymentProviderStatus } from "@/lib/services/payment-settings";
 import { listRules } from "@/lib/services/automation";
+import { getSystemHealth } from "@/lib/services/health";
+import { HealthView } from "@/components/admin/health/health-view";
 import { RulesEditor } from "@/components/admin/automation/rules-editor";
 
 export async function generateMetadata() {
@@ -40,7 +42,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getWhatsAppStatus(db),
     getPaymentProviderStatus(db),
   ]);
-  const rules = await listRules(db);
+  const [rules, health] = await Promise.all([listRules(db), getSystemHealth(db, user)]);
   const [categories, calendarStatus, invoiceStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id), getInvoiceStatus(db)]);
   return (
     <>
@@ -52,6 +54,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role, status: s.status }))}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: t.tasks, stages: t.stages, documents: t.documents, active: t.active }))}
         serviceTypes={<ServiceTypes categories={categories} />}
+        health={
+          <>
+            <h2 className="text-lg font-semibold">{d.health.title}</h2>
+            <p className="mb-4 text-sm text-slate-500">{d.health.subtitle}</p>
+            <HealthView level={health.level} checks={health.checks} checkedAt={health.checkedAt} />
+          </>
+        }
         automation={<RulesEditor rules={rules.map((r) => ({ id: r.id, name: r.name, active: r.active, trigger: r.trigger, triggerStatus: r.triggerStatus, category: r.category, action: r.action, runCount: r.runCount, lastRunAt: r.lastRunAt ? r.lastRunAt.toISOString() : null }))} />}
         integrations={
           <>

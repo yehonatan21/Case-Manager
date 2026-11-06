@@ -103,7 +103,6 @@ export const en: typeof he = {
     reports: "Reports",
     queue: "Work queue",
     conversations: "Conversations",
-    health: "System health",
     customers: "Customers",
     payments: "Payments",
     settings: "Settings",
