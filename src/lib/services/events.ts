@@ -9,6 +9,7 @@ export type EventType =
   | "assigned"
   | "unassigned"
   | "status_changed"
+  | "activated_without_payment"
   | "info_requested"
   | "client_responded"
   | "document_requested"

@@ -21,7 +21,7 @@ async function completedCase() {
   const client = await makeUser(db, "customer");
   const c = await makeCase(db, client, "Done");
   await assignCase(db, admin, c.id, manager.id);
-  for (const to of ["under_review", "quote_preparation", "active", "completed"] as const) await changeStatus(db, admin, c.id, to).catch(() => {});
+  for (const to of ["under_review", "quote_preparation", "active", "completed"] as const) await changeStatus(db, admin, c.id, to, { activation: { reason: "free_of_charge" } }).catch(() => {});
   await db.update(s.cases).set({ status: "completed", completedAt: new Date() }).where(eq(s.cases.id, c.id));
   return { manager, client, c };
 }

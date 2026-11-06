@@ -9,6 +9,7 @@ import { WebAnalytics } from "@/components/app/web-analytics";
 import { CategoriesProvider } from "@/components/app/categories";
 import { getDb } from "@/lib/db";
 import { listServiceCategories } from "@/lib/services/categories";
+import { aiMayKeepData } from "@/lib/ai/providers";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { d } = await getDict();
@@ -39,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {d.common.demoBanner}
           </div>
         )}
-        <I18nProvider locale={locale}>
+        <I18nProvider locale={locale} aiMayKeepData={aiMayKeepData()}>
           <CategoriesProvider categories={categories}>
             <ToastProvider>{children}</ToastProvider>
           </CategoriesProvider>

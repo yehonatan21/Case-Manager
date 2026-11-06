@@ -72,8 +72,11 @@ export const env = {
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean),
-  /** "deny" routes only to providers that don't store or train on prompts (most free models are then unavailable). */
-  openrouterDataCollection: (str("OPENROUTER_DATA_COLLECTION", "allow") === "deny" ? "deny" : "allow") as "allow" | "deny",
+  /**
+   * "deny" (default) routes only to providers that don't store or train on prompts, as the privacy policy promises.
+   * Most free models are then unavailable; "allow" lets them be used, but the privacy policy no longer holds.
+   */
+  openrouterDataCollection: (str("OPENROUTER_DATA_COLLECTION", "deny").trim().toLowerCase() === "allow" ? "allow" : "deny") as "allow" | "deny",
   openrouterBaseUrl: str("OPENROUTER_BASE_URL"),
   /** Any OpenAI-compatible API (OpenAI, Groq, Mistral, Together, a local Ollama...): AI_PROVIDER=openai-compatible. */
   aiBaseUrl: str("AI_BASE_URL"),

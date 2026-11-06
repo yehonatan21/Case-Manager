@@ -47,6 +47,18 @@ export function getAiProvider(): AiProvider | null {
   return id ? registry[id]!.create() : null;
 }
 
+/**
+ * Whether the AI provider in use may keep prompts or train on them: OpenRouter with data collection allowed
+ * (needed by most free models). The privacy policy and the AI consent text then say so.
+ */
+export function aiMayKeepData(): boolean {
+  try {
+    return getAiProvider()?.id === "openrouter" && env.openrouterDataCollection === "allow";
+  } catch {
+    return false;
+  }
+}
+
 /** "mock" when the offline engine is used. */
 export function aiProviderName(): string {
   return getAiProvider()?.id ?? "mock";

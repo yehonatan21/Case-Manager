@@ -34,6 +34,7 @@ export function CaseWorkspace({
   staff,
   templates,
   currentUserId,
+  currentRole,
   aiMock,
   initialTab,
   maxMb,
@@ -44,6 +45,7 @@ export function CaseWorkspace({
   staff: StaffOption[];
   templates: TemplateOption[];
   currentUserId: string;
+  currentRole?: string;
   aiMock: boolean;
   initialTab?: string;
   maxMb: number;
@@ -178,7 +180,7 @@ export function CaseWorkspace({
 
       <div className="grid gap-5 xl:grid-cols-[16rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[18rem_minmax(0,1fr)_22rem]">
         <div className={cn(pane !== "details" && "hidden", "xl:block")}>
-          <DetailsPane c={c} staff={staff} currentUserId={currentUserId} />
+          <DetailsPane c={c} staff={staff} currentUserId={currentUserId} currentRole={currentRole} />
         </div>
 
         <div className={cn("min-w-0 space-y-5", pane !== "work" && "hidden", "xl:block")}>

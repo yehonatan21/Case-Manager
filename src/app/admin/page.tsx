@@ -7,6 +7,7 @@ import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { attentionItems, dashboardMetrics } from "@/lib/services/dashboard";
 import { getSettings } from "@/lib/services/settings";
+import { getSystemHealth } from "@/lib/services/health";
 import { PageHeader } from "@/components/ui/misc";
 import { UrgencyBadgeServer } from "@/components/admin/server-badges";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ export default async function Dashboard() {
   const db = await getDb();
   const settings = await getSettings(db);
   const [m, items] = await Promise.all([dashboardMetrics(db, user), attentionItems(db, user, settings.first_response_sla_hours)]);
+  // Admins see when an integration or the scheduled jobs stop working, without opening the health page.
+  const broken = user.role === "admin" ? (await getSystemHealth(db, user).catch(() => null))?.level === "error" : false;
   const tiles = [
     { label: d.admin.metrics.newRequests, hint: d.admin.metrics.newRequestsHint, value: m.newRequests, href: "/admin/inbox", icon: Inbox, tone: "text-brand-700 bg-brand-50" },
     { label: d.admin.metrics.awaitingQuote, hint: d.admin.metrics.awaitingQuoteHint, value: m.awaitingQuote, href: "/admin/cases?status=quote_preparation", icon: FileClock, tone: "text-sky-700 bg-sky-50" },
@@ -33,6 +36,15 @@ export default async function Dashboard() {
   return (
     <>
       <PageHeader title={d.admin.dashboardTitle} subtitle={d.admin.dashboardSub} />
+      {broken && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          <span className="flex-1 font-medium">{d.health.dashboardAlert}</span>
+          <Link href="/admin/health" className="font-semibold underline">
+            {d.health.dashboardAlertLink}
+          </Link>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {tiles.map((t) => (
           <Link key={t.label} href={t.href} className="group rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-brand-200 hover:shadow-sm">
