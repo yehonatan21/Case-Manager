@@ -36,6 +36,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Client replies arrive on a signed webhook and are added to the right case's messages, labelled "WhatsApp". Files they send are added to the case's documents. "STOP" opts out.
 
 ### Changed
+- System health moved from the side menu into **Settings → System health**; the old address opens that tab.
 - Each task's "done" checkbox now names its task for screen readers.
 - **Starting work before payment needs a reason.** Moving a case to active from review or quote preparation (paid another way, free of charge) is limited to admins and case managers, who must choose a reason; it's kept in the case history for the team only.
 - **AI privacy by default.** `OPENROUTER_DATA_COLLECTION` now defaults to `deny`, so prompts go only to providers that don't keep or train on them, as the privacy policy says. With a free model, AI requests may fall back to the offline analysis; use a paid model, or set `allow` knowingly. With `allow`, the privacy policy and the AI consent text say that the free AI provider may store the content and use it to improve its models, instead of promising it won't.

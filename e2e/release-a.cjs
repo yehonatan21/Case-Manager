@@ -63,10 +63,13 @@ async function axe(page, label) {
     log("the accessibility statement shows the coordinator saved in Settings");
 
     // ---- 2. System health ----
+    // Under Settings; the old address forwards there.
     await admin.goto(BASE + "/admin/health");
+    await admin.waitForURL(/\/admin\/settings\?tab=health/);
     await settle(admin);
-    await admin.getByRole("heading", { name: "תקינות המערכת", level: 1 }).waitFor();
-    for (const name of ["בינה מלאכותית", "דוא״ל", "תשלומים", "קבלות וחשבוניות", "משימות מתוזמנות"]) await admin.getByRole("heading", { name, level: 2 }).waitFor();
+    await admin.getByRole("tab", { name: "תקינות המערכת", selected: true }).waitFor();
+    await admin.getByRole("heading", { name: "תקינות המערכת", level: 2 }).waitFor();
+    for (const name of ["בינה מלאכותית", "דוא״ל", "תשלומים", "קבלות וחשבוניות", "משימות מתוזמנות"]) await admin.getByRole("heading", { name, level: 3 }).waitFor();
     // Demo mode uses the test checkout: flagged, with what to do.
     await admin.getByText("לא מחובר ספק תשלומים").waitFor();
     await axe(admin, "system health");

@@ -40,7 +40,7 @@ export default async function Dashboard() {
         <div role="alert" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           <AlertTriangle className="size-4 shrink-0" aria-hidden />
           <span className="flex-1 font-medium">{d.health.dashboardAlert}</span>
-          <Link href="/admin/health" className="font-semibold underline">
+          <Link href="/admin/settings?tab=health" className="font-semibold underline">
             {d.health.dashboardAlertLink}
           </Link>
         </div>

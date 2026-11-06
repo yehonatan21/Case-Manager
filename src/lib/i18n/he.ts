@@ -101,7 +101,6 @@ export const he = {
     reports: "דוחות",
     queue: "תור עבודה",
     conversations: "שיחות",
-    health: "תקינות המערכת",
     customers: "לקוחות",
     payments: "תשלומים",
     settings: "הגדרות",
