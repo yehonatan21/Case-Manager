@@ -227,6 +227,8 @@ export const en: typeof he = {
     aiTitle: "How do we use AI?",
     aiText:
       "To summarise and organise your request, the conversation is processed by an external AI service. We minimise identifying details before sending, and the content is not used to train models. Every professional or commercial decision is made by a person.",
+    aiTextMayKeep:
+      "To summarise and organise your request, the conversation is processed by an external AI service. We minimise identifying details before sending. The AI service we currently use is free, and its providers may store the content and use it to improve their models. Every professional or commercial decision is made by a person.",
     aiConsent: "I agree to my request being processed with AI as described",
     sendCode: "Send verification code",
     sendingCode: "Sending code…",
@@ -925,7 +927,7 @@ export const en: typeof he = {
     never: "Never",
     issues: {
       ai_offline: "No AI service is connected, so the app uses its offline analysis. Connect an AI service to get summaries and drafts.",
-      ai_data_allowed: "The AI provider is allowed to keep prompts and may train on them, but the privacy policy promises it won't. Set OPENROUTER_DATA_COLLECTION=deny and use a paid model.",
+      ai_data_allowed: "The AI provider may keep the content it receives and train on it (OPENROUTER_DATA_COLLECTION=allow, needed by most free models). The privacy policy and the AI consent text say so. For stronger privacy, use a paid model and set it to deny.",
       ai_free_model: "A free AI model is set. Free models have daily limits, and most aren't available when data collection is denied, so requests may fall back to the offline analysis. Use a paid model for real clients.",
       ai_check_terms: "Check that this AI service doesn't keep or train on your data, as the privacy policy promises.",
       ai_failing: "Recent AI requests failed and fell back to the offline analysis.",
@@ -1532,6 +1534,8 @@ export const en: typeof he = {
       "Payments are processed by a secure external payment provider. We do not store card details.",
       "You can ask to access, correct or delete your information at any time, subject to legal retention obligations.",
     ],
+    privacyAiMayKeep:
+      "To summarise and organise your request, its content may be processed by an external AI provider. We minimise identifying details (such as email and phone) before processing. The AI service we currently use is free, and its providers may store the content and use it to improve their models.",
     termsTitle: "Terms of use",
     terms: [
       "The system helps you define a request, receive a quote and follow the work. Submitting a request does not constitute a commitment to provide the service.",

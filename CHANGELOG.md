@@ -30,7 +30,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ### Changed
 - **Starting work before payment needs a reason.** Moving a case to active from review or quote preparation (paid another way, free of charge) is limited to admins and case managers, who must choose a reason; it's kept in the case history for the team only.
-- **AI privacy by default.** `OPENROUTER_DATA_COLLECTION` now defaults to `deny`, so prompts go only to providers that don't keep or train on them, as the privacy policy says. With a free model, AI requests may fall back to the offline analysis; use a paid model, or set `allow` knowingly.
+- **AI privacy by default.** `OPENROUTER_DATA_COLLECTION` now defaults to `deny`, so prompts go only to providers that don't keep or train on them, as the privacy policy says. With a free model, AI requests may fall back to the offline analysis; use a paid model, or set `allow` knowingly. With `allow`, the privacy policy and the AI consent text say that the free AI provider may store the content and use it to improve its models, instead of promising it won't.
 - Google Calendar can also be connected from Settings → Integrations; after Google's consent screen you return to the page you started from.
 - Grow can also be connected and disconnected from Settings → Integrations, next to WhatsApp.
 - After a client uploads, the case goes back to the team only once every required requested document is in (it used to move on after any single upload).

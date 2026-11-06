@@ -95,8 +95,9 @@ function aiCheck(): Omit<HealthCheck, "stats"> {
   if (ai.id === "openrouter") {
     facts.dataCollection = env.openrouterDataCollection;
     if (env.openrouterDataCollection === "allow") {
+      // The privacy policy and consent text then say the provider may keep the content (see aiMayKeepData).
       issues.push("ai_data_allowed");
-      level = "error";
+      level = "warning";
     }
     if (/:free$/.test(env.openrouterModel) || env.openrouterFallbackModels.some((m) => /:free$/.test(m))) {
       issues.push("ai_free_model");

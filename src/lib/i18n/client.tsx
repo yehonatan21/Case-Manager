@@ -1,13 +1,15 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import type { Locale } from "./config";
-import { dictionaries, type Dict } from "./dictionaries";
+import { dictFor, dictionaries, type Dict } from "./dictionaries";
 
 const I18nContext = createContext<{ locale: Locale; d: Dict }>({ locale: "he", d: dictionaries.he });
 
-export function I18nProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
-  return <I18nContext.Provider value={{ locale, d: dictionaries[locale] }}>{children}</I18nContext.Provider>;
+/** `aiMayKeepData`: the AI provider may keep prompts (free models), so the AI texts say so. */
+export function I18nProvider({ locale, aiMayKeepData = false, children }: { locale: Locale; aiMayKeepData?: boolean; children: React.ReactNode }) {
+  const value = useMemo(() => ({ locale, d: dictFor(locale, { aiMayKeepData }) }), [locale, aiMayKeepData]);
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {

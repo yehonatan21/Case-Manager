@@ -170,7 +170,7 @@ The AI features talk to one small interface, `AiProvider` in [`src/lib/ai/provid
 
 The default OpenRouter model is free (`nvidia/nemotron-3.5-super-vl:free`, with `google/gemma-4-31b-it:free` as fallback). Free models have daily request limits, and free endpoints may log prompts.
 
-`OPENROUTER_DATA_COLLECTION` is `deny` by default: OpenRouter then uses only providers that don't keep or train on prompts, as the privacy policy promises. Most free models aren't available that way, so with a free model AI requests may fall back to the offline analysis; use a paid model for real clients. `allow` makes free models work again, but then the privacy policy's promise no longer holds, and System health shows an error.
+`OPENROUTER_DATA_COLLECTION` is `deny` by default: OpenRouter then uses only providers that don't keep or train on prompts, as the privacy policy promises. Most free models aren't available that way, so with a free model AI requests may fall back to the offline analysis; use a paid model for real clients. `allow` makes free models work again. The privacy policy and the AI consent text then say that the AI provider may store the content and use it to improve its models (instead of promising it won't), and System health shows a warning.
 
 **Safety:**
 - Output is validated against Zod schemas.

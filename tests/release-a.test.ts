@@ -101,7 +101,14 @@ describe("system health", () => {
     try {
       Object.assign(env, { aiProvider: "openrouter", openrouterApiKey: "sk-or-test", openrouterModel: "vendor/model:free", openrouterFallbackModels: [], openrouterDataCollection: "allow" });
       let ai = (await getSystemHealth(db, admin)).checks.find((c) => c.id === "ai")!;
-      expect(ai).toMatchObject({ level: "error", facts: { provider: "openrouter", dataCollection: "allow" } });
+      expect(ai).toMatchObject({ level: "warning", facts: { provider: "openrouter", dataCollection: "allow" } });
+      // The texts then say the provider may keep the content.
+      const { dictFor } = await import("@/lib/i18n/dictionaries");
+      const { aiMayKeepData } = await import("@/lib/ai/providers");
+      expect(aiMayKeepData()).toBe(true);
+      expect(dictFor("he", { aiMayKeepData: true }).legal.privacy.join(" ")).not.toContain("אינו משמש לאימון");
+      expect(dictFor("en", { aiMayKeepData: true }).account.aiText).toContain("may store the content");
+      expect(dictFor("en").legal.privacy.join(" ")).toContain("not used to train");
       expect(ai.issues).toEqual(expect.arrayContaining(["ai_data_allowed", "ai_free_model"]));
       Object.assign(env, { openrouterModel: "vendor/model", openrouterDataCollection: "deny" });
       ai = (await getSystemHealth(db, admin)).checks.find((c) => c.id === "ai")!;
