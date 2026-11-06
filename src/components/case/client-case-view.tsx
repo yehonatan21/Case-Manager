@@ -44,6 +44,8 @@ export type ClientCaseData = {
   meetings: MeetingItem[];
   meetingDurations: number[];
   feedback: { rating: number; comment: string | null } | null;
+  /** The work plan's stages the client may see. */
+  milestones?: { id: string; title: string; dueDate: string | null; completedAt: Date | string | null }[];
 };
 
 const TABS = ["overview", "messages", "documents", "meetings", "quote"] as const;
@@ -163,6 +165,40 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
               </CardHeader>
               <CardContent className="py-5">
                 <ProgressTrack status={c.status} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* The work plan's stages, when the team set one */}
+          {c.milestones && c.milestones.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{d.workPlan.clientTitle}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-2">
+                  {c.milestones.map((m, i) => {
+                    const firstOpen = c.milestones!.findIndex((x) => !x.completedAt);
+                    const state = m.completedAt ? "done" : i === firstOpen ? "current" : "upcoming";
+                    return (
+                      <li key={m.id} className="flex items-start gap-3">
+                        <span
+                          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${state === "done" ? "bg-emerald-600 text-white" : state === "current" ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600"}`}
+                          aria-hidden
+                        >
+                          {state === "done" ? "✓" : i + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`bidi-auto font-medium ${state === "upcoming" ? "text-slate-600" : "text-slate-900"}`}>{m.title}</p>
+                          <p className="text-xs text-slate-500">
+                            {d.workPlan[state]}
+                            {m.dueDate && !m.completedAt && <> · {fmt(d.workPlan.target, { date: formatDate(m.dueDate, locale) })}</>}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
               </CardContent>
             </Card>
           )}

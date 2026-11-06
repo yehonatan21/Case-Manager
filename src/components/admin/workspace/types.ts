@@ -13,7 +13,11 @@ export type WorkspaceTask = {
   status: TaskStatus;
   priority: "low" | "normal" | "high";
   requiresClientAction: boolean;
+  dependsOnId: string | null;
+  milestoneId: string | null;
 };
+
+export type WorkspaceMilestone = { id: string; title: string; dueDate: string | null; clientVisible: boolean; completedAt: Date | string | null };
 
 export type WorkspaceQuote = {
   id: string;
@@ -50,7 +54,7 @@ export type WorkspaceData = {
   today: string;
   intakeSummary: IntakeSummary | null;
   aiSummary: CaseAiSummary | null;
-  customer: { name: string; email: string; phone: string | null; type: string; organization: string | null; customerId: string; aiConsent: boolean } | null;
+  customer: { name: string; email: string; phone: string | null; type: string; organization: string | null; customerId: string; aiConsent: boolean; locale: string } | null;
   /** The client's rating, once the case is completed. */
   feedback?: { rating: number; comment: string | null; createdAt: Date | string } | null;
   access: CaseAccess;
@@ -58,6 +62,7 @@ export type WorkspaceData = {
   messages: ThreadMessage[];
   documents: Doc[];
   tasks: WorkspaceTask[];
+  milestones: WorkspaceMilestone[];
   quotes: WorkspaceQuote[];
   payments: WorkspacePayment[];
   recommendations: ("ask_client" | "prepare_quote" | "create_tasks")[];

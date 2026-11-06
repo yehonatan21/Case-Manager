@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lt, max } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, max, or } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
 import { aiRuns, cases, customers, quoteItems, quotes, users, type Case, type Quote, type QuoteItem, type User } from "../db/schema";
 import { AppError } from "../errors";
@@ -306,4 +306,44 @@ export async function expireQuotes(db: DbOrTx) {
     .where(and(inArray(quotes.status, ["sent", "clarification_requested"]), lt(quotes.validUntil, todayIso())))
     .returning({ id: quotes.id });
   return rows.length;
+}
+
+/**
+ * Follow-ups for sent quotes with no answer: one reminder to the client after N days, and one note to the
+ * handler (or the admins) after M days. Settings → General; 0 turns either off. Run by the scheduled jobs.
+ */
+export async function sendQuoteFollowups(db: DbOrTx): Promise<{ client: number; staff: number }> {
+  const s = await getSettings(db);
+  const day = 24 * 3600 * 1000;
+  let client = 0;
+  let staff = 0;
+  const open = and(eq(quotes.status, "sent"), or(isNull(quotes.validUntil), gte(quotes.validUntil, todayIso())));
+  if (s.quote_followup_client_days > 0) {
+    const due = await db
+      .select({ q: quotes, number: cases.number, customerId: cases.customerId, caseId: cases.id })
+      .from(quotes)
+      .innerJoin(cases, eq(cases.id, quotes.caseId))
+      .where(and(open, isNull(quotes.clientFollowupAt), lt(quotes.sentAt, new Date(Date.now() - s.quote_followup_client_days * day))));
+    for (const r of due) {
+      const [cu] = await db.select({ id: customers.userId }).from(customers).where(eq(customers.id, r.customerId));
+      if (cu) await notify(db, { userIds: [cu.id], type: "quote_followup_client", caseId: r.caseId, vars: { number: r.number }, link: `/portal/cases/${r.caseId}?tab=quote` });
+      await db.update(quotes).set({ clientFollowupAt: new Date() }).where(eq(quotes.id, r.q.id));
+      client++;
+    }
+  }
+  if (s.quote_followup_staff_days > 0) {
+    const due = await db
+      .select({ q: quotes, number: cases.number, assigneeId: cases.assigneeId, caseId: cases.id })
+      .from(quotes)
+      .innerJoin(cases, eq(cases.id, quotes.caseId))
+      .where(and(open, isNull(quotes.staffFollowupAt), lt(quotes.sentAt, new Date(Date.now() - s.quote_followup_staff_days * day))));
+    const admins = due.some((r) => !r.assigneeId) ? (await db.select({ id: users.id }).from(users).where(and(eq(users.role, "admin"), eq(users.status, "active")))).map((u) => u.id) : [];
+    for (const r of due) {
+      const days = Math.floor((Date.now() - new Date(r.q.sentAt!).getTime()) / day);
+      await notify(db, { userIds: r.assigneeId ? [r.assigneeId] : admins, type: "quote_followup_staff", caseId: r.caseId, vars: { number: r.number, days }, link: `/admin/cases/${r.caseId}?tab=quotes` });
+      await db.update(quotes).set({ staffFollowupAt: new Date() }).where(eq(quotes.id, r.q.id));
+      staff++;
+    }
+  }
+  return { client, staff };
 }

@@ -13,9 +13,15 @@ export const TemplateBody = z.object({
         dueInDays: z.number().int().min(0).max(365).optional(),
         requiresClientAction: z.boolean().optional(),
         priority: z.enum(["low", "normal", "high"]).optional(),
+        stage: z.number().int().min(0).max(19).optional(),
+        after: z.number().int().min(0).max(59).optional(),
       }),
     )
-    .max(40),
+    .max(60),
+  stages: z
+    .array(z.object({ title: z.string().min(1).max(200), dueInDays: z.number().int().min(0).max(730).optional(), clientVisible: z.boolean().optional() }))
+    .max(20)
+    .optional(),
   documents: z
     .array(z.object({ title: z.string().max(200), note: z.string().max(1000).optional(), required: z.boolean().optional() }))
     .max(30)

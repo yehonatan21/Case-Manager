@@ -5,6 +5,10 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Work plans in service templates.** Stages with target days, and tasks that wait for the one before them. Applying a template creates the stages as milestones on the case, unlocks tasks as their prerequisites are done (notifying the handler), completes stages, and sets the case deadline. Clients see their stages and progress.
+- **Automation rules** (Settings → Automation). When a request arrives, all required documents are approved, a quote is approved, a payment arrives, the case reaches a status or a stage completes, the rule creates a task, notifies the handler or messages the client. Rules can be limited to one service type.
+- **Quote follow-up.** One reminder to the client and one note to the handler when a sent quote gets no answer (days set in Settings → General).
+- **Conversations inbox** with saved replies. Client messages from all cases, those waiting for an answer first; reply in place. Saved replies in Hebrew and English are also in the case message composer.
 - **Work queue.** One page of open cases, most pressing first (late, then urgency, then deadline), with views and counts: My work, Unassigned, Late, Due in 7 days, Waiting on the client, Waiting on others, No activity for 7 days, All open. Filters, saved views per user, and bulk changes (handler, urgency, status, deadline) for admins and case managers.
 - **Team workload** for admins and case managers: each member's open, urgent, late and due-soon cases, and their late tasks.
 - **Case deadlines and "waiting on others".** Set on the case (team only); the handler is reminded the day before and on the day. A summary bar above each case shows the handler, next step, deadline and last activity.
@@ -32,6 +36,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
   - Client replies arrive on a signed webhook and are added to the right case's messages, labelled "WhatsApp". Files they send are added to the case's documents. "STOP" opts out.
 
 ### Changed
+- Each task's "done" checkbox now names its task for screen readers.
 - **Starting work before payment needs a reason.** Moving a case to active from review or quote preparation (paid another way, free of charge) is limited to admins and case managers, who must choose a reason; it's kept in the case history for the team only.
 - **AI privacy by default.** `OPENROUTER_DATA_COLLECTION` now defaults to `deny`, so prompts go only to providers that don't keep or train on them, as the privacy policy says. With a free model, AI requests may fall back to the offline analysis; use a paid model, or set `allow` knowingly. With `allow`, the privacy policy and the AI consent text say that the free AI provider may store the content and use it to improve its models, instead of promising it won't.
 - Google Calendar can also be connected from Settings → Integrations; after Google's consent screen you return to the page you started from.

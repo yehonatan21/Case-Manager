@@ -12,6 +12,7 @@ import { Textarea, Checkbox } from "@/components/ui/form";
 import { Avatar, Notice } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ReplyPicker } from "./reply-picker";
 
 export type ThreadMessage = {
   id: string;
@@ -34,6 +35,7 @@ export function MessageThread({
   kind,
   canPost,
   staffComposer,
+  replyVars,
   draft,
   onDraftConsumed,
   emptyText,
@@ -44,6 +46,8 @@ export function MessageThread({
   kind: "thread" | "internal_note";
   canPost: boolean;
   staffComposer?: boolean;
+  /** Enables saved replies in the staff composer (client name, case number, client language). */
+  replyVars?: { client: string; number: string; locale: string };
   /** Text injected from the AI copilot; must be reviewed and sent by a person. */
   draft?: { text: string; runId: string } | null;
   onDraftConsumed?: () => void;
@@ -97,10 +101,10 @@ export function MessageThread({
           const staffSender = m.senderRole && m.senderRole !== "customer";
           return (
             <div key={m.id} className={cn("flex gap-2.5", mine && "flex-row-reverse")}>
-              <Avatar name={m.senderName ?? "?"} className={cn(!staffSender && "bg-slate-200 text-slate-700")} />
+              <Avatar name={m.senderName ?? (m.via === "automation" ? "⚙" : "?")} className={cn(!staffSender && m.via !== "automation" && "bg-slate-200 text-slate-700")} />
               <div className={cn("max-w-[85%]", mine && "items-end text-end")}>
                 <p className="mb-1 text-xs text-slate-500">
-                  <span className="font-medium text-slate-700">{mine ? d.common.you : m.senderName}</span>
+                  <span className="font-medium text-slate-700">{mine ? d.common.you : m.via === "automation" ? d.conversations.automatic : m.senderName}</span>
                   {staffSender && !mine && kind === "thread" && <> · {d.messages.team}</>} · {formatDateTime(m.createdAt, locale)}
                   {m.via === "whatsapp" && (
                     <>
@@ -166,9 +170,12 @@ export function MessageThread({
           />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             {staffComposer && kind === "thread" ? (
-              <div>
-                <Checkbox label={d.messages.infoRequest} checked={infoRequest} onChange={(e) => setInfoRequest(e.target.checked)} />
-                {infoRequest && <p className="ms-6 mt-0.5 text-xs text-slate-500">{d.messages.infoRequestHint}</p>}
+              <div className="flex flex-wrap items-start gap-3">
+                <div>
+                  <Checkbox label={d.messages.infoRequest} checked={infoRequest} onChange={(e) => setInfoRequest(e.target.checked)} />
+                  {infoRequest && <p className="ms-6 mt-0.5 text-xs text-slate-500">{d.messages.infoRequestHint}</p>}
+                </div>
+                {replyVars && <ReplyPicker vars={replyVars} onPick={(text) => setBody((b) => (b.trim() ? `${b.trimEnd()}\n\n${text}` : text))} />}
               </div>
             ) : (
               <span />

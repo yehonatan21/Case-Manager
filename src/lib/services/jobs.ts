@@ -1,5 +1,5 @@
 import type { Database } from "../db";
-import { expireQuotes } from "./quotes";
+import { expireQuotes, sendQuoteFollowups } from "./quotes";
 import { dispatchPendingEmails } from "./notifications";
 import { dispatchPendingPushes, prunePushOutbox } from "./push";
 import { sendDocumentReminders } from "./checklists";
@@ -18,12 +18,13 @@ export async function runJobs(db: Database) {
   const reminders = await sendDocumentReminders(db);
   const meetingReminders = await sendMeetingReminders(db);
   const deadlineReminders = await sendDeadlineReminders(db);
+  const quoteFollowups = await sendQuoteFollowups(db);
   const emails = await dispatchPendingEmails(db, 100);
   const pushes = await dispatchPendingPushes(db, 200);
   const whatsapp = await dispatchPendingWhatsApp(db, 200);
   const invoicesIssued = await dispatchPendingInvoices(db, 50);
   await prunePushOutbox(db);
-  const result = { expiredQuotes: expired, documentReminders: reminders.cases, meetingReminders, deadlineReminders, emailsSent: emails, pushesSent: pushes, whatsappSent: whatsapp, invoicesIssued };
+  const result = { expiredQuotes: expired, documentReminders: reminders.cases, meetingReminders, deadlineReminders, quoteFollowups: quoteFollowups.client + quoteFollowups.staff, emailsSent: emails, pushesSent: pushes, whatsappSent: whatsapp, invoicesIssued };
   await recordJobsRun(db, result);
   return result;
 }
