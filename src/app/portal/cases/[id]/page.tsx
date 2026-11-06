@@ -50,6 +50,7 @@ export default async function CustomerCasePage({ params, searchParams }: { param
           feedback: feedback ? { rating: feedback.rating, comment: feedback.comment } : null,
           checkout: { provider: await activePaymentProvider(db), payerName: user.name, payerPhone: user.phone ?? "" },
           actions: b.actions,
+          milestones: b.milestones.map((m) => ({ id: m.id, title: m.title, dueDate: m.dueDate, completedAt: m.completedAt })),
           events: b.events.map((e) => ({ id: e.id, type: e.type, visibility: e.visibility, actorKind: e.actorKind, actorName: e.actorName, data: e.data, createdAt: e.createdAt })),
           messages: b.messages.map((m) => ({ id: m.id, senderId: m.senderId, senderName: m.senderName, senderRole: m.senderRole, kind: m.kind, body: m.body, isInfoRequest: m.isInfoRequest, via: m.via, aiRunId: null, createdAt: m.createdAt })),
           documents: b.documents.map((doc) => ({

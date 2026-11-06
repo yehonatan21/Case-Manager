@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql, ne } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
 import { documentFiles, documents, signatures, type User } from "../db/schema";
 import { AppError } from "../errors";
@@ -162,6 +162,14 @@ export async function reviewDocument(
     if (input.status === "needs_new_version") {
       const to = statusWhenRequestingFromClient(c.status);
       if (to) await applyStatus(tx, c, to, actor, { notifyClient: false });
+    }
+    // The last required document approved: "all documents are in" (for the team, and for automation rules).
+    if (input.status === "approved" && doc.status !== "approved" && doc.required && doc.visibility === "client") {
+      const [left] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(documents)
+        .where(and(eq(documents.caseId, c.id), eq(documents.required, true), eq(documents.visibility, "client"), ne(documents.status, "approved"), ne(documents.id, doc.id)));
+      if ((left?.n ?? 0) === 0) await addEvent(tx, { caseId: c.id, type: "documents_complete", actor, visibility: "internal" });
     }
     if (clientVisible) {
       const [cu] = await tx.select({ locale: users.locale }).from(users).where(eq(users.id, customerUserId));

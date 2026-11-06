@@ -205,13 +205,13 @@ export function CaseWorkspace({
               />
               <div className="py-4">
                 <TabPanel id="messages" active={tab === "messages"}>
-                  <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="thread" canPost={a.messages} staffComposer draft={draft} onDraftConsumed={consumeDraft} />
+                  <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="thread" canPost={a.messages} staffComposer replyVars={c.customer ? { client: c.customer.name, number: c.number, locale: c.customer.locale } : undefined} draft={draft} onDraftConsumed={consumeDraft} />
                 </TabPanel>
                 <TabPanel id="notes" active={tab === "notes"}>
                   <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="internal_note" canPost={a.internal} staffComposer />
                 </TabPanel>
                 <TabPanel id="tasks" active={tab === "tasks"}>
-                  <TasksPanel caseId={c.id} tasks={c.tasks} staff={staff} templates={templates} canEdit={a.edit} />
+                  <TasksPanel caseId={c.id} tasks={c.tasks} milestones={c.milestones} today={c.today} staff={staff} templates={templates} canEdit={a.edit} />
                 </TabPanel>
                 <TabPanel id="quotes" active={tab === "quotes"} className="space-y-4">
                   {a.manageQuotes && !c.quotes.some((q) => q.status === "draft") && !["active", "awaiting_client", "completed", "closed", "cancelled"].includes(c.status) && (

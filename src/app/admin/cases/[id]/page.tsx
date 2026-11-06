@@ -70,6 +70,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
                 organization: b.customer.organization?.name ?? null,
                 customerId: b.customer.id,
                 aiConsent: !!b.customer.user.aiConsentAt,
+                locale: b.customer.user.locale,
               }
             : null,
           feedback: feedback ? { rating: feedback.rating, comment: feedback.comment, createdAt: feedback.createdAt } : null,
@@ -91,7 +92,8 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
             // The latest signature request on the document (cancelled ones are hidden from clients by the bundle).
             signature: b.signatures.find((x) => x.documentId === doc.id && x.status !== "cancelled") ?? null,
           })),
-          tasks: b.tasks.map((t) => ({ id: t.id, title: t.title, description: t.description, assigneeId: t.assigneeId, dueDate: t.dueDate, status: t.status, priority: t.priority, requiresClientAction: t.requiresClientAction })),
+          tasks: b.tasks.map((t) => ({ id: t.id, title: t.title, description: t.description, assigneeId: t.assigneeId, dueDate: t.dueDate, status: t.status, priority: t.priority, requiresClientAction: t.requiresClientAction, dependsOnId: t.dependsOnId, milestoneId: t.milestoneId })),
+          milestones: b.milestones.map((m) => ({ id: m.id, title: m.title, dueDate: m.dueDate, clientVisible: m.clientVisible, completedAt: m.completedAt })),
           quotes: b.quotes.map((q) => ({ id: q.id, version: q.version, status: q.status, expired: q.expired, serviceName: q.serviceName, totalCents: q.totalCents, currency: q.currency, sentAt: q.sentAt, approvedAt: q.approvedAt, updatedAt: q.updatedAt })),
           payments: b.payments.map((p) => ({ id: p.id, amountCents: p.amountCents, currency: p.currency, status: p.status, provider: p.provider, createdAt: p.createdAt, paidAt: p.paidAt })),
           recommendations: b.access.internal ? recommendations(b).map((r) => r.kind) : [],
