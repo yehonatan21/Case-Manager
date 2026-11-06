@@ -25,6 +25,9 @@ export type AppSettings = {
   meeting_office_address: string;
   /** Shown on the accessibility statement (Israeli regulations require a named contact). Empty phone/email fall back to the company's. */
   accessibility_contact: { name: string; phone: string; email: string; response_days: number };
+  /** Remind the client about a quote with no answer after N days, and tell the handler after M days (0 = off). */
+  quote_followup_client_days: number;
+  quote_followup_staff_days: number;
 };
 
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {

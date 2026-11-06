@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, exists, ilike, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import type { Database, DbOrTx, Tx } from "../db";
 import {
+  caseMilestones,
   caseCounters,
   caseEvents,
   caseReads,
@@ -508,6 +509,12 @@ export async function getCaseBundle(db: DbOrTx, user: User, caseId: string) {
         .orderBy(desc(signatures.requestedAt))
     : [];
   const visibleDocIds = new Set(docs.map((d) => d.id));
+  // The work plan's stages; clients see only the ones marked for them.
+  const milestones = await db
+    .select()
+    .from(caseMilestones)
+    .where(client ? and(eq(caseMilestones.caseId, c.id), eq(caseMilestones.clientVisible, true)) : eq(caseMilestones.caseId, c.id))
+    .orderBy(asc(caseMilestones.sortOrder));
   const signatureList = sigRows
     .filter((x) => !x.documentId || visibleDocIds.has(x.documentId))
     .filter((x) => !client || x.status !== "cancelled")
@@ -550,6 +557,7 @@ export async function getCaseBundle(db: DbOrTx, user: User, caseId: string) {
     messages: msgRows.map((r) => ({ ...r.m, senderName: r.senderName, senderRole: r.senderRole })),
     documents: docs,
     tasks: taskRows,
+    milestones,
     quotes: quoteList,
     payments: paymentRows,
     signatures: signatureList,

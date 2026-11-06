@@ -71,6 +71,13 @@
       "when": 1793957668831,
       "tag": "0009_work_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793958770881,
+      "tag": "0010_workflows",
+      "breakpoints": true
     }
   ]
 }

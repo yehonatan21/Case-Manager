@@ -166,7 +166,26 @@ export type ServiceTemplateTask = {
   dueInDays?: number;
   requiresClientAction?: boolean;
   priority?: "low" | "normal" | "high";
+  /** Index (in the template's stages) of the stage this task belongs to. */
+  stage?: number;
+  /** Index (in the template's tasks) of a task that must be done first. */
+  after?: number;
 };
+
+/** A stage of a service's work plan; applying the template creates a milestone per stage. */
+export type ServiceTemplateStage = {
+  title: string;
+  /** Target, in days from the day the plan is applied (cumulative, not per stage). */
+  dueInDays?: number;
+  /** Clients see the stage and its progress on their case page. */
+  clientVisible?: boolean;
+};
+
+export type AutomationTrigger = "documents_complete" | "quote_approved" | "payment_succeeded" | "status_changed" | "milestone_completed" | "case_submitted";
+export type AutomationAction =
+  | { type: "create_task"; title: string; dueInDays?: number | null; priority?: "low" | "normal" | "high" }
+  | { type: "notify_owner"; text: string }
+  | { type: "message_client"; he: string; en: string };
 
 // ---------- Tables ----------
 
@@ -606,6 +625,10 @@ export const tasks = pgTable(
     relatedMessageId: uuid("related_message_id"),
     relatedDocumentId: uuid("related_document_id"),
     sortOrder: integer("sort_order").notNull().default(0),
+    /** A task that must be done first; until then this one is waiting ("blocked"). */
+    dependsOnId: uuid("depends_on_id"),
+    /** The milestone (stage of the work plan) it belongs to. */
+    milestoneId: uuid("milestone_id"),
     aiRunId: uuid("ai_run_id"),
     createdById: uuid("created_by_id").references(() => users.id),
     completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -614,6 +637,52 @@ export const tasks = pgTable(
   },
   (t) => [index("tasks_case_idx").on(t.caseId), index("tasks_assignee_idx").on(t.assigneeId)],
 );
+
+/** A stage of a case's work plan, with a target date; done when all its tasks are, or by hand. */
+export const caseMilestones = pgTable(
+  "case_milestones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    dueDate: date("due_date", { mode: "string" }),
+    clientVisible: boolean("client_visible").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("case_milestones_case_idx").on(t.caseId, t.sortOrder)],
+);
+
+/** "When X happens on a case, do Y": set by admins under Settings → Automation. */
+export const automationRules = pgTable("automation_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  trigger: text("trigger").$type<AutomationTrigger>().notNull(),
+  /** For status_changed: the status reached. */
+  triggerStatus: text("trigger_status"),
+  /** Only cases of this service type (null = all). */
+  category: text("category"),
+  action: jsonb("action").$type<AutomationAction>().notNull(),
+  runCount: integer("run_count").notNull().default(0),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  createdById: uuid("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Saved replies for the team (Hebrew and English), with {client} and {number} placeholders. */
+export const replyTemplates = pgTable("reply_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  bodyHe: text("body_he").notNull().default(""),
+  bodyEn: text("body_en").notNull().default(""),
+  createdById: uuid("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const quotes = pgTable(
   "quotes",
@@ -641,6 +710,9 @@ export const quotes = pgTable(
     aiRunId: uuid("ai_run_id"),
     sentSnapshot: jsonb("sent_snapshot").$type<Record<string, unknown> | null>(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
+    /** Follow-ups sent while the quote waits for an answer (client reminder, then a note to the handler). */
+    clientFollowupAt: timestamp("client_followup_at", { withTimezone: true }),
+    staffFollowupAt: timestamp("staff_followup_at", { withTimezone: true }),
     sentById: uuid("sent_by_id").references(() => users.id),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     approvedById: uuid("approved_by_id").references(() => users.id),
@@ -800,6 +872,7 @@ export const serviceTemplates = pgTable("service_templates", {
   category: text("category").notNull().default("other"),
   description: text("description").notNull().default(""),
   tasks: jsonb("tasks").$type<ServiceTemplateTask[]>().notNull().default([]),
+  stages: jsonb("stages").$type<ServiceTemplateStage[]>().notNull().default([]),
   documents: jsonb("documents").$type<ServiceTemplateDocument[]>().notNull().default([]),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -874,6 +947,9 @@ export type Payment = typeof payments.$inferSelect;
 export type IntakeSession = typeof intakeSessions.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type ServiceTemplate = typeof serviceTemplates.$inferSelect;
+export type CaseMilestone = typeof caseMilestones.$inferSelect;
+export type AutomationRule = typeof automationRules.$inferSelect;
+export type ReplyTemplate = typeof replyTemplates.$inferSelect;
 export type PriceListItem = typeof priceListItems.$inferSelect;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type CaseStatus = (typeof caseStatusEnum.enumValues)[number];

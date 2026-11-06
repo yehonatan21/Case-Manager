@@ -15,16 +15,15 @@ import { TabList, TabPanel } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { useCategories } from "@/components/app/categories";
 import type { AppSettings } from "@/lib/services/settings";
-import type { ServiceTemplateDocument, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
+import type { ServiceTemplateDocument, ServiceTemplateStage, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
+import { formatWorkPlan, parseWorkPlan } from "@/lib/work-plan";
 
 type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled" };
-type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; documents: ServiceTemplateDocument[]; active: boolean };
+type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; stages?: ServiceTemplateStage[]; documents: ServiceTemplateDocument[]; active: boolean };
 type Price = { id: string; code: string; name: string; category: string; unitPriceCents: number; currency: string; active: boolean };
 
 const STAFF_ROLES: UserRole[] = ["admin", "case_manager", "staff", "finance"];
 
-/** "Title" per line; a leading or trailing * marks a client action. */
-const tasksToText = (tasks: ServiceTemplateTask[]) => tasks.map((t) => `${t.requiresClientAction ? "* " : ""}${t.title}${t.dueInDays != null ? ` | ${t.dueInDays}` : ""}`).join("\n");
 /** Documents are edited one per line: "Title" or "Title | note". */
 const docsToText = (docs: ServiceTemplateDocument[], required: boolean) =>
   docs
@@ -37,16 +36,6 @@ const textToDocs = (text: string, required: boolean): ServiceTemplateDocument[] 
     .map((line) => line.split("|").map((p) => p.trim()))
     .filter(([title]) => title)
     .map(([title, ...note]) => ({ title: title!, note: note.join(" | ") || undefined, required }));
-const textToTasks = (s: string): ServiceTemplateTask[] =>
-  s
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((l) => {
-      const client = l.startsWith("*") || l.endsWith("*");
-      const [title, days] = l.replace(/^\*\s*|\s*\*$/g, "").split("|").map((x) => x.trim());
-      return { title: title!, requiresClientAction: client, ...(days && !isNaN(Number(days)) ? { dueInDays: Number(days) } : {}) };
-    });
 
 export function SettingsTabs({
   initialTab,
@@ -57,6 +46,7 @@ export function SettingsTabs({
   prices,
   integrations,
   serviceTypes,
+  automation,
 }: {
   initialTab?: string;
   currentUserId: string;
@@ -68,12 +58,14 @@ export function SettingsTabs({
   integrations?: React.ReactNode;
   /** Rendered in the Service types tab. */
   serviceTypes?: React.ReactNode;
+  /** Rendered in the Automation tab. */
+  automation?: React.ReactNode;
 }) {
   const categories = useCategories();
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
+  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations"].includes(initialTab ?? "") ? initialTab! : "general");
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [durationsText, setDurationsText] = useState(settings.meeting_durations.join(", "));
@@ -107,6 +99,7 @@ export function SettingsTabs({
           { id: "users", label: d.settingsPage.tabs.users },
           { id: "templates", label: d.settingsPage.tabs.templates },
           ...(serviceTypes ? [{ id: "serviceTypes", label: d.settingsPage.tabs.serviceTypes }] : []),
+          ...(automation ? [{ id: "automation", label: d.automation.tab }] : []),
           { id: "priceList", label: d.settingsPage.tabs.priceList },
           ...(integrations ? [{ id: "integrations", label: d.settingsPage.tabs.integrations }] : []),
         ]}
@@ -115,6 +108,11 @@ export function SettingsTabs({
         {serviceTypes && (
           <TabPanel id="serviceTypes" active={tab === "serviceTypes"} className="max-w-3xl">
             {serviceTypes}
+          </TabPanel>
+        )}
+        {automation && (
+          <TabPanel id="automation" active={tab === "automation"} className="max-w-4xl">
+            {automation}
           </TabPanel>
         )}
         {integrations && (
@@ -169,6 +167,13 @@ export function SettingsTabs({
               <div className="sm:col-span-2">
                 <Field label={d.meetings.officeAddress}>{(p) => <Input {...p} value={s.meeting_office_address} onChange={(e) => setS({ ...s, meeting_office_address: e.target.value })} />}</Field>
               </div>
+              <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.followups.title}</h3>
+              <Field label={d.followups.clientDays} hint={d.followups.hint}>
+                {(p) => <Input {...p} type="number" dir="ltr" min={0} max={60} value={s.quote_followup_client_days} onChange={(e) => setS({ ...s, quote_followup_client_days: Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))) })} />}
+              </Field>
+              <Field label={d.followups.staffDays} hint={d.followups.hint}>
+                {(p) => <Input {...p} type="number" dir="ltr" min={0} max={60} value={s.quote_followup_staff_days} onChange={(e) => setS({ ...s, quote_followup_staff_days: Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))) })} />}
+              </Field>
               <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.settingsPage.a11yTitle}</h3>
               <p className="sm:col-span-2 -mt-2 text-xs text-slate-500">
                 {d.settingsPage.a11yHint}{" "}
@@ -314,7 +319,7 @@ export function SettingsTabs({
                       size="sm"
                       variant="outline"
                       onClick={() =>
-                        setTpl({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: tasksToText(t.tasks), docsRequired: docsToText(t.documents, true), docsOptional: docsToText(t.documents, false) })
+                        setTpl({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: formatWorkPlan(t.stages ?? [], t.tasks, locale === "he" ? "צוות" : "team"), docsRequired: docsToText(t.documents, true), docsOptional: docsToText(t.documents, false) })
                       }
                     >
                       {d.common.edit}
@@ -366,7 +371,9 @@ export function SettingsTabs({
                 )}
               </Field>
               <Field label={d.tasks.description}>{(p) => <Input {...p} value={tpl.description} onChange={(e) => setTpl({ ...tpl, description: e.target.value })} />}</Field>
-              <Field label={d.settingsPage.templateTasks}>{(p) => <Textarea {...p} value={tpl.tasks} rows={6} onChange={(e) => setTpl({ ...tpl, tasks: e.target.value })} />}</Field>
+              <Field label={d.workPlan.editorLabel} hint={d.workPlan.editorHint}>
+                {(p) => <Textarea {...p} value={tpl.tasks} rows={10} className="font-mono text-sm" onChange={(e) => setTpl({ ...tpl, tasks: e.target.value })} />}
+              </Field>
               <Field label={d.settingsPage.templateDocsRequired} hint={d.settingsPage.templateDocsHint}>
                 {(p) => <Textarea {...p} value={tpl.docsRequired} rows={4} className="bidi-auto" onChange={(e) => setTpl({ ...tpl, docsRequired: e.target.value })} />}
               </Field>
@@ -392,7 +399,7 @@ export function SettingsTabs({
                             name: tpl.name,
                             category: tpl.category,
                             description: tpl.description,
-                            tasks: textToTasks(tpl.tasks),
+                            ...parseWorkPlan(tpl.tasks),
                             documents: [...textToDocs(tpl.docsRequired, true), ...textToDocs(tpl.docsOptional, false)],
                           },
                         }),

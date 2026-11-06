@@ -28,6 +28,8 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
   meeting_horizon_days: 21,
   meeting_office_address: "",
   accessibility_contact: { name: "", phone: "", email: "", response_days: 0 },
+  quote_followup_client_days: 3,
+  quote_followup_staff_days: 5,
 };
 
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */

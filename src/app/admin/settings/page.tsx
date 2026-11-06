@@ -18,6 +18,8 @@ import { getCalendarStatus } from "@/lib/services/calendar";
 import { googleEnabled } from "@/lib/services/google";
 import { listServiceCategories } from "@/lib/services/categories";
 import { getPaymentProviderStatus } from "@/lib/services/payment-settings";
+import { listRules } from "@/lib/services/automation";
+import { RulesEditor } from "@/components/admin/automation/rules-editor";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -38,6 +40,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getWhatsAppStatus(db),
     getPaymentProviderStatus(db),
   ]);
+  const rules = await listRules(db);
   const [categories, calendarStatus, invoiceStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id), getInvoiceStatus(db)]);
   return (
     <>
@@ -47,8 +50,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         currentUserId={user.id}
         settings={settings}
         staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role, status: s.status }))}
-        templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: t.tasks, documents: t.documents, active: t.active }))}
+        templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: t.tasks, stages: t.stages, documents: t.documents, active: t.active }))}
         serviceTypes={<ServiceTypes categories={categories} />}
+        automation={<RulesEditor rules={rules.map((r) => ({ id: r.id, name: r.name, active: r.active, trigger: r.trigger, triggerStatus: r.triggerStatus, category: r.category, action: r.action, runCount: r.runCount, lastRunAt: r.lastRunAt ? r.lastRunAt.toISOString() : null }))} />}
         integrations={
           <>
             <GrowConnect status={payments} canEdit className="" />

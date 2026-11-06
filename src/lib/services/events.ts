@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { DbOrTx } from "../db";
 import { caseEvents, cases, type EventData, type User } from "../db/schema";
 import { isStaffRole } from "../domain";
+import { EVENT_TRIGGERS, runRules } from "./automation";
 
 export type EventType =
   | "case_submitted"
@@ -41,7 +42,11 @@ export type EventType =
   | "case_completed"
   | "case_closed"
   | "ai_summary"
-  | "urgency_changed";
+  | "urgency_changed"
+  | "work_plan_applied"
+  | "milestone_completed"
+  | "documents_complete"
+  | "rule_applied";
 
 /** Record a case event. Every material action creates one (who, what, when, and who may see it). */
 export async function addEvent(
@@ -68,4 +73,10 @@ export async function addEvent(
           : { updatedAt: now },
     )
     .where(eq(cases.id, e.caseId));
+  // Automation rules ("when X happens, do Y") start from the case's history.
+  const trigger = EVENT_TRIGGERS[e.type];
+  if (trigger) {
+    const to = e.type === "case_completed" ? "completed" : e.type === "case_closed" ? "closed" : e.data?.to;
+    await runRules(db, trigger, e.caseId, { ...e.data, to });
+  }
 }
