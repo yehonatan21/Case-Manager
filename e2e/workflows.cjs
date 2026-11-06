@@ -130,6 +130,11 @@ async function axe(page, label) {
     await settle(manager);
     await item.getByLabel("הכנסת תשובה שמורה…").selectOption({ label: `עדכון ${stamp}` });
     assert.match(await item.locator("textarea").inputValue(), /אנחנו מטפלים בתיק/);
+    // The Send button fades from disabled to enabled; check contrast once the fade is over.
+    const sendBtn = item.locator("button:has-text('שליחה')");
+    await manager.waitForFunction((el) => !el.disabled, await sendBtn.elementHandle(), { timeout: 10000 });
+    await manager.mouse.move(0, 0);
+    await manager.waitForTimeout(500);
     await axe(manager, "quick reply with saved reply");
     await manager.screenshot({ path: OUT + "/conversations.png", fullPage: true });
     await item.locator("button:has-text('שליחה')").click();
