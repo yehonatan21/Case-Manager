@@ -29,7 +29,14 @@ async function axe(page, label) {
   // Next.js streams the <title> in just after the page loads; check once it's there, as a visitor would.
   await page.waitForFunction(() => document.title.length > 0, null, { timeout: 10000 }).catch(() => {});
   await page.addScriptTag({ content: AXE });
-  const v = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(" ")).slice(0, 2).join(", ")}`));
+  const run = () => page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(" ")).slice(0, 2).join(", ")}`));
+  let v = await run();
+  // A page refreshing after a save briefly has no <title> while Next.js streams the new one in: check again once.
+  if (v.length === 1 && v[0].startsWith("document-title")) {
+    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => document.title.length > 0, null, { timeout: 10000 }).catch(() => {});
+    v = await run();
+  }
   assert.deepEqual(v, [], `accessibility violations on ${label}`);
 }
 

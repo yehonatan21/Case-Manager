@@ -43,6 +43,16 @@ describe("backups", () => {
     damaged[damaged.length - 5]! ^= 0xff;
     await expect(restoreBackup(await createPgliteDatabase(), damaged)).rejects.toThrow(/decrypted/);
     await expect(restoreBackup(await createPgliteDatabase(), Buffer.from("not a backup"))).rejects.toThrow(/not a Case Manager backup/);
+    // With BACKUP_SECRET set, only that secret opens the file.
+    process.env.BACKUP_SECRET = "first-backup-secret-0123456789abcdef";
+    try {
+      const own = (await createBackup(source)).file;
+      expect(readBackup(own).data.users!.length).toBe(meta.tables.users!.rows);
+      process.env.BACKUP_SECRET = "another-backup-secret-0123456789abcd";
+      expect(() => readBackup(own)).toThrow(/BACKUP_SECRET differs/);
+    } finally {
+      delete process.env.BACKUP_SECRET;
+    }
   }, 60_000);
 
   it("covers every table, each after the tables it references", () => {
