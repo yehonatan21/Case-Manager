@@ -468,6 +468,8 @@ e2e/                   Playwright browser scripts
 
 ## Security
 
+To report a security problem, see [SECURITY.md](SECURITY.md). Dependabot opens weekly dependency updates into `dev` (`.github/dependabot.yml`).
+
 - **Sessions:** httpOnly, SameSite cookies.
 - **Sign-in codes:** hashed, single-use, time-limited, rate-limited and attempt-limited.
 - **Requests:** same-origin checks on all mutations; security headers (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`).
