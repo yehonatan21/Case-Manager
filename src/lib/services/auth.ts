@@ -81,7 +81,7 @@ export async function verifyLoginCode(
   input: { email: string; code: string; ip: string | null; locale: Locale; signup?: SignupInput | null },
 ): Promise<{ user: User; created: boolean }> {
   const email = normalizeEmail(input.email);
-  if (input.ip) await rateLimit(db, `verify:ip:${input.ip}`, 60, 15 * 60);
+  if (input.ip) await rateLimit(db, `verify:ip:${input.ip}`, env.otpVerifyMaxPerIp, 15 * 60);
 
   const [latest] = await db
     .select()

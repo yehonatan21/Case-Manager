@@ -78,44 +78,9 @@ async function axe(page, label) {
   const watch = (p) => p.on("pageerror", (e) => errors.push(e.message));
   let admin;
   try {
-    // ---- 1. The admin connects an email service ----
-    admin = await signIn(browser, "admin@example.com");
-    watch(admin);
-    await admin.goto(BASE + "/admin/settings?tab=integrations");
-    await settle(admin);
-    const card = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "דוא״ל", exact: true }) }).first();
-    await card.getByText("לא נשלח", { exact: true }).waitFor();
-    await card.locator("button:has-text('חיבור דוא״ל')").click();
-    await card.getByLabel("שירות").selectOption("resend");
-    await card.getByLabel(/^מפתח API/).fill("re_wrong_key_0000");
-    await card.getByLabel(/^כתובת השולח/).fill("updates@example.com");
-    await card.getByLabel("שם השולח").fill("המשרד");
-    await axe(admin, "email connect form");
-    await card.locator("button:has-text('בדיקה וחיבור')").click();
-    await admin.locator("[role=alert]", { hasText: "שירות הדוא״ל לא שלח את הודעת הבדיקה" }).first().waitFor();
-    await card.getByLabel(/^מפתח API/).fill(KEY);
-    await card.locator("button:has-text('בדיקה וחיבור')").click();
-    await admin.locator("[role=status]", { hasText: "נשלחה אליכם הודעת בדיקה" }).first().waitFor();
-    assert.deepEqual(sent[0].to, ["admin@example.com"]);
-    assert.equal(sent[0].from, "המשרד <updates@example.com>");
-    await settle(admin);
-    await card.getByText("מחובר", { exact: true }).waitFor();
-    assert.equal(await admin.locator(`text=${KEY}`).count(), 0, "the key is never shown");
-    await card.locator("button:has-text('שליחת הודעת בדיקה')").click();
-    await admin.locator("[role=status]", { hasText: "נשלחה הודעת בדיקה אל admin@example.com" }).first().waitFor();
-    assert.equal(sent.length, 2);
-    await axe(admin, "email connected");
-    await admin.screenshot({ path: OUT + "/email.png", fullPage: true });
-    log("the admin connected Resend; a wrong key was refused and the test email arrived");
-
-    // ---- 2. Sign-in codes now go out through it ----
+    // ---- 1. A team member's own event on the calendar ----
     const manager = await signIn(browser, "manager@example.com");
     watch(manager);
-    const otp = await waitFor(() => sent.find((m) => m.to[0] === "manager@example.com"), "the sign-in code email");
-    assert.match(otp.subject, /\d{6}/);
-    log("the sign-in code was emailed through the connected service");
-
-    // ---- 3. A team member's own event on the calendar ----
     await manager.goto(BASE + "/admin/meetings?view=week");
     await settle(manager);
     const cal = manager.locator("#calendar");
@@ -151,6 +116,43 @@ async function axe(page, label) {
     await settle(manager);
     assert.equal(await cal.getByRole("button", { name: /פגישת צוות/ }).count(), 0);
     log("the team member added an event, moved it and deleted it");
+
+    // ---- 2. The admin connects an email service ----
+    admin = await signIn(browser, "admin@example.com");
+    watch(admin);
+    await admin.goto(BASE + "/admin/settings?tab=integrations");
+    await settle(admin);
+    const card = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "דוא״ל", exact: true }) }).first();
+    await card.getByText("לא נשלח", { exact: true }).waitFor();
+    await card.locator("button:has-text('חיבור דוא״ל')").click();
+    await card.getByLabel("שירות").selectOption("resend");
+    await card.getByLabel(/^מפתח API/).fill("re_wrong_key_0000");
+    await card.getByLabel(/^כתובת השולח/).fill("updates@example.com");
+    await card.getByLabel("שם השולח").fill("המשרד");
+    await axe(admin, "email connect form");
+    await card.locator("button:has-text('בדיקה וחיבור')").click();
+    await admin.locator("[role=alert]", { hasText: "שירות הדוא״ל לא שלח את הודעת הבדיקה" }).first().waitFor();
+    await card.getByLabel(/^מפתח API/).fill(KEY);
+    await card.locator("button:has-text('בדיקה וחיבור')").click();
+    await admin.locator("[role=status]", { hasText: "נשלחה אליכם הודעת בדיקה" }).first().waitFor();
+    assert.deepEqual(sent[0].to, ["admin@example.com"]);
+    assert.equal(sent[0].from, "המשרד <updates@example.com>");
+    await settle(admin);
+    await card.getByText("מחובר", { exact: true }).waitFor();
+    assert.equal(await admin.locator(`text=${KEY}`).count(), 0, "the key is never shown");
+    await card.locator("button:has-text('שליחת הודעת בדיקה')").click();
+    await admin.locator("[role=status]", { hasText: "נשלחה הודעת בדיקה אל admin@example.com" }).first().waitFor();
+    assert.equal(sent.length, 2);
+    await axe(admin, "email connected");
+    await admin.screenshot({ path: OUT + "/email.png", fullPage: true });
+    log("the admin connected Resend; a wrong key was refused and the test email arrived");
+
+    // ---- 3. Sign-in codes now go out through it ----
+    const asked = await admin.request.fetch(BASE + "/api/auth/request-code", { method: "POST", data: { email: "client@example.com", purpose: "login" }, headers: { "content-type": "application/json", origin: BASE } });
+    assert.equal(asked.status(), 200, await asked.text());
+    const otp = await waitFor(() => sent.find((m) => m.to[0] === "client@example.com"), "the sign-in code email");
+    assert.match(otp.subject, /\d{6}/);
+    log("the sign-in code was emailed through the connected service");
 
     assert.deepEqual(errors, [], "no page errors");
     console.log("\nEMAIL & CALENDAR: all passed");

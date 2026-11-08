@@ -138,6 +138,8 @@ export const env = {
   otpMaxPerEmail: Math.max(1, Number(str("OTP_MAX_PER_EMAIL", "5")) || 5),
   /** Sign-in codes per IP address per 15 minutes. Raise only for test servers. */
   otpMaxPerIp: Math.max(1, Number(str("OTP_MAX_PER_IP", "30")) || 30),
+  /** Code checks per IP per 15 minutes. */
+  otpVerifyMaxPerIp: Math.max(1, Number(str("OTP_VERIFY_MAX_PER_IP", "60")) || 60),
   /** Web Push keys. Optional: without them the app generates a key pair once and stores it encrypted. */
   vapidPublicKey: str("VAPID_PUBLIC_KEY"),
   vapidPrivateKey: str("VAPID_PRIVATE_KEY"),

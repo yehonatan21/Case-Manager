@@ -90,6 +90,7 @@ jobs:
           # Many test scripts sign in to the same demo accounts on one server.
           OTP_MAX_PER_EMAIL: "50"
           OTP_MAX_PER_IP: "500"
+          OTP_VERIFY_MAX_PER_IP: "500"
       - name: HTTP API tests (auth, permissions, CSRF, headers)
         run: npm run test:api
         env:
