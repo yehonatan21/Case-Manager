@@ -4,6 +4,8 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-08
+
 ### Added
 - **Backups with a tested restore.** `npm run db:backup` writes an encrypted copy of every table and restores it into an empty database to check it; `npm run db:restore` checks a file or restores into a new database (it never overwrites data). A nightly GitHub Actions workflow runs the backup, keeps 30 days of files and reports to Settings → System health, which now has a Backups card.
 - **Remove demo data from the app.** System health flags leftover demo accounts and an admin removes them with one button.
@@ -103,4 +105,6 @@ First release.
 - Security: hashed single-use sign-in codes, rate limits, same-origin checks, encrypted files and secrets, verified idempotent webhooks, audit log.
 - CI: type check, 173 unit and integration tests on PGlite and PostgreSQL, HTTP tests, and seven browser test scripts (journey, accounts, staff requests, team, Grow, push, accessibility).
 
+[Unreleased]: https://github.com/yehonatan21/Case-Manager/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/yehonatan21/Case-Manager/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/yehonatan21/Case-Manager/releases/tag/1.0.0
