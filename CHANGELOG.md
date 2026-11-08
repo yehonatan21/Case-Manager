@@ -4,6 +4,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Changed
+- The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.
+
 ### Added
 - A security policy (`SECURITY.md`) on how to report a problem privately (to the owner directly), and weekly Dependabot updates into `dev`.
 

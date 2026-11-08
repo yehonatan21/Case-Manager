@@ -438,7 +438,8 @@ npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=
 | **Type check, tests, build** | `tsc`; the tests on PGlite and on PostgreSQL 16; production build. |
 | **Browser walkthrough** | Production server in demo mode, then the HTTP tests and all browser scripts. Screenshots are kept as an artifact. |
 | **Docker image** | Builds the image; on `main` pushes it to `ghcr.io/<owner>/case-manager`. |
-| **Deploy to Vercel** | Runs only with the `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets. Otherwise Vercel's Git integration deploys. |
+
+Vercel deploys through its Git integration: production from `main`, and a preview of every other branch with the Preview settings (the dev database and address).
 
 [Dependabot](.github/dependabot.yml) opens weekly update PRs.
 
