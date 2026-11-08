@@ -13,6 +13,7 @@ import { latestFile } from "./documents";
 import { addDaysIso } from "../utils";
 import type { Locale } from "../i18n/config";
 import { isStaffRole } from "../domain";
+import { cleanDetails } from "../doc-checks";
 
 /** Whether the case's customer agreed to AI processing of their request. */
 export async function customerAiConsent(db: DbOrTx, caseId: string): Promise<boolean> {
@@ -201,4 +202,22 @@ export function recommendations(b: CaseBundle): Recommendation[] {
 
 export function aiIsMock() {
   return aiProviderName() === "mock";
+}
+
+/**
+ * Pre-fills a document's details from the AI analysis, as a suggestion ("ai") a person confirms. Only empty
+ * details are filled; details a person already saved are left alone. Returns the details, or null when the AI
+ * couldn't read anything (no AI service that reads files, an unreadable scan...).
+ */
+export async function fillDocumentDetailsFromAi(db: Database, actor: User, documentId: string, locale: Locale) {
+  const analysis = await copilotAnalyzeDocument(db, actor, documentId, locale);
+  const a = analysis.details;
+  const suggested = a
+    ? cleanDetails({ docType: a.doc_type ?? undefined, fullName: a.full_name ?? undefined, idNumber: a.id_number ?? undefined, birthDate: a.birth_date ?? undefined, issueDate: a.issue_date ?? undefined, expiryDate: a.expiry_date ?? undefined }, "ai")
+    : null;
+  if (!suggested) return null;
+  const [d] = await db.select({ details: documents.details }).from(documents).where(eq(documents.id, documentId));
+  if (d?.details?.source === "staff") return d.details;
+  await db.update(documents).set({ details: suggested, detailsConfirmedById: null, detailsConfirmedAt: null }).where(eq(documents.id, documentId));
+  return suggested;
 }

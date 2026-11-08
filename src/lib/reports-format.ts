@@ -12,3 +12,9 @@ export function duration(hours: number | null, l: Locale, t: { hours: string; da
   if (hours < 48) return t.hours.replace("{n}", num(hours, l, hours < 10 ? 1 : 0));
   return t.days.replace("{n}", num(hours / 24, l, 1));
 }
+
+/** Minutes as hours and minutes: "2:05". */
+export function hhmm(minutes: number) {
+  const m = Math.max(0, Math.round(minutes));
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+}

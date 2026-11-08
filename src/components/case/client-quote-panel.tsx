@@ -19,7 +19,13 @@ import type { CaseStatus, PaymentStatusT } from "./types-quote";
 
 export type ClientQuote = QuoteViewData & { id: string; approvedAt: Date | string | null; declinedAt: Date | string | null };
 /** How the customer pays: Grow needs name, mobile number and terms approval before opening its page. */
-export type CheckoutInfo = { provider: "mock" | "stripe" | "grow"; payerName: string; payerPhone: string };
+export type CheckoutInfo = {
+  provider: "mock" | "stripe" | "grow";
+  payerName: string;
+  payerPhone: string;
+  /** A company colleague who isn't the owner or billing contact sees the quote but can't approve or pay. */
+  canPay?: boolean;
+};
 export type ClientPayment = { id: string; amountCents: number; currency: string; status: PaymentStatusT; createdAt: Date | string; paidAt: Date | string | null };
 
 export function ClientQuotePanel({
@@ -89,7 +95,8 @@ export function ClientQuotePanel({
     <div className="space-y-5">
       <QuoteView q={current} />
 
-      {open && (
+      {open && checkout.canPay === false && <Notice tone="info">{d.company.cantPay}</Notice>}
+      {open && checkout.canPay !== false && (
         <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-5">
           <section aria-labelledby="quote-sign-title" className="mb-4 grid gap-3 rounded-lg bg-white p-4 ring-1 ring-brand-100">
             <h3 id="quote-sign-title" className="flex items-center gap-1.5 text-sm font-semibold">
@@ -137,10 +144,14 @@ export function ClientQuotePanel({
             <p className="font-semibold">{d.caseView.actionPay}</p>
             <p className="text-sm text-slate-600">{formatMoney(current.totalCents, current.currency, locale)}</p>
           </div>
-          <Button size="lg" onClick={pay} loading={busy === "pay"}>
-            <Lock className="size-4" aria-hidden />
-            {busy === "pay" ? d.quote.redirecting : d.quote.payNow}
-          </Button>
+          {checkout.canPay === false ? (
+            <p className="text-sm text-slate-600">{d.company.cantPay}</p>
+          ) : (
+            <Button size="lg" onClick={pay} loading={busy === "pay"}>
+              <Lock className="size-4" aria-hidden />
+              {busy === "pay" ? d.quote.redirecting : d.quote.payNow}
+            </Button>
+          )}
         </div>
       )}
 

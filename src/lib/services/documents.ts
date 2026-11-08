@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { and, desc, eq, inArray, isNotNull, sql, ne } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { documentFiles, documents, signatures, type User } from "../db/schema";
+import { documentFiles, documents, signatures, type DocumentDetails, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { sha256 } from "../crypto";
 import { storage } from "../storage";
@@ -16,6 +16,7 @@ import { canAccessIntake } from "./intake";
 import { intakeSessions, users } from "../db/schema";
 import { dictionaries } from "../i18n/dictionaries";
 import type { Locale } from "../i18n/config";
+import { cleanDetails } from "../doc-checks";
 
 type UploadFile = { name: string; data: Buffer };
 
@@ -213,4 +214,20 @@ export async function authorizeDownload(db: Database, user: User | null, ownerTo
 export async function latestFile(db: DbOrTx, documentId: string) {
   const [f] = await db.select().from(documentFiles).where(eq(documentFiles.documentId, documentId)).orderBy(desc(documentFiles.version)).limit(1);
   return f ?? null;
+}
+
+/** Staff save (and so confirm) a document's key details, which the document checks use. */
+export async function updateDocumentDetails(db: Database, actor: User, documentId: string, input: DocumentDetails) {
+  const [doc] = await db.select().from(documents).where(eq(documents.id, documentId));
+  if (!doc?.caseId) throw new AppError("not_found");
+  const { access } = await caseWithAccess(db, actor, doc.caseId);
+  if (!access.edit || !access.documents) throw new AppError("forbidden");
+  const details = cleanDetails(input, "staff");
+  const [u] = await db
+    .update(documents)
+    .set({ details, detailsConfirmedById: details ? actor.id : null, detailsConfirmedAt: details ? new Date() : null, updatedAt: new Date() })
+    .where(eq(documents.id, doc.id))
+    .returning();
+  await audit(db, { actorId: actor.id, action: "document.details", entityType: "document", entityId: doc.id });
+  return u!.details;
 }

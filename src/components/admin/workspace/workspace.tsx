@@ -26,8 +26,9 @@ import { CopilotPane } from "./copilot-pane";
 import type { StaffOption, TemplateOption, WorkspaceData } from "./types";
 import { cn } from "@/lib/utils";
 import { SummaryBar } from "./summary-bar";
+import { TimePanel } from "./time-panel";
 
-type WorkTab = "messages" | "notes" | "tasks" | "quotes" | "documents" | "meetings" | "timeline";
+type WorkTab = "messages" | "notes" | "tasks" | "quotes" | "documents" | "meetings" | "time" | "timeline";
 type Pane = "details" | "work" | "copilot";
 
 export function CaseWorkspace({
@@ -41,6 +42,7 @@ export function CaseWorkspace({
   maxMb,
   meetings = [],
   meetingDurations = [30, 60],
+  currency = "ILS",
 }: {
   c: WorkspaceData;
   staff: StaffOption[];
@@ -52,6 +54,7 @@ export function CaseWorkspace({
   maxMb: number;
   meetings?: MeetingItem[];
   meetingDurations?: number[];
+  currency?: string;
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -63,6 +66,7 @@ export function CaseWorkspace({
     ...(a.viewQuotes ? (["quotes"] as WorkTab[]) : []),
     ...(a.documents ? (["documents"] as WorkTab[]) : []),
     "meetings",
+    ...(a.edit || currentRole === "finance" ? (["time"] as WorkTab[]) : []),
     "timeline",
   ];
   const [tab, setTab] = useState<WorkTab>(available.includes(initialTab as WorkTab) ? (initialTab as WorkTab) : available[0]!);
@@ -137,6 +141,7 @@ export function CaseWorkspace({
     quotes: d.workspace.tabs.quotes,
     documents: d.workspace.tabs.documents,
     meetings: d.meetings.tab,
+    time: d.time.tab,
     timeline: d.workspace.tabs.timeline,
   };
   const openTasks = c.tasks.filter((t) => !["done", "cancelled"].includes(t.status)).length;
@@ -271,6 +276,8 @@ export function CaseWorkspace({
                     mode="staff"
                     canEdit={a.edit}
                     maxMb={maxMb}
+                    clientName={c.customer?.name ?? ""}
+                    today={c.today}
                     checklistTemplates={templates
                       .filter((t) => t.documents?.length)
                       .sort((x, y) => Number(y.category === c.serviceCategory) - Number(x.category === c.serviceCategory))}
@@ -279,6 +286,11 @@ export function CaseWorkspace({
                 <TabPanel id="meetings" active={tab === "meetings"}>
                   <MeetingsPanel caseId={c.id} mode="staff" meetings={meetings} durations={meetingDurations} canBook={a.edit} staff={staff} currentUserId={currentUserId} />
                 </TabPanel>
+                {available.includes("time") && (
+                  <TabPanel id="time" active={tab === "time"}>
+                    {tab === "time" && <TimePanel caseId={c.id} currentUserId={currentUserId} canEdit={a.edit} currency={currency} />}
+                  </TabPanel>
+                )}
                 <TabPanel id="timeline" active={tab === "timeline"}>
                   <Timeline events={c.events} audience="staff" />
                 </TabPanel>

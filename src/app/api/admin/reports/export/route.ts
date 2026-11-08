@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { requireApiStaff } from "@/lib/auth/session";
 import { getDict } from "@/lib/i18n/server";
 import { buildReport, resolvePeriod } from "@/lib/services/reports";
+import { buildProfitReport } from "@/lib/services/time";
 import { listServiceCategories } from "@/lib/services/categories";
 import { buildXlsx, type Sheet } from "@/lib/xlsx";
 import { monthLabel } from "@/lib/reports-format";
@@ -86,6 +87,32 @@ export async function GET(req: Request) {
         ]),
       ],
     });
+    // Time and profitability (hours for admins and case managers; money for admins and finance).
+    const profit = await buildProfitReport(db, user, period, r.currency);
+    if (profit) {
+      const hours = (m: number) => Math.round((m / 60) * 100) / 100;
+      const tt = d.time;
+      sheets.push({
+        name: tt.hoursByMember,
+        rtl,
+        widths: [24, 12, 12, 10, ...(profit.money ? [14] : [])],
+        rows: [
+          [tt.member, tt.hoursCol, tt.billableCol, tt.casesCol, ...(profit.money ? [`${tt.laborCol} (${r.currency})`] : [])],
+          ...profit.byMember.map((m) => [m.name, hours(m.minutes), hours(m.billableMinutes), m.cases, ...(profit.money ? [amount("laborCents" in m && m.laborCents != null ? m.laborCents : null)] : [])]),
+        ],
+      });
+      if (profit.money) {
+        sheets.push({
+          name: tt.byService,
+          rtl,
+          widths: [28, 10, 10, 14, 14, 14, 14, 10],
+          rows: [
+            [tt.serviceCol, tt.casesCol, tt.hoursCol, `${tt.revenueCol} (${r.currency})`, `${tt.laborCol} (${r.currency})`, `${tt.expensesCol} (${r.currency})`, `${tt.profitCol} (${r.currency})`, `${tt.marginCol} (%)`],
+            ...profit.money.byService.map((x) => [cat(x.category), x.cases, hours(x.minutes), amount(x.revenueCents), amount(x.laborCents), amount(x.expensesCents), amount(x.profitCents), x.marginPct]),
+          ],
+        });
+      }
+    }
     const file = buildXlsx(sheets);
     return new Response(file as unknown as BodyInit, {
       headers: {

@@ -78,6 +78,18 @@ export const DocAnalysisSchema = z.object({
   summary: z.string(),
   fields: z.array(z.object({ label: z.string(), value: z.string(), location: z.string().nullable(), confidence: z.enum(["low", "medium", "high"]) })),
   notes: z.string(),
+  /** The key details for the document checks; null where not visible. Dates as YYYY-MM-DD. */
+  details: z
+    .object({
+      doc_type: z.string().nullable().describe("e.g. passport, ID card, birth certificate"),
+      full_name: z.string().nullable().describe("the holder's full name exactly as printed"),
+      id_number: z.string().nullable().describe("passport or ID number"),
+      birth_date: z.string().nullable().describe("YYYY-MM-DD"),
+      issue_date: z.string().nullable().describe("YYYY-MM-DD"),
+      expiry_date: z.string().nullable().describe("YYYY-MM-DD"),
+    })
+    .nullable()
+    .optional(),
 });
 export type DocAnalysis = z.infer<typeof DocAnalysisSchema>;
 

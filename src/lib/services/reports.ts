@@ -52,7 +52,7 @@ export function resolvePeriod(input: { preset?: string | null; from?: string | n
   }
 }
 
-const bounds = (p: Period) => ({ start: zonedToUtc(p.from, "00:00"), end: zonedToUtc(zonedDay(new Date(zonedToUtc(p.to, "12:00").getTime() + 86_400_000)).day, "00:00") });
+export const bounds = (p: Period) => ({ start: zonedToUtc(p.from, "00:00"), end: zonedToUtc(zonedDay(new Date(zonedToUtc(p.to, "12:00").getTime() + 86_400_000)).day, "00:00") });
 
 const median = (xs: number[]) => {
   if (!xs.length) return null;

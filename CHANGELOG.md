@@ -5,6 +5,18 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Time and profit.**
+  - A Time & costs tab on each case: a timer, time added by hand, expenses.
+  - Admins set a cost per hour for each team member.
+  - Admins and finance see each case's profit (revenue before VAT − time cost − expenses).
+  - Reports have a Time and profitability section (hours per member; profit by service type; most and least profitable cases), also in the Excel export.
+- **Document checks.**
+  - Staff confirm each document's key details (name, ID number, dates); AI can suggest them when it reads files.
+  - The checks flag expired or soon-expiring documents, names that don't match the client, and ID numbers or dates of birth that differ between documents.
+- **Company accounts with several contacts.**
+  - A company's contacts each have a role: owner, contact, billing or signatory.
+  - Each contact sees either all the company's cases or only their own.
+  - Only owners and billing contacts approve and pay; only owners and signatories sign.
 - **Work plans in service templates.** Stages with target days, and tasks that wait for the one before them. Applying a template creates the stages as milestones on the case, unlocks tasks as their prerequisites are done (notifying the handler), completes stages, and sets the case deadline. Clients see their stages and progress.
 - **Automation rules** (Settings → Automation). When a request arrives, all required documents are approved, a quote is approved, a payment arrives, the case reaches a status or a stage completes, the rule creates a task, notifies the handler or messages the client. Rules can be limited to one service type.
 - **Quote follow-up.** One reminder to the client and one note to the handler when a sent quote gets no answer (days set in Settings → General).

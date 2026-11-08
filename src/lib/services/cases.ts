@@ -24,6 +24,7 @@ import {
   type CaseStatus,
   type IntakeSession,
   type IntakeSummary,
+  type OrgRole,
   type Urgency,
   type User,
 } from "../db/schema";
@@ -69,9 +70,21 @@ export async function caseWithAccess(db: DbOrTx, user: User, caseId: string): Pr
       .limit(1);
     isTaskAssignee = !!t;
   }
-  const access = caseAccess({ user, caseAssigneeId: c.assigneeId, caseCustomerUserId: customerUserId, isTaskAssignee });
+  const companyRole = user.role === "customer" && user.id !== customerUserId ? await companyRoleFor(db, user.id, c.customerId) : null;
+  const access = caseAccess({ user, caseAssigneeId: c.assigneeId, caseCustomerUserId: customerUserId, isTaskAssignee, companyRole });
   if (!access.view) throw new AppError("not_found");
   return { c, access, customerUserId };
+}
+
+/**
+ * A client's role at the company of a case's client, when they share a company and may see all its cases;
+ * null otherwise.
+ */
+export async function companyRoleFor(db: DbOrTx, userId: string, caseCustomerId: string): Promise<OrgRole | null> {
+  const [me] = await db.select({ org: customers.organizationId, role: customers.orgRole, access: customers.orgAccess }).from(customers).where(eq(customers.userId, userId));
+  if (!me?.org || me.access !== "all") return null;
+  const [owner] = await db.select({ org: customers.organizationId }).from(customers).where(eq(customers.id, caseCustomerId));
+  return owner?.org === me.org ? me.role : null;
 }
 
 async function nextCaseNumber(tx: DbOrTx): Promise<string> {
@@ -409,13 +422,18 @@ async function clientActionsForCases(db: DbOrTx, rows: Pick<Case, "id" | "status
 }
 
 export async function listCustomerCases(db: DbOrTx, user: User) {
+  // A company contact who may see all the company's cases sees their colleagues' cases too.
+  const [me] = await db.select({ org: customers.organizationId, access: customers.orgAccess }).from(customers).where(eq(customers.userId, user.id));
+  const company = me?.org && me.access === "all" ? me.org : null;
   const rows = await db
-    .select({ c: cases })
+    .select({ c: cases, openedFor: users.name, ownerId: users.id })
     .from(cases)
     .innerJoin(customers, eq(customers.id, cases.customerId))
-    .where(eq(customers.userId, user.id))
+    .innerJoin(users, eq(users.id, customers.userId))
+    .where(company ? or(eq(customers.userId, user.id), eq(customers.organizationId, company)) : eq(customers.userId, user.id))
     .orderBy(desc(cases.updatedAt));
   const list = rows.map((r) => r.c);
+  const openedFor = new Map(rows.filter((r) => r.ownerId !== user.id).map((r) => [r.c.id, r.openedFor]));
   const actions = await clientActionsForCases(db, list);
   const unread = await db
     .select({ caseId: messages.caseId, n: sql<number>`count(*)::int` })
@@ -430,7 +448,7 @@ export async function listCustomerCases(db: DbOrTx, user: User) {
       ),
     )
     .groupBy(messages.caseId);
-  return list.map((c) => ({ ...c, actions: actions.get(c.id) ?? [], unread: unread.find((u) => u.caseId === c.id)?.n ?? 0 }));
+  return list.map((c) => ({ ...c, actions: actions.get(c.id) ?? [], unread: unread.find((u) => u.caseId === c.id)?.n ?? 0, openedFor: openedFor.get(c.id) ?? null }));
 }
 
 /** Everything a case page needs, filtered by what the viewer may see. */
@@ -708,7 +726,7 @@ export async function createCaseForCustomer(db: Database, actor: User, input: St
           const [org] = await tx.insert(organizations).values({ name: input.customer.organizationName.trim() }).returning();
           organizationId = org!.id;
         }
-        const [c] = await tx.insert(customers).values({ userId: u!.id, type: input.customer.customerType, organizationId }).returning();
+        const [c] = await tx.insert(customers).values({ userId: u!.id, type: input.customer.customerType, organizationId, orgRole: "owner", orgAccess: organizationId ? "all" : "own" }).returning();
         await audit(tx, { actorId: actor.id, action: "customer.create", entityType: "user", entityId: u!.id });
         customerId = c!.id;
         customerUser = u!;
