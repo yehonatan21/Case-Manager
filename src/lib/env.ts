@@ -112,6 +112,8 @@ export const env = {
   /** Graph API base URL (with version). Override only for tests. */
   /** Invoicing service API base URL override (tests). */
   invoiceApiUrl: str("INVOICE_API_URL").replace(/\/+$/, ""),
+  /** Resend's API base URL. Override only for tests. */
+  resendApiUrl: str("RESEND_API_URL", "https://api.resend.com").replace(/\/+$/, ""),
   whatsappApiUrl: str("WHATSAPP_API_URL", "https://graph.facebook.com/v23.0").replace(/\/+$/, ""),
 
   // local disk by default; Vercel Blob when connected; the database when the host has no persistent disk.

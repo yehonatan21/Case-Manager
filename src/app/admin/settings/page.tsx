@@ -14,6 +14,8 @@ import { ServiceTypes } from "@/components/admin/settings/service-types";
 import { CalendarConnect } from "@/components/admin/meetings/calendar-connect";
 import { InvoicesConnect } from "@/components/admin/invoices-connect";
 import { getInvoiceStatus } from "@/lib/services/invoices";
+import { EmailConnect } from "@/components/admin/email-connect";
+import { getEmailStatus } from "@/lib/services/email";
 import { getCalendarStatus } from "@/lib/services/calendar";
 import { googleEnabled } from "@/lib/services/google";
 import { listServiceCategories } from "@/lib/services/categories";
@@ -43,7 +45,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getPaymentProviderStatus(db),
   ]);
   const [rules, health] = await Promise.all([listRules(db), getSystemHealth(db, user)]);
-  const [categories, calendarStatus, invoiceStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id), getInvoiceStatus(db)]);
+  const [categories, calendarStatus, invoiceStatus, emailStatus] = await Promise.all([listServiceCategories(db, { includeInactive: true }), getCalendarStatus(db, user.id), getInvoiceStatus(db), getEmailStatus(db)]);
   return (
     <>
       <PageHeader title={d.settingsPage.title} />
@@ -64,6 +66,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         automation={<RulesEditor rules={rules.map((r) => ({ id: r.id, name: r.name, active: r.active, trigger: r.trigger, triggerStatus: r.triggerStatus, category: r.category, action: r.action, runCount: r.runCount, lastRunAt: r.lastRunAt ? r.lastRunAt.toISOString() : null }))} />}
         integrations={
           <>
+            <EmailConnect status={emailStatus} adminEmail={user.email} />
             <GrowConnect status={payments} canEdit className="" />
             <InvoicesConnect status={invoiceStatus} />
             <WhatsAppConnect status={whatsapp} canTest={!!user.whatsappOptInAt && !!user.whatsappPhone} />

@@ -6,11 +6,11 @@
  */
 import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { meetings, staffAvailability, users, type Case, type Meeting, type User, type WeeklyHours } from "../db/schema";
+import { meetings, staffAvailability, staffEvents, users, type Case, type Meeting, type User, type WeeklyHours } from "../db/schema";
 import { AppError } from "../errors";
 import { env } from "../env";
 import { isStaffRole } from "../domain";
-import { cleanWeeklyHours, DEFAULT_TZ, defaultWeeklyHours, freeSlots, meetingIcs, zonedToUtc, type Interval } from "../meetings";
+import { cleanWeeklyHours, DEFAULT_TZ, defaultWeeklyHours, freeSlots, meetingIcs, zonedDay, zonedToUtc, type Interval } from "../meetings";
 import type { CalendarItem } from "../calendar-view";
 import { dictionaries } from "../i18n/dictionaries";
 import { fmt, type Locale } from "../i18n/config";
@@ -70,7 +70,12 @@ async function staffBusy(db: DbOrTx, staffId: string, from: Date, to: Date, exce
     .select({ start: meetings.startAt, end: meetings.endAt })
     .from(meetings)
     .where(and(eq(meetings.staffId, staffId), eq(meetings.status, "scheduled"), lt(meetings.startAt, to), gt(meetings.endAt, from), ...(exceptMeetingId ? [ne(meetings.id, exceptMeetingId)] : [])));
-  return rows;
+  // The team member's own events made in the app are busy too (also without Google Calendar connected).
+  const own = await db
+    .select({ start: staffEvents.startAt, end: staffEvents.endAt })
+    .from(staffEvents)
+    .where(and(eq(staffEvents.userId, staffId), lt(staffEvents.startAt, to), gt(staffEvents.endAt, from)));
+  return [...rows, ...own];
 }
 
 export type Slot = { start: string; end: string; staffId: string; staffName: string };
@@ -340,14 +345,30 @@ export async function calendarItems(db: DbOrTx, actor: User, range: { from: Date
     meetUrl: m.meetUrl,
     staffName: all ? staffName : null,
   }));
+  const { listStaffEvents } = await import("./staff-events");
+  for (const e of await listStaffEvents(db, actor, range.from, range.to)) {
+    const s = zonedDay(e.startAt, tz);
+    items.push({
+      id: `e:${e.id}`,
+      source: "event",
+      title: e.title,
+      start: e.startAt.toISOString(),
+      end: e.endAt.toISOString(),
+      allDay: e.allDay,
+      href: null,
+      meetUrl: e.meetUrl,
+      staffName: null,
+      event: { id: e.id, title: e.title, notes: e.notes, date: s.day, allDay: e.allDay, startTime: e.allDay ? "09:00" : s.time, endTime: e.allDay ? "10:00" : zonedDay(e.endAt, tz).time, video: !!e.meetUrl },
+    });
+  }
   const status = await getCalendarStatus(db, actor.id);
   let google: "ok" | "off" | "error" = "off";
   if (status.connected) {
     const events = await listCalendarEvents(db, actor.id, range.from, range.to);
     google = events ? "ok" : "error";
     for (const e of events ?? []) {
-      // The app's own meetings are already in the list (they're always the actor's own).
-      if (e.meetingId) continue;
+      // The app's own meetings and events are already in the list (they're always the actor's own).
+      if (e.meetingId || e.staffEventId) continue;
       items.push({
         id: `g:${e.id}`,
         source: "google",

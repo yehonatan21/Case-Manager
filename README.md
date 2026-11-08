@@ -288,7 +288,7 @@ The service sits behind an interface ([`src/lib/invoicing/`](src/lib/invoicing/)
 
 The refresh token is stored encrypted. If Google refuses or is unreachable, bookings still work and the problem is shown on the Meetings page.
 
-**The calendar.** The top of **Meetings** is a calendar by day, week (from Sunday) or month, in Israel time: the team member's meetings in the app (each opens its case) and, when connected, the other events in their Google Calendar (each opens in Google Calendar; recurring events included). Each meeting appears once even though it's also a Google event. Admins choosing **Whole team** see everyone's meetings; a team member's Google events are shown only to them. The view and date are in the address (`?view=week&date=2026-11-08`), so a view can be bookmarked.
+**The calendar.** The top of **Meetings** is a calendar by day, week (from Sunday) or month, in Israel time: the team member's meetings in the app (each opens its case) and, when connected, the other events in their Google Calendar (each opens in Google Calendar; recurring events included). Each meeting appears once even though it's also a Google event. **New event** adds a team member's own event (a title, a day, a time or all day, notes, optionally a Google Meet link). With Google Calendar connected it's created there too, and editing or deleting it in the app changes it there; an event made before connecting is added when it's next saved. These events also block those times from client bookings. Admins choosing **Whole team** see everyone's meetings; a team member's own events and Google events are shown only to them. The view and date are in the address (`?view=week&date=2026-11-08`), so a view can be bookmarked.
 
 Code: [`src/lib/services/meetings.ts`](src/lib/services/meetings.ts), [`src/lib/services/calendar.ts`](src/lib/services/calendar.ts), and the time zone and slot logic in [`src/lib/meetings.ts`](src/lib/meetings.ts). Times are computed in Israel time, `Asia/Jerusalem`, including the daylight-saving changes.
 
@@ -316,7 +316,10 @@ Alternatively, set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAP
 
 ## Email
 
-Set `SMTP_URL` (for example Gmail with an app password: `smtps://you%40gmail.com:app-password@smtp.gmail.com:465`). `EMAIL_FROM` sets the sender address, and `EMAIL_FROM_NAME` the name recipients see.
+Sign-in codes and email updates go out through one of these, in this order:
+
+1. **The service connected in the app** — **Settings → Integrations → Email** (admins): an SMTP server (Gmail with an app password, Outlook, your domain's mail host: server, port, SSL, username, password) or [Resend](https://resend.com) (an API key). Connecting sends a test email to you first and saves the details only if it's sent; the password or key is stored encrypted, and never shown again. **Send a test email** checks it any time, and System health shows it.
+2. **`SMTP_URL` on the server**, as before (for example Gmail with an app password: `smtps://you%40gmail.com:app-password@smtp.gmail.com:465`). `EMAIL_FROM` sets the sender address, and `EMAIL_FROM_NAME` the name recipients see. Disconnecting the service in the app falls back to it.
 
 Without SMTP, emails are printed to the server log, and in development they're listed at `/admin/mailbox`. For good deliverability, send from your own domain with SPF/DKIM set up. Gmail shows "me" / "אני" for mail you send to yourself.
 
@@ -427,10 +430,10 @@ Merging a release pull request also adds a merge commit that exists only on `mai
 | HTTP | `API_BASE=http://localhost:3000 npm run test:api` | A running server: security headers, auth, CSRF, validation, cookie flags, role isolation, webhooks, Grow, push, WhatsApp and signature endpoints. |
 | Browser | `BASE=http://localhost:3000 npm run e2e` | Playwright scripts in `e2e/`: accessibility (axe), the full journey (Hebrew/English, desktop/mobile), accounts, staff-opened requests, team, Grow (with a stand-in Grow API), push (with a stand-in push service), document checklists, WhatsApp (with a stand-in Meta API) electronic signatures (requesting, drawing and signing, the signed PDF, signed quotes), service types and AI consent, meetings (hours, booking a free slot, .ics, moving, cancelling), reports (sections by role, periods, the Excel export), receipts and ratings (with a stand-in Green Invoice API), production readiness (the accessibility coordinator, System health, starting work before payment, customer search), the Work queue (deadlines, views, bulk changes, saved views, team workload), workflows (work plans, automation rules, the Conversations inbox with saved replies), and Release D (time and profit, document checks, company contacts). |
 
-The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014` (and `INVOICE_API_URL=http://localhost:4016/api/v1` for `e2e/invoices.cjs`):
+The HTTP and browser suites need the server in demo mode (codes on screen). The Grow, push and WhatsApp scripts also need `GROW_API_URL=http://localhost:4010`, `PUSH_EXTRA_HOSTS=localhost:4012` and `WHATSAPP_API_URL=http://localhost:4014` (and `INVOICE_API_URL=http://localhost:4016/api/v1` for `e2e/invoices.cjs`, `RESEND_API_URL=http://localhost:4018` for `e2e/email-calendar.cjs`):
 
 ```bash
-npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 WHATSAPP_API_URL=http://localhost:4014 INVOICE_API_URL=http://localhost:4016/api/v1 npm start
+npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=true PGLITE_DIR=.data/ci GROW_API_URL=http://localhost:4010 PUSH_EXTRA_HOSTS=localhost:4012 WHATSAPP_API_URL=http://localhost:4014 INVOICE_API_URL=http://localhost:4016/api/v1 RESEND_API_URL=http://localhost:4018 npm start
 ```
 
 [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) runs on every pull request and push to `main`:

@@ -91,7 +91,7 @@ export async function dispatchPendingEmails(db: Database, limit = 25): Promise<n
       footer: fmt(d.email.footer, { app: env.appName }),
     });
     try {
-      await sendEmail({ to: String(n.to_email), subject: String(n.title), text, html });
+      await sendEmail({ to: String(n.to_email), subject: String(n.title), text, html }, db);
       await db.update(notifications).set({ status: "sent", sentAt: new Date(), error: null }).where(eq(notifications.id, n.id as string));
       sent++;
     } catch (err) {

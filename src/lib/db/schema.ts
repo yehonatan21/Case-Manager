@@ -569,6 +569,32 @@ export const meetings = pgTable(
   (t) => [index("meetings_case_idx").on(t.caseId), index("meetings_staff_idx").on(t.staffId, t.startAt)],
 );
 
+/**
+ * A team member's own calendar event, created on the Meetings page (not a meeting with a client). With Google
+ * Calendar connected it's also created there, and changes and deletions follow it.
+ */
+export const staffEvents = pgTable(
+  "staff_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    notes: text("notes"),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    allDay: boolean("all_day").notNull().default(false),
+    /** The event in the connected Google Calendar, and its Meet link. */
+    externalEventId: text("external_event_id"),
+    meetUrl: text("meet_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("staff_events_user_idx").on(t.userId, t.startAt)],
+);
+export type StaffEvent = typeof staffEvents.$inferSelect;
+
 /** A team member's connected calendar (Google). Tokens are stored encrypted. */
 export const calendarConnections = pgTable("calendar_connections", {
   userId: uuid("user_id")

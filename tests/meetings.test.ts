@@ -332,3 +332,73 @@ describe("the Meetings page calendar", () => {
     expect(r.items.map((i) => i.source)).toEqual(["app"]);
   });
 });
+
+describe("team members' own events on the calendar", () => {
+  it("made in the app, kept in Google Calendar when connected, edited and deleted there too", async () => {
+    const { manager, client, c } = await setup();
+    const { createStaffEvent, updateStaffEvent, deleteStaffEvent } = await import("@/lib/services/staff-events");
+    const { calendarItems } = await import("@/lib/services/meetings");
+    const free = await availableSlots(db, client, c.id, 30);
+    const day = zonedDay(new Date(free[0]!.start)).day;
+
+    // Without Google: kept in the app only, and its time isn't offered to clients.
+    const local = await createStaffEvent(db, manager, { title: "Dentist", date: day, allDay: false, startTime: zonedDay(new Date(free[0]!.start)).time, endTime: "23:00" });
+    expect(local.externalEventId).toBeNull();
+    expect((await availableSlots(db, client, c.id, 30)).map((s) => s.start)).not.toContain(free[0]!.start);
+    const range = { from: new Date(Date.parse(free[0]!.start) - 24 * H), to: new Date(Date.parse(free[0]!.start) + 48 * H) };
+    expect((await calendarItems(db, manager, range)).items.find((i) => i.id === `e:${local.id}`)).toMatchObject({ source: "event", title: "Dentist", event: { id: local.id, date: day, allDay: false } });
+
+    // Bad input, and someone else's event.
+    await expectCode(createStaffEvent(db, manager, { title: "x", date: day, allDay: false, startTime: "10:00", endTime: "09:00" }), "validation");
+    await expectCode(createStaffEvent(db, manager, { title: " ", date: day, allDay: true }), "validation");
+    await expectCode(createStaffEvent(db, client, { title: "x", date: day, allDay: true }), "forbidden");
+    const other = await makeUser(db, "case_manager");
+    await expectCode(updateStaffEvent(db, other, local.id, { title: "mine now", date: day, allDay: true }), "not_found");
+    await expectCode(deleteStaffEvent(db, other, local.id), "not_found");
+    expect((await calendarItems(db, other, range)).items.find((i) => i.id === `e:${local.id}`)).toBeUndefined();
+
+    // With Google connected: created there (with a Meet link when asked), changed and deleted there.
+    await saveCalendarConnection(db, manager, { refreshToken: "rt", email: "m@gmail.com", scopesGranted: true });
+    const calls: { url: string; method: string; body: Record<string, unknown> | null }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        calls.push({ url, method, body: typeof init?.body === "string" ? JSON.parse(init.body) : null });
+        if (url.includes("oauth2.googleapis.com/token")) return Response.json({ access_token: "at", expires_in: 3600 });
+        if (url.endsWith("/freeBusy")) return Response.json({ calendars: { primary: { busy: [] } } });
+        if (url.includes("/events?") && method === "POST") return Response.json({ id: "g-evt", hangoutLink: "https://meet.google.com/aaa-bbbb-ccc" });
+        if (url.includes("/events/g-evt") && method === "PATCH") return Response.json({ id: "g-evt" });
+        if (url.includes("/events/g-evt") && method === "DELETE") return new Response(null, { status: 204 });
+        if (url.includes("/events?")) return Response.json({ items: [{ id: "g-evt", summary: "Office day", start: { date: day }, end: { date: day }, extendedProperties: { private: { caseManagerEventId: "x" } } }] });
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    const e = await createStaffEvent(db, manager, { title: "Office day", notes: "Bring the files", date: day, allDay: true, video: true });
+    expect(e).toMatchObject({ externalEventId: "g-evt", meetUrl: "https://meet.google.com/aaa-bbbb-ccc", allDay: true });
+    const insert = calls.find((x) => x.method === "POST" && x.url.includes("/events?"))!;
+    expect(insert.body).toMatchObject({ summary: "Office day", description: "Bring the files", start: { date: day }, extendedProperties: { private: { caseManagerEventId: e.id } }, conferenceData: { createRequest: {} } });
+    expect((insert.body as { end: { date: string } }).end.date > day).toBe(true);
+    // Google's copy isn't shown twice.
+    const items = (await calendarItems(db, manager, range)).items;
+    expect(items.filter((i) => i.title === "Office day").map((i) => i.source)).toEqual(["event"]);
+
+    // Editing keeps the Meet link (no new one); turning video off removes it.
+    await updateStaffEvent(db, manager, e.id, { title: "Office day (moved)", date: day, allDay: false, startTime: "08:00", endTime: "09:00", video: true });
+    let patch = calls.filter((x) => x.method === "PATCH").at(-1)!;
+    expect(patch.body).toMatchObject({ summary: "Office day (moved)", start: { dateTime: zonedToUtc(day, "08:00").toISOString() } });
+    expect(patch.body).not.toHaveProperty("conferenceData");
+    const off = await updateStaffEvent(db, manager, e.id, { title: "Office day (moved)", date: day, allDay: false, startTime: "08:00", endTime: "09:00", video: false });
+    patch = calls.filter((x) => x.method === "PATCH").at(-1)!;
+    expect(patch.body).toMatchObject({ conferenceData: null });
+    expect(off.meetUrl).toBeNull();
+    // An event made before connecting is added to Google when it's next saved.
+    const synced = await updateStaffEvent(db, manager, local.id, { title: "Dentist", date: day, allDay: true });
+    expect(synced.externalEventId).toBe("g-evt");
+
+    await deleteStaffEvent(db, manager, e.id);
+    expect(calls.some((x) => x.method === "DELETE" && x.url.includes("/events/g-evt"))).toBe(true);
+    expect((await calendarItems(db, manager, range)).items.find((i) => i.id === `e:${e.id}`)).toBeUndefined();
+  });
+});

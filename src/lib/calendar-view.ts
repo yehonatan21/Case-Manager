@@ -7,9 +7,22 @@ import { DEFAULT_TZ, zonedDay, zonedToUtc } from "./meetings";
 export type CalendarMode = "day" | "week" | "month";
 export const CALENDAR_MODES: CalendarMode[] = ["day", "week", "month"];
 
+/** What the edit dialog needs for a team member's own event. */
+export type EditableEvent = {
+  id: string;
+  title: string;
+  notes: string | null;
+  date: string;
+  allDay: boolean;
+  startTime: string;
+  endTime: string;
+  video: boolean;
+};
+
 export type CalendarItem = {
   id: string;
-  source: "app" | "google";
+  /** A meeting with a client, the team member's own event made in the app, or another Google Calendar event. */
+  source: "app" | "event" | "google";
   title: string;
   /** ISO instants; for all-day events, midnight (business time) of the first day and of the day after the last. */
   start: string;
@@ -19,6 +32,7 @@ export type CalendarItem = {
   href: string | null;
   meetUrl: string | null;
   staffName: string | null;
+  event?: EditableEvent;
 };
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -84,7 +98,15 @@ export function calendarRange(mode: CalendarMode, anchor: string, tz = DEFAULT_T
     next = addMonths(monthStart, 1);
   }
   const days = Array.from({ length: count }, (_, i) => addDays(first, i));
-  return { mode, anchor, days, from: zonedToUtc(days[0]!, "00:00", tz), to: zonedToUtc(addDays(days.at(-1)!, 1), "00:00", tz), prev, next };
+  return {
+    mode,
+    anchor,
+    days,
+    from: zonedToUtc(days[0]!, "00:00", tz),
+    to: zonedToUtc(addDays(days.at(-1)!, 1), "00:00", tz),
+    prev,
+    next,
+  };
 }
 
 /** The items that fall on a day (an item running past midnight appears on each day it touches). */
@@ -96,7 +118,13 @@ export function itemsOnDay(items: CalendarItem[], day: string, tz = DEFAULT_TZ):
     .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
 }
 
-export type PlacedItem = { item: CalendarItem; startMin: number; endMin: number; lane: number; lanes: number };
+export type PlacedItem = {
+  item: CalendarItem;
+  startMin: number;
+  endMin: number;
+  lane: number;
+  lanes: number;
+};
 
 /**
  * A day's timed items in the time grid: minutes from midnight (clipped to the day), and side-by-side lanes
@@ -141,7 +169,10 @@ export function placeDay(items: CalendarItem[], day: string, tz = DEFAULT_TZ): P
 }
 
 /** The hours the time grid shows: 08:00–20:00, widened to fit every timed item in the range. */
-export function gridHours(placedByDay: PlacedItem[][]): { first: number; last: number } {
+export function gridHours(placedByDay: PlacedItem[][]): {
+  first: number;
+  last: number;
+} {
   let first = 8;
   let last = 20;
   for (const day of placedByDay)

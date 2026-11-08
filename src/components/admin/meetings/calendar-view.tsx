@@ -7,6 +7,7 @@ import { TIME_ZONE } from "@/lib/i18n/format";
 import { CALENDAR_MODES, gridHours, itemsOnDay, placeDay, todayIn, type CalendarItem, type CalendarMode, type CalendarRange, type PlacedItem } from "@/lib/calendar-view";
 import { zonedDay } from "@/lib/meetings";
 import { cn } from "@/lib/utils";
+import { EventChip, NewEventButton } from "./event-dialog";
 
 /**
  * The Meetings page calendar: a day or week time grid, or a month grid, of the app's meetings and the
@@ -20,13 +21,17 @@ type T = Dict["meetings"]["cal"];
 const intl = (l: Locale) => (l === "he" ? "he-IL" : "en-GB");
 const atNoon = (day: string) => new Date(`${day}T12:00:00Z`);
 
-export function CalendarView(props: { range: CalendarRange; items: CalendarItem[]; google: "ok" | "off" | "error"; locale: Locale; t: T; all: boolean; now?: Date }) {
-  const { range, items, google, locale, t, all } = props;
+export function CalendarView(props: { range: CalendarRange; items: CalendarItem[]; google: "ok" | "off" | "error"; connected: boolean; locale: Locale; t: T; all: boolean; now?: Date }) {
+  const { range, items, google, connected, locale, t, all } = props;
   const now = props.now ?? new Date();
   const today = todayIn(TIME_ZONE, now);
   const href = (mode: CalendarMode, date: string) => `/admin/meetings?${new URLSearchParams({ view: mode, date, ...(all ? { all: "1" } : {}) })}#calendar`;
   const label = rangeLabel(range, locale);
-  const prevNext = { day: [t.prevDay, t.nextDay], week: [t.prevWeek, t.nextWeek], month: [t.prevMonth, t.nextMonth] }[range.mode];
+  const prevNext = {
+    day: [t.prevDay, t.nextDay],
+    week: [t.prevWeek, t.nextWeek],
+    month: [t.prevMonth, t.nextMonth],
+  }[range.mode];
   // The arrows point the way time runs in the page's direction.
   const [Back, Forward] = locale === "he" ? [ChevronRight, ChevronLeft] : [ChevronLeft, ChevronRight];
 
@@ -50,32 +55,39 @@ export function CalendarView(props: { range: CalendarRange; items: CalendarItem[
         <p className="font-medium text-slate-800" aria-live="polite">
           {label}
         </p>
-        <nav aria-label={t.viewLabel} className="ms-auto flex rounded-lg border border-slate-300 p-0.5 text-sm">
-          {CALENDAR_MODES.map((m) => (
-            <Link
-              key={m}
-              href={href(m, range.anchor)}
-              aria-current={m === range.mode ? "page" : undefined}
-              className={cn("rounded-md px-3 py-1", m === range.mode ? "bg-brand-700 font-medium text-white" : "text-slate-700 hover:bg-slate-100")}
-            >
-              {t[m]}
-            </Link>
-          ))}
-        </nav>
+        <div className="ms-auto flex flex-wrap items-center gap-2">
+          <NewEventButton date={range.mode === "day" || !range.days.includes(today) ? range.anchor : today} google={connected} />
+          <nav aria-label={t.viewLabel} className="flex rounded-lg border border-slate-300 p-0.5 text-sm">
+            {CALENDAR_MODES.map((m) => (
+              <Link
+                key={m}
+                href={href(m, range.anchor)}
+                aria-current={m === range.mode ? "page" : undefined}
+                className={cn("rounded-md px-3 py-1", m === range.mode ? "bg-brand-700 font-medium text-white" : "text-slate-700 hover:bg-slate-100")}
+              >
+                {t[m]}
+              </Link>
+            ))}
+          </nav>
+        </div>
       </div>
 
       {google !== "ok" && <p className="mb-2 text-sm text-slate-600">{google === "error" ? t.googleError : t.googleOff}</p>}
 
       {range.mode === "month" ? (
-        <MonthGrid range={range} items={items} locale={locale} t={t} today={today} dayHref={(d) => href("day", d)} />
+        <MonthGrid range={range} items={items} locale={locale} t={t} connected={connected} today={today} dayHref={(d) => href("day", d)} />
       ) : (
-        <TimeGrid range={range} items={items} locale={locale} t={t} today={today} now={now} dayHref={(d) => href("day", d)} />
+        <TimeGrid range={range} items={items} locale={locale} t={t} connected={connected} today={today} now={now} dayHref={(d) => href("day", d)} />
       )}
 
       <ul className="mt-2 flex flex-wrap gap-4 text-xs text-slate-600" aria-label={t.title}>
         <li className="flex items-center gap-1.5">
           <span aria-hidden className="size-3 rounded-sm border border-brand-300 bg-brand-50" />
           {t.legendMeeting}
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="size-3 rounded-sm border border-sky-400 bg-sky-50" />
+          {t.legendEvent}
         </li>
         <li className="flex items-center gap-1.5">
           <span aria-hidden className="size-3 rounded-sm border border-emerald-400 bg-emerald-50" />
@@ -95,17 +107,64 @@ function rangeLabel(range: CalendarRange, locale: Locale) {
   return `${f({ day: "numeric", month: "short" }, first)} – ${f({ day: "numeric", month: "short", year: "numeric" }, last)}`;
 }
 
-const timeOf = (iso: string, locale: Locale) => new Intl.DateTimeFormat(intl(locale), { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TIME_ZONE }).format(new Date(iso));
+const timeOf = (iso: string, locale: Locale) =>
+  new Intl.DateTimeFormat(intl(locale), {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: TIME_ZONE,
+  }).format(new Date(iso));
 
-function ItemLink({ item, locale, t, className, style, compact }: { item: CalendarItem; locale: Locale; t: T; className?: string; style?: React.CSSProperties; compact?: boolean }) {
+function ItemLink({
+  item,
+  locale,
+  t,
+  connected,
+  className,
+  style,
+  compact,
+}: {
+  item: CalendarItem;
+  locale: Locale;
+  t: T;
+  connected: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  compact?: boolean;
+}) {
   const google = item.source === "google";
   const title = item.title || t.noTitle;
   const time = item.allDay ? t.allDay : `${timeOf(item.start, locale)}–${timeOf(item.end, locale)}`;
+  if (item.event)
+    return (
+      <EventChip
+        event={item.event}
+        label={compact && !item.allDay ? `${timeOf(item.start, locale)} ${title}` : title}
+        time={time}
+        className={className}
+        style={style}
+        compact={compact}
+        google={connected}
+      />
+    );
   const body = (
     <>
-      <span className={cn("block truncate font-medium", compact && "inline")}>{compact && !item.allDay ? `${timeOf(item.start, locale)} ` : ""}{title}</span>
-      {!compact && <span className="block truncate text-[11px] opacity-90">{time}{item.staffName ? ` · ${item.staffName}` : ""}</span>}
-      {google && <span className="sr-only"> ({t.legendGoogle}, {t.openInGoogle})</span>}
+      <span className={cn("block truncate font-medium", compact && "inline")}>
+        {compact && !item.allDay ? `${timeOf(item.start, locale)} ` : ""}
+        {title}
+      </span>
+      {!compact && (
+        <span className="block truncate text-[11px] opacity-90">
+          {time}
+          {item.staffName ? ` · ${item.staffName}` : ""}
+        </span>
+      )}
+      {google && (
+        <span className="sr-only">
+          {" "}
+          ({t.legendGoogle}, {t.openInGoogle})
+        </span>
+      )}
       {compact && <span className="sr-only">, {time}</span>}
     </>
   );
@@ -114,7 +173,12 @@ function ItemLink({ item, locale, t, className, style, compact }: { item: Calend
     google ? "border-emerald-400 bg-emerald-50 text-emerald-950 hover:bg-emerald-100" : "border-brand-300 bg-brand-50 text-brand-900 hover:bg-brand-100",
     className,
   );
-  if (!item.href) return <span className={cls} style={style}>{body}</span>;
+  if (!item.href)
+    return (
+      <span className={cls} style={style}>
+        {body}
+      </span>
+    );
   if (google)
     return (
       <a href={item.href} target="_blank" rel="noopener noreferrer" className={cls} style={style}>
@@ -140,13 +204,33 @@ function DayHeader({ day, locale, today, href, long }: { day: string; locale: Lo
   );
 }
 
-function TimeGrid({ range, items, locale, t, today, now, dayHref }: { range: CalendarRange; items: CalendarItem[]; locale: Locale; t: T; today: string; now: Date; dayHref: (d: string) => string }) {
+function TimeGrid({
+  range,
+  items,
+  locale,
+  t,
+  connected,
+  today,
+  now,
+  dayHref,
+}: {
+  range: CalendarRange;
+  items: CalendarItem[];
+  locale: Locale;
+  t: T;
+  connected: boolean;
+  today: string;
+  now: Date;
+  dayHref: (d: string) => string;
+}) {
   const placed = range.days.map((d) => placeDay(items, d, TIME_ZONE));
   const allDay = range.days.map((d) => itemsOnDay(items, d, TIME_ZONE).filter((i) => i.allDay));
   const { first, last } = gridHours(placed);
   const hours = Array.from({ length: last - first }, (_, i) => first + i);
   const height = hours.length * HOUR_PX;
-  const cols = { gridTemplateColumns: `3.25rem repeat(${range.days.length}, minmax(0, 1fr))` };
+  const cols = {
+    gridTemplateColumns: `3.25rem repeat(${range.days.length}, minmax(0, 1fr))`,
+  };
   const nowMin = (() => {
     const z = zonedDay(now, TIME_ZONE);
     const [h, m] = z.time.split(":").map(Number) as [number, number];
@@ -172,7 +256,7 @@ function TimeGrid({ range, items, locale, t, today, now, dayHref }: { range: Cal
               <ul key={range.days[i]} className="min-w-0 space-y-0.5 border-s border-slate-100 p-0.5">
                 {list.map((item) => (
                   <li key={item.id}>
-                    <ItemLink item={item} locale={locale} t={t} compact />
+                    <ItemLink item={item} locale={locale} t={t} connected={connected} compact />
                   </li>
                 ))}
               </ul>
@@ -191,12 +275,15 @@ function TimeGrid({ range, items, locale, t, today, now, dayHref }: { range: Cal
             <div
               key={d}
               className="relative border-s border-slate-100"
-              style={{ height, backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_PX - 1}px, rgb(241 245 249) ${HOUR_PX - 1}px, rgb(241 245 249) ${HOUR_PX}px)` }}
+              style={{
+                height,
+                backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${HOUR_PX - 1}px, rgb(241 245 249) ${HOUR_PX - 1}px, rgb(241 245 249) ${HOUR_PX}px)`,
+              }}
             >
               <ol className="contents">
                 {placed[di]!.map((p) => (
                   <li key={p.item.id} className="contents">
-                    <ItemLink item={p.item} locale={locale} t={t} className="absolute z-10 shadow-sm" style={position(p, first)} compact={p.endMin - p.startMin < 40} />
+                    <ItemLink item={p.item} locale={locale} t={t} connected={connected} className="absolute z-10 shadow-sm" style={position(p, first)} compact={p.endMin - p.startMin < 40} />
                   </li>
                 ))}
               </ol>
@@ -224,12 +311,38 @@ function position(p: PlacedItem, firstHour: number): React.CSSProperties {
   };
 }
 
-function MonthGrid({ range, items, locale, t, today, dayHref }: { range: CalendarRange; items: CalendarItem[]; locale: Locale; t: T; today: string; dayHref: (d: string) => string }) {
+function MonthGrid({
+  range,
+  items,
+  locale,
+  t,
+  connected,
+  today,
+  dayHref,
+}: {
+  range: CalendarRange;
+  items: CalendarItem[];
+  locale: Locale;
+  t: T;
+  connected: boolean;
+  today: string;
+  dayHref: (d: string) => string;
+}) {
   const month = range.anchor.slice(0, 7);
   const weeks: string[][] = [];
   for (let i = 0; i < range.days.length; i += 7) weeks.push(range.days.slice(i, i + 7));
-  const weekday = (day: string, style: "short" | "long") => new Intl.DateTimeFormat(intl(locale), { weekday: style, timeZone: "UTC" }).format(atNoon(day));
-  const fullDate = (day: string) => new Intl.DateTimeFormat(intl(locale), { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(atNoon(day));
+  const weekday = (day: string, style: "short" | "long") =>
+    new Intl.DateTimeFormat(intl(locale), {
+      weekday: style,
+      timeZone: "UTC",
+    }).format(atNoon(day));
+  const fullDate = (day: string) =>
+    new Intl.DateTimeFormat(intl(locale), {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    }).format(atNoon(day));
   return (
     <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full min-w-[42rem] table-fixed border-collapse">
@@ -257,14 +370,17 @@ function MonthGrid({ range, items, locale, t, today, dayHref }: { range: Calenda
                       href={dayHref(d)}
                       aria-label={fullDate(d)}
                       aria-current={d === today ? "date" : undefined}
-                      className={cn("mb-0.5 grid size-6 place-items-center rounded-full text-xs font-semibold", d === today ? "bg-brand-700 text-white" : inMonth ? "text-slate-900 hover:bg-slate-100" : "text-slate-500 hover:bg-slate-100")}
+                      className={cn(
+                        "mb-0.5 grid size-6 place-items-center rounded-full text-xs font-semibold",
+                        d === today ? "bg-brand-700 text-white" : inMonth ? "text-slate-900 hover:bg-slate-100" : "text-slate-500 hover:bg-slate-100",
+                      )}
                     >
                       {Number(d.slice(8))}
                     </Link>
                     <ul className="space-y-0.5">
                       {list.slice(0, MONTH_CELL_ITEMS).map((item) => (
                         <li key={item.id}>
-                          <ItemLink item={item} locale={locale} t={t} compact />
+                          <ItemLink item={item} locale={locale} t={t} connected={connected} compact />
                         </li>
                       ))}
                     </ul>
@@ -283,4 +399,3 @@ function MonthGrid({ range, items, locale, t, today, dayHref }: { range: Calenda
     </div>
   );
 }
-

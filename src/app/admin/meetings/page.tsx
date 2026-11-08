@@ -19,7 +19,16 @@ export async function generateMetadata() {
   return { title: d.meetings.pageTitle };
 }
 
-export default async function MeetingsPage({ searchParams }: { searchParams: Promise<{ all?: string; calendar?: string; view?: string; date?: string }> }) {
+export default async function MeetingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    all?: string;
+    calendar?: string;
+    view?: string;
+    date?: string;
+  }>;
+}) {
   const user = await requirePageStaff("/admin/meetings");
   const { all, calendar, view, date } = await searchParams;
   const { d, locale } = await getDict();
@@ -36,48 +45,56 @@ export default async function MeetingsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title={t.pageTitle} subtitle={t.pageSub} />
-      <div className="mb-8">
-        <CalendarView range={range} items={shown.items} google={shown.google} locale={locale} t={t.cal} all={showAll} />
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
-        <section aria-labelledby="upcoming-title" className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="upcoming-title" className="text-lg font-semibold">
-              {t.upcoming}
-            </h2>
-            {user.role === "admin" && (
-              <nav className="flex gap-1 text-sm" aria-label={t.upcoming}>
-                <Link href={`/admin/meetings?view=${range.mode}&date=${range.anchor}`} aria-current={!showAll ? "page" : undefined} className={!showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
-                  {t.onlyMine}
-                </Link>
-                <Link href={`/admin/meetings?all=1&view=${range.mode}&date=${range.anchor}`} aria-current={showAll ? "page" : undefined} className={showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
-                  {t.allTeam}
-                </Link>
-              </nav>
-            )}
-          </div>
-          {rows.length === 0 ? (
-            <EmptyState icon={<CalendarClock className="size-10" />} title={t.none} />
-          ) : (
-            <ul className="space-y-2">
-              {rows.map((r) => (
-                <li key={r.m.id}>
-                  <Link href={`/admin/cases/${r.m.caseId}?tab=meetings`} className="block rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-brand-200">
-                    <p className="font-medium text-slate-900">
-                      {formatDateTime(r.m.startAt, locale)} · {t.modes[r.m.mode]}
-                      {showAll && <span className="text-slate-500"> · {r.staffName}</span>}
-                    </p>
-                    <p className="bidi-auto text-sm text-slate-600">
-                      {r.clientName} · <span dir="ltr">{r.caseNumber}</span> · {r.caseTitle}
-                    </p>
-                    {r.m.notes && <p className="bidi-auto mt-0.5 line-clamp-1 text-sm text-slate-500">{r.m.notes}</p>}
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_26rem]">
+        <div className="min-w-0 space-y-8">
+          <CalendarView range={range} items={shown.items} google={shown.google} connected={cal.connected} locale={locale} t={t.cal} all={showAll} />
+          <section aria-labelledby="upcoming-title" className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 id="upcoming-title" className="text-lg font-semibold">
+                {t.upcoming}
+              </h2>
+              {user.role === "admin" && (
+                <nav className="flex gap-1 text-sm" aria-label={t.upcoming}>
+                  <Link
+                    href={`/admin/meetings?view=${range.mode}&date=${range.anchor}`}
+                    aria-current={!showAll ? "page" : undefined}
+                    className={!showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}
+                  >
+                    {t.onlyMine}
                   </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <div className="space-y-6">
+                  <Link
+                    href={`/admin/meetings?all=1&view=${range.mode}&date=${range.anchor}`}
+                    aria-current={showAll ? "page" : undefined}
+                    className={showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}
+                  >
+                    {t.allTeam}
+                  </Link>
+                </nav>
+              )}
+            </div>
+            {rows.length === 0 ? (
+              <EmptyState icon={<CalendarClock className="size-10" />} title={t.none} />
+            ) : (
+              <ul className="space-y-2">
+                {rows.map((r) => (
+                  <li key={r.m.id}>
+                    <Link href={`/admin/cases/${r.m.caseId}?tab=meetings`} className="block rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-brand-200">
+                      <p className="font-medium text-slate-900">
+                        {formatDateTime(r.m.startAt, locale)} · {t.modes[r.m.mode]}
+                        {showAll && <span className="text-slate-500"> · {r.staffName}</span>}
+                      </p>
+                      <p className="bidi-auto text-sm text-slate-600">
+                        {r.clientName} · <span dir="ltr">{r.caseNumber}</span> · {r.caseTitle}
+                      </p>
+                      {r.m.notes && <p className="bidi-auto mt-0.5 line-clamp-1 text-sm text-slate-500">{r.m.notes}</p>}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+        <div className="grid content-start gap-6 lg:grid-cols-2 2xl:grid-cols-1">
           <CalendarConnect status={cal} available={googleEnabled()} result={calendar} />
           <AvailabilityEditor initial={availability} />
         </div>
