@@ -1,6 +1,6 @@
 # Case Manager — AI-assisted requests, quotes & cases
 
-**Version 1.0.0** · [Changelog](CHANGELOG.md)
+**Version 1.1.0** · [Changelog](CHANGELOG.md)
 
 > **מערכת חכמה לניהול בקשות, שירותים ותיקים.** מבקשה חופשית של לקוח ועד השלמת השירות — בתהליך אחד, ברור, חכם ושקוף.
 > הממשק בעברית (RTL) כברירת מחדל, עם מעבר מלא לאנגלית (LTR) בלחיצה אחת.
