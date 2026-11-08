@@ -43,6 +43,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, documents: t.documents }))}
         meetings={meetingList}
         meetingDurations={settings.meeting_durations}
+        currency={settings.currency}
         c={{
           id: b.case.id,
           number: b.case.number,
@@ -88,6 +89,8 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
             requestNote: doc.requestNote,
             reviewNote: doc.reviewNote,
             aiAnalysis: doc.aiAnalysis,
+            details: doc.details,
+            detailsConfirmedBy: doc.detailsConfirmedById ? (staff.find((s) => s.id === doc.detailsConfirmedById)?.name ?? null) : null,
             files: doc.files.map((f) => ({ id: f.id, version: f.version, filename: f.filename, mimeType: f.mimeType, sizeBytes: f.sizeBytes, scanStatus: f.scanStatus, createdAt: f.createdAt, uploaderName: f.uploaderName })),
             // The latest signature request on the document (cancelled ones are hidden from clients by the bundle).
             signature: b.signatures.find((x) => x.documentId === doc.id && x.status !== "cancelled") ?? null,

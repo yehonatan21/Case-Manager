@@ -18,6 +18,9 @@ import { ACCEPT_ATTRIBUTE } from "@/lib/domain";
 import { documentChecklist, sameTitle } from "@/lib/checklist";
 import type { DocumentStatus, ScanStatusT } from "./types";
 import { SignDialog } from "./signature";
+import { checkDocuments } from "@/lib/doc-checks";
+import { DocumentDetailsForm, FindingText } from "./document-details";
+import type { DocumentDetails } from "@/lib/db/schema";
 
 export type DocFile = { id: string; version: number; filename: string; mimeType?: string; sizeBytes: number; scanStatus: ScanStatusT; createdAt: Date | string; uploaderName: string | null };
 export type DocSignature = {
@@ -46,6 +49,9 @@ export type Doc = {
   requestNote: string | null;
   reviewNote: string | null;
   aiAnalysis: Record<string, unknown> | null;
+  /** Staff only: the key details for the checks, and who confirmed them. */
+  details?: DocumentDetails | null;
+  detailsConfirmedBy?: string | null;
   files: DocFile[];
   signature?: DocSignature | null;
 };
@@ -141,6 +147,9 @@ export function DocumentsPanel({
   maxMb,
   checklistTemplates = [],
   signerName = "",
+  clientName = "",
+  today,
+  canSign = true,
 }: {
   caseId: string;
   docs: Doc[];
@@ -151,6 +160,11 @@ export function DocumentsPanel({
   checklistTemplates?: ChecklistTemplate[];
   /** Client: their name, prefilled when signing. */
   signerName?: string;
+  /** Staff: the client's name and the office's today, for the document checks. */
+  clientName?: string;
+  today?: string;
+  /** Client: false for a company colleague who isn't the owner or signatory. */
+  canSign?: boolean;
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -263,6 +277,16 @@ export function DocumentsPanel({
     }
   };
 
+  // Staff: checks across the documents that have details (expiry, names, ID numbers, dates of birth).
+  const findings =
+    mode === "staff" && today
+      ? checkDocuments(
+          docs.filter((x) => x.files.length > 0).map((x) => ({ id: x.id, title: x.title, details: x.details ?? null, readable: (x.aiAnalysis as { readable?: boolean } | null)?.readable ?? null })),
+          clientName,
+          today,
+        )
+      : [];
+
   const renderDoc = (doc: Doc) => {
     const latest = doc.files[0];
     const sig = doc.signature ?? null;
@@ -315,6 +339,16 @@ export function DocumentsPanel({
               {doc.status === "needs_new_version" && doc.reviewNote && (
                 <p className="bidi-auto mt-1.5 text-sm text-red-700">{fmt(d.documents.reviewNote, { note: doc.reviewNote })}</p>
               )}
+              {mode === "staff" && latest && (
+                <DocumentDetailsForm
+                  documentId={doc.id}
+                  details={doc.details ?? null}
+                  confirmedBy={doc.detailsConfirmedBy ?? null}
+                  findings={findings.filter((f) => f.documentId === doc.id)}
+                  canEdit={canEdit}
+                  hasFile={!!latest}
+                />
+              )}
               {latest && (
                 <p className="mt-1.5 text-xs text-slate-500">
                   {latest.filename} · {kb(latest.sizeBytes)} · {fmt(d.documents.version, { n: latest.version })} ·{" "}
@@ -331,7 +365,8 @@ export function DocumentsPanel({
                 {d.common.download}
               </a>
             )}
-            {mode === "client" && awaitingSignature && latest && (
+            {mode === "client" && awaitingSignature && latest && !canSign && <span className="text-xs text-slate-600">{d.company.cantSign}</span>}
+            {mode === "client" && awaitingSignature && latest && canSign && (
               <Button size="sm" onClick={() => setSignDoc(doc)}>
                 <PenLine className="size-4" aria-hidden />
                 {d.signatures.review}
@@ -432,6 +467,22 @@ export function DocumentsPanel({
   return (
     <div className="space-y-6">
       <ChecklistSummary docs={docs} mode={mode} />
+      {/* Staff: what the document checks found, across the case (errors and warnings; "check AI details" stays on the document). */}
+      {mode === "staff" && findings.some((f) => f.severity !== "info") && (
+        <div role="region" aria-label={fmt(d.docChecks.summary, { n: findings.filter((f) => f.severity !== "info").length })} className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="mb-1.5 text-sm font-semibold text-amber-950">{fmt(d.docChecks.summary, { n: findings.filter((f) => f.severity !== "info").length })}</p>
+          <ul className="space-y-1">
+            {findings
+              .filter((f) => f.severity !== "info")
+              .map((f, i) => (
+                <li key={i} className="flex flex-wrap items-baseline gap-1.5">
+                  <span className="bidi-auto text-xs font-medium text-slate-700">{docs.find((x) => x.id === f.documentId)?.title}:</span>
+                  <FindingText f={f} />
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
       {requested.length > 0 && (
         <section>
           <h3 className="mb-2 text-sm font-semibold text-slate-800">{mode === "client" ? d.documents.requestedTitle : d.documentStatus.requested}</h3>

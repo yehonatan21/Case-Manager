@@ -200,7 +200,7 @@ export async function seedDemo(db: Database) {
   const [noamCustomer] = await db.insert(s.customers).values({ userId: noam.id, type: "private" }).returning();
   const [roniCustomer] = await db
     .insert(s.customers)
-    .values({ userId: roni.id, type: "company", organizationId: org!.id })
+    .values({ userId: roni.id, type: "company", organizationId: org!.id, orgRole: "owner", orgAccess: "all" })
     .returning();
 
   const num = (n: number) => `CASE-${year}-${String(n).padStart(4, "0")}`;

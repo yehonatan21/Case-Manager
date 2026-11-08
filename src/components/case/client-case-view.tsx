@@ -35,6 +35,10 @@ export type ClientCaseData = {
   assignee: { name: string } | null;
   customerName: string;
   checkout: CheckoutInfo;
+  /** False for a company colleague who isn't the owner or signatory. */
+  canSign?: boolean;
+  /** Set when the case was opened for a colleague at the same company. */
+  openedFor?: string | null;
   actions: ClientAction[];
   events: TimelineEvent[];
   messages: ThreadMessage[];
@@ -109,6 +113,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
         <div className="min-w-0">
           <p className="text-sm text-slate-500" dir="auto">
             {fmt(d.caseView.caseNumber, { number: c.number })} · {formatDate(c.createdAt, locale)}
+            {c.openedFor && <> · {fmt(d.company.openedFor, { name: c.openedFor })}</>}
           </p>
           <h1 className="bidi-auto mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{c.title}</h1>
           <p className="mt-2 text-base font-medium text-brand-800">{d.status.clientHeadline[clientStatus]}</p>
@@ -250,7 +255,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                 </Card>
               </TabPanel>
               <TabPanel id="documents" active={tab === "documents"}>
-                <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} signerName={c.checkout?.payerName ?? ""} />
+                <DocumentsPanel caseId={c.id} docs={c.documents} mode="client" canEdit={false} maxMb={maxMb} signerName={c.checkout?.payerName ?? ""} canSign={c.canSign !== false} />
               </TabPanel>
               <TabPanel id="meetings" active={tab === "meetings"}>
                 <MeetingsPanel

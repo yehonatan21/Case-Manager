@@ -18,7 +18,7 @@ import type { AppSettings } from "@/lib/services/settings";
 import type { ServiceTemplateDocument, ServiceTemplateStage, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
 import { formatWorkPlan, parseWorkPlan } from "@/lib/work-plan";
 
-type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled" };
+type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled"; hourlyCostCents?: number | null };
 type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; stages?: ServiceTemplateStage[]; documents: ServiceTemplateDocument[]; active: boolean };
 type Price = { id: string; code: string; name: string; category: string; unitPriceCents: number; currency: string; active: boolean };
 
@@ -267,6 +267,9 @@ export function SettingsTabs({
                   <th className="px-4 py-3 text-start font-medium">{d.common.email}</th>
                   <th className="px-4 py-3 text-start font-medium">{d.admin.col.role}</th>
                   <th className="px-4 py-3 text-start font-medium">{d.common.status}</th>
+                  <th className="px-4 py-3 text-start font-medium">
+                    <span title={d.time.hourlyCostHint}>{d.time.hourlyCost}</span>
+                  </th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -292,6 +295,24 @@ export function SettingsTabs({
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={u.status === "active" ? "success" : u.status === "invited" ? "info" : "muted"}>{d.userStatus[u.status]}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="1"
+                        dir="ltr"
+                        aria-label={`${d.time.hourlyCost}: ${u.name}`}
+                        title={d.time.hourlyCostHint}
+                        className="h-8 w-24 text-xs"
+                        defaultValue={u.hourlyCostCents != null ? u.hourlyCostCents / 100 : ""}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          const cents = v === "" ? null : Math.round(Number(v) * 100);
+                          if (cents === (u.hourlyCostCents ?? null) || (cents !== null && !(cents >= 0))) return;
+                          void call(`cost-${u.id}`, () => api(`/api/admin/users/${u.id}/cost`, { method: "PUT", body: { cents } }));
+                        }}
+                      />
                     </td>
                     <td className="px-4 py-3 text-end">
                       {u.id !== currentUserId && (

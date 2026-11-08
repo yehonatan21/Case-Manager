@@ -192,7 +192,7 @@ export async function sendQuote(db: Database, actor: User, quoteId: string) {
 export async function approveQuote(db: Database, actor: User, quoteId: string, ip: string | null) {
   return db.transaction(async (tx) => {
     const { q, c, access } = await quoteWithCase(tx, actor, quoteId);
-    if (!access.isClient) throw new AppError("forbidden");
+    if (!access.isClient || !access.pay) throw new AppError("forbidden");
     if (q.status !== "sent" && q.status !== "clarification_requested") throw new AppError("quote_not_approvable");
     if (isQuoteExpired(q)) throw new AppError("quote_expired");
     const hash = sha256(JSON.stringify(q.sentSnapshot ?? {}));
@@ -213,7 +213,7 @@ export async function approveQuote(db: Database, actor: User, quoteId: string, i
 export async function declineQuote(db: Database, actor: User, quoteId: string, reason: string | null) {
   return db.transaction(async (tx) => {
     const { q, c, access } = await quoteWithCase(tx, actor, quoteId);
-    if (!access.isClient) throw new AppError("forbidden");
+    if (!access.isClient || !access.pay) throw new AppError("forbidden");
     if (q.status !== "sent" && q.status !== "clarification_requested") throw new AppError("quote_not_approvable");
     await tx.update(quotes).set({ status: "declined", declinedAt: new Date(), declineReason: reason?.trim() || null, updatedAt: new Date() }).where(eq(quotes.id, q.id));
     await addEvent(tx, { caseId: c.id, type: "quote_declined", actor, visibility: "client", data: { version: q.version } });

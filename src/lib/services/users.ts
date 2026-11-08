@@ -41,7 +41,8 @@ export async function createCustomerAccount(
       .returning();
     organizationId = org!.id;
   }
-  await db.insert(customers).values({ userId: user!.id, type: input.customerType, organizationId });
+  // A client who registers a company is its owner and sees all its cases.
+  await db.insert(customers).values({ userId: user!.id, type: input.customerType, organizationId, orgRole: "owner", orgAccess: organizationId ? "all" : "own" });
   await audit(db, { actorId: user!.id, action: "user.signup", entityType: "user", entityId: user!.id });
   return user!;
 }

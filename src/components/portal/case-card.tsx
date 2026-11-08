@@ -10,7 +10,7 @@ import { useActionText } from "@/components/case/client-actions";
 import type { ClientAction } from "@/lib/services/cases";
 import type { CaseStatus } from "@/lib/db/schema";
 
-export type CaseCardData = { id: string; number: string; title: string; status: CaseStatus; createdAt: Date; updatedAt: Date; actions: ClientAction[]; unread: number };
+export type CaseCardData = { id: string; number: string; title: string; status: CaseStatus; createdAt: Date; updatedAt: Date; actions: ClientAction[]; unread: number; openedFor?: string | null };
 
 export function CaseCard({ c }: { c: CaseCardData }) {
   const { d, locale } = useI18n();
@@ -24,6 +24,7 @@ export function CaseCard({ c }: { c: CaseCardData }) {
       </div>
       <p className="mt-1 text-xs text-slate-500">
         <span dir="ltr">{c.number}</span> · {fmt(d.portal.openedOn, { date: formatDate(c.createdAt, locale) })}
+        {c.openedFor && <> · <span className="bidi-auto">{fmt(d.company.openedFor, { name: c.openedFor })}</span></>}
       </p>
       <p className="mt-3 text-sm text-slate-600">{fmt(d.portal.lastUpdate, { date: formatDate(c.updatedAt, locale) })}</p>
       {first && (

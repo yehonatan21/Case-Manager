@@ -51,7 +51,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         initialTab={tab}
         currentUserId={user.id}
         settings={settings}
-        staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role, status: s.status }))}
+        staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email, role: s.role, status: s.status, hourlyCostCents: s.hourlyCostCents }))}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, description: t.description, tasks: t.tasks, stages: t.stages, documents: t.documents, active: t.active }))}
         serviceTypes={<ServiceTypes categories={categories} />}
         health={
