@@ -10,7 +10,8 @@ import { meetings, staffAvailability, users, type Case, type Meeting, type User,
 import { AppError } from "../errors";
 import { env } from "../env";
 import { isStaffRole } from "../domain";
-import { cleanWeeklyHours, defaultWeeklyHours, freeSlots, meetingIcs, type Interval } from "../meetings";
+import { cleanWeeklyHours, DEFAULT_TZ, defaultWeeklyHours, freeSlots, meetingIcs, zonedToUtc, type Interval } from "../meetings";
+import type { CalendarItem } from "../calendar-view";
 import { dictionaries } from "../i18n/dictionaries";
 import { fmt, type Locale } from "../i18n/config";
 import { formatDateTime } from "../i18n/format";
@@ -19,7 +20,7 @@ import { addEvent } from "./events";
 import { notify } from "./notifications";
 import { audit } from "./audit";
 import { getSettings } from "./settings";
-import { calendarBusy, createCalendarEvent, deleteCalendarEvent, moveCalendarEvent } from "./calendar";
+import { calendarBusy, createCalendarEvent, deleteCalendarEvent, getCalendarStatus, listCalendarEvents, moveCalendarEvent } from "./calendar";
 
 export type MeetingMode = "video" | "phone" | "office";
 export const MEETING_MODES: MeetingMode[] = ["video", "phone", "office"];
@@ -309,6 +310,58 @@ export async function listUpcomingMeetings(db: DbOrTx, actor: User, opts: { all?
     .where(and(eq(meetings.status, "scheduled"), gt(meetings.endAt, from), ...(opts.all && actor.role === "admin" ? [] : [eq(meetings.staffId, actor.id)])))
     .orderBy(asc(meetings.startAt))
     .limit(200);
+}
+
+/**
+ * The Meetings page calendar for a period: the app's scheduled meetings (the actor's, or everyone's for an
+ * admin who asks), and the events in the actor's own Google Calendar. Events the app created for its meetings
+ * appear once, as the meeting. `google` says whether the calendar was read: "off" when not connected.
+ */
+export async function calendarItems(db: DbOrTx, actor: User, range: { from: Date; to: Date; all?: boolean }, tz = DEFAULT_TZ) {
+  if (!isStaffRole(actor.role)) throw new AppError("forbidden");
+  const { cases } = await import("../db/schema");
+  const all = !!range.all && actor.role === "admin";
+  const rows = await db
+    .select({ m: meetings, staffName: users.name, caseNumber: cases.number, clientName: sql<string>`(select name from users u where u.id = ${meetings.clientUserId})` })
+    .from(meetings)
+    .innerJoin(users, eq(users.id, meetings.staffId))
+    .innerJoin(cases, eq(cases.id, meetings.caseId))
+    .where(and(eq(meetings.status, "scheduled"), lt(meetings.startAt, range.to), gt(meetings.endAt, range.from), ...(all ? [] : [eq(meetings.staffId, actor.id)])))
+    .orderBy(asc(meetings.startAt))
+    .limit(1000);
+  const items: CalendarItem[] = rows.map(({ m, staffName, caseNumber, clientName }) => ({
+    id: `m:${m.id}`,
+    source: "app",
+    title: `${clientName} · ${caseNumber}`,
+    start: m.startAt.toISOString(),
+    end: m.endAt.toISOString(),
+    allDay: false,
+    href: `/admin/cases/${m.caseId}?tab=meetings`,
+    meetUrl: m.meetUrl,
+    staffName: all ? staffName : null,
+  }));
+  const status = await getCalendarStatus(db, actor.id);
+  let google: "ok" | "off" | "error" = "off";
+  if (status.connected) {
+    const events = await listCalendarEvents(db, actor.id, range.from, range.to);
+    google = events ? "ok" : "error";
+    for (const e of events ?? []) {
+      // The app's own meetings are already in the list (they're always the actor's own).
+      if (e.meetingId) continue;
+      items.push({
+        id: `g:${e.id}`,
+        source: "google",
+        title: e.title,
+        start: e.allDay ? zonedToUtc(e.startDay!, "00:00", tz).toISOString() : new Date(e.start).toISOString(),
+        end: e.allDay ? zonedToUtc(e.endDay ?? e.startDay!, "00:00", tz).toISOString() : new Date(e.end).toISOString(),
+        allDay: e.allDay,
+        href: e.htmlLink,
+        meetUrl: e.meetUrl,
+        staffName: null,
+      });
+    }
+  }
+  return { items, google };
 }
 
 /** The .ics file for a meeting the actor can see. */

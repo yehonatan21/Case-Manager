@@ -244,3 +244,91 @@ describe("Google Calendar", () => {
     expect((await getCalendarStatus(db, manager.id)).lastError).toMatch(/token refresh failed/);
   });
 });
+
+describe("the Meetings page calendar", () => {
+  it("day, week (from Sunday) and month (whole weeks) ranges, in Israel time", async () => {
+    const { calendarRange, parseDay, parseMode } = await import("@/lib/calendar-view");
+    expect(parseMode("month")).toBe("month");
+    expect(parseMode("year")).toBe("week");
+    expect(parseDay("2026-02-30")).not.toBe("2026-02-30");
+    const day = calendarRange("day", "2026-11-11");
+    expect(day.days).toEqual(["2026-11-11"]);
+    expect(day.from.toISOString()).toBe("2026-11-10T22:00:00.000Z");
+    expect([day.prev, day.next]).toEqual(["2026-11-10", "2026-11-12"]);
+    const week = calendarRange("week", "2026-11-11");
+    expect([week.days[0], week.days[6], week.days.length]).toEqual(["2026-11-08", "2026-11-14", 7]);
+    const month = calendarRange("month", "2026-11-11");
+    // November 2026 starts on a Sunday and ends on a Monday: five weeks.
+    expect([month.days[0], month.days.at(-1), month.days.length]).toEqual(["2026-11-01", "2026-12-05", 35]);
+    expect([month.prev, month.next]).toEqual(["2026-10-01", "2026-12-01"]);
+  });
+
+  it("overlapping items sit side by side; the grid widens to fit early and late items", async () => {
+    const { placeDay, gridHours } = await import("@/lib/calendar-view");
+    const item = (id: string, start: string, end: string) => ({ id, source: "app" as const, title: id, start, end, allDay: false, href: null, meetUrl: null, staffName: null });
+    const placed = placeDay(
+      [item("a", "2026-11-11T07:00:00Z", "2026-11-11T08:00:00Z"), item("b", "2026-11-11T07:30:00Z", "2026-11-11T08:30:00Z"), item("c", "2026-11-11T10:00:00Z", "2026-11-11T10:10:00Z"), item("early", "2026-11-11T04:00:00Z", "2026-11-11T04:30:00Z")],
+      "2026-11-11",
+    );
+    const by = Object.fromEntries(placed.map((p) => [p.item.id, p]));
+    expect([by.a!.lane, by.b!.lane, by.a!.lanes, by.b!.lanes]).toEqual([0, 1, 2, 2]);
+    expect([by.c!.lanes, by.c!.endMin - by.c!.startMin]).toEqual([1, 20]);
+    expect(by.a!.startMin).toBe(9 * 60);
+    expect(gridHours([placed])).toEqual({ first: 6, last: 20 });
+  });
+
+  it("shows the app's meetings and the Google Calendar's other events, each once", async () => {
+    const { manager, client, c } = await setup();
+    const { calendarItems } = await import("@/lib/services/meetings");
+    const slots = await availableSlots(db, client, c.id, 30);
+    const m = await bookMeeting(db, client, c.id, { start: slots[0]!.start, durationMinutes: 30, mode: "office" });
+    const range = { from: new Date(Date.parse(slots[0]!.start) - 24 * H), to: new Date(Date.parse(slots[0]!.start) + 24 * H) };
+    // Not connected: only the meeting.
+    let r = await calendarItems(db, manager, range);
+    expect(r.google).toBe("off");
+    expect(r.items.map((i) => i.source)).toEqual(["app"]);
+    expect(r.items[0]).toMatchObject({ id: `m:${m.id}`, href: `/admin/cases/${c.id}?tab=meetings` });
+
+    await saveCalendarConnection(db, manager, { refreshToken: "rt", email: "m@gmail.com", scopesGranted: true });
+    const listed: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        if (url.includes("oauth2.googleapis.com/token")) return Response.json({ access_token: "at", expires_in: 3600 });
+        if (url.includes("/calendars/primary/events?")) {
+          listed.push(url);
+          return Response.json({
+            items: [
+              { id: "dentist", summary: "Dentist", htmlLink: "https://calendar.google.com/event?eid=1", start: { dateTime: "2026-11-11T09:00:00+02:00" }, end: { dateTime: "2026-11-11T10:00:00+02:00" } },
+              { id: "holiday", summary: "Holiday", start: { date: "2026-11-12" }, end: { date: "2026-11-13" } },
+              { id: "ours", summary: "Meeting", start: { dateTime: m.startAt.toISOString() }, end: { dateTime: m.endAt.toISOString() }, extendedProperties: { private: { caseManagerMeetingId: m.id } } },
+              { id: "gone", status: "cancelled", start: { dateTime: "2026-11-11T11:00:00Z" }, end: { dateTime: "2026-11-11T12:00:00Z" } },
+            ],
+          });
+        }
+        return new Response("not found", { status: 404 });
+      }),
+    );
+    r = await calendarItems(db, manager, range);
+    expect(r.google).toBe("ok");
+    expect(listed[0]).toContain("singleEvents=true");
+    expect(r.items.map((i) => i.id).sort()).toEqual([`m:${m.id}`, "g:dentist", "g:holiday"].sort());
+    expect(r.items.find((i) => i.id === "g:holiday")).toMatchObject({ allDay: true, start: "2026-11-11T22:00:00.000Z", end: "2026-11-12T22:00:00.000Z" });
+    // Another team member sees neither this manager's meeting nor their calendar.
+    const other = await makeUser(db, "case_manager");
+    expect((await calendarItems(db, other, range)).items).toEqual([]);
+    // Admins asking for the whole team see the meeting, with who it's with.
+    expect((await calendarItems(db, admin, { ...range, all: true })).items.find((i) => i.id === `m:${m.id}`)?.staffName).toBe(manager.name);
+    await expectCode(calendarItems(db, client, range), "forbidden");
+
+    // When Google fails, the meetings still show.
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL) => (String(input).includes("token") ? Response.json({ access_token: "at2", expires_in: 3600 }) : new Response("boom", { status: 500 }))));
+    _resetCalendarTokens();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    r = await calendarItems(db, manager, range);
+    spy.mockRestore();
+    expect(r.google).toBe("error");
+    expect(r.items.map((i) => i.source)).toEqual(["app"]);
+  });
+});

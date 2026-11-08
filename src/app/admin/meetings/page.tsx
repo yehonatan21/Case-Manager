@@ -3,12 +3,15 @@ import { getDict } from "@/lib/i18n/server";
 import { formatDateTime } from "@/lib/i18n/format";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { getAvailability, listUpcomingMeetings } from "@/lib/services/meetings";
+import { calendarItems, getAvailability, listUpcomingMeetings } from "@/lib/services/meetings";
+import { calendarRange, parseDay, parseMode } from "@/lib/calendar-view";
+import { TIME_ZONE } from "@/lib/i18n/format";
 import { getCalendarStatus } from "@/lib/services/calendar";
 import { googleEnabled } from "@/lib/services/google";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { AvailabilityEditor } from "@/components/admin/meetings/availability-editor";
 import { CalendarConnect } from "@/components/admin/meetings/calendar-connect";
+import { CalendarView } from "@/components/admin/meetings/calendar-view";
 import { CalendarClock } from "lucide-react";
 
 export async function generateMetadata() {
@@ -16,17 +19,26 @@ export async function generateMetadata() {
   return { title: d.meetings.pageTitle };
 }
 
-export default async function MeetingsPage({ searchParams }: { searchParams: Promise<{ all?: string; calendar?: string }> }) {
+export default async function MeetingsPage({ searchParams }: { searchParams: Promise<{ all?: string; calendar?: string; view?: string; date?: string }> }) {
   const user = await requirePageStaff("/admin/meetings");
-  const { all, calendar } = await searchParams;
+  const { all, calendar, view, date } = await searchParams;
   const { d, locale } = await getDict();
   const t = d.meetings;
   const db = await getDb();
   const showAll = all === "1" && user.role === "admin";
-  const [rows, availability, cal] = await Promise.all([listUpcomingMeetings(db, user, { all: showAll }), getAvailability(db, user.id), getCalendarStatus(db, user.id)]);
+  const range = calendarRange(parseMode(view), parseDay(date, TIME_ZONE), TIME_ZONE);
+  const [rows, availability, cal, shown] = await Promise.all([
+    listUpcomingMeetings(db, user, { all: showAll }),
+    getAvailability(db, user.id),
+    getCalendarStatus(db, user.id),
+    calendarItems(db, user, { from: range.from, to: range.to, all: showAll }, TIME_ZONE),
+  ]);
   return (
     <>
       <PageHeader title={t.pageTitle} subtitle={t.pageSub} />
+      <div className="mb-8">
+        <CalendarView range={range} items={shown.items} google={shown.google} locale={locale} t={t.cal} all={showAll} />
+      </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
         <section aria-labelledby="upcoming-title" className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -35,10 +47,10 @@ export default async function MeetingsPage({ searchParams }: { searchParams: Pro
             </h2>
             {user.role === "admin" && (
               <nav className="flex gap-1 text-sm" aria-label={t.upcoming}>
-                <Link href="/admin/meetings" aria-current={!showAll ? "page" : undefined} className={!showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
+                <Link href={`/admin/meetings?view=${range.mode}&date=${range.anchor}`} aria-current={!showAll ? "page" : undefined} className={!showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
                   {t.onlyMine}
                 </Link>
-                <Link href="/admin/meetings?all=1" aria-current={showAll ? "page" : undefined} className={showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
+                <Link href={`/admin/meetings?all=1&view=${range.mode}&date=${range.anchor}`} aria-current={showAll ? "page" : undefined} className={showAll ? "rounded-md bg-brand-50 px-2.5 py-1 font-medium text-brand-800" : "rounded-md px-2.5 py-1 text-slate-600 hover:bg-slate-100"}>
                   {t.allTeam}
                 </Link>
               </nav>

@@ -121,6 +121,33 @@ async function axe(page, label) {
     await manager.locator("li", { hasText: `פגישה ${stamp}` }).first().waitFor();
     log("the team member moved the meeting; it's on their schedule");
 
+    // ---- 4b. The calendar: week, month and day views ----
+    await manager.goto(`${BASE}/admin/meetings?view=week&date=${iso}`);
+    await settle(manager);
+    const cal = manager.locator("#calendar");
+    await cal.getByRole("heading", { name: "יומן" }).waitFor();
+    const event = cal.locator(`a[href*="${caseId}"]`).first();
+    await event.waitFor();
+    assert.match(await event.innerText(), /18:30/);
+    await axe(manager, "calendar, week");
+    await manager.screenshot({ path: OUT + "/calendar-week.png", fullPage: true });
+    await cal.getByRole("link", { name: "חודש", exact: true }).click();
+    await manager.waitForURL(/view=month/);
+    await cal.locator(`a[href*="${caseId}"]`).first().waitFor();
+    assert.equal(await cal.getByRole("link", { name: "חודש", exact: true }).getAttribute("aria-current"), "page");
+    await axe(manager, "calendar, month");
+    await manager.screenshot({ path: OUT + "/calendar-month.png", fullPage: true });
+    await cal.getByRole("link", { name: "יום", exact: true }).click();
+    await manager.waitForURL(/view=day/);
+    await cal.locator(`a[href*="${caseId}"]`).first().waitFor();
+    await axe(manager, "calendar, day");
+    // Next and back again.
+    await cal.getByRole("link", { name: "היום הבא" }).click();
+    await manager.waitForURL((u) => !u.toString().includes(`date=${iso}`));
+    await settle(manager);
+    assert.equal(await cal.locator(`a[href*="${caseId}"]`).count(), 0);
+    log("the calendar shows the meeting by week, month and day");
+
     // ---- 5. The client cancels ----
     await client.goto(`${BASE}/portal/cases/${caseId}?tab=meetings`);
     await settle(client);

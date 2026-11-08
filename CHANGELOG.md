@@ -4,11 +4,12 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- **A calendar on the Meetings page**, by day, week or month: your meetings in the app and the events in your Google Calendar, with today, previous and next. Admins can show the whole team's meetings.
+- A security policy (`SECURITY.md`) on how to report a problem privately (to the owner directly), and weekly Dependabot updates into `dev`.
+
 ### Changed
 - The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.
-
-### Added
-- A security policy (`SECURITY.md`) on how to report a problem privately (to the owner directly), and weekly Dependabot updates into `dev`.
 
 ## [1.1.0] — 2026-11-08
 

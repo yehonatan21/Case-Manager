@@ -115,7 +115,78 @@ export async function calendarBusy(db: DbOrTx, userId: string, from: Date, to: D
   return (r?.calendars?.primary?.busy ?? []).map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
 }
 
-export type CalendarEventInput = { meetingId: string; title: string; description: string; start: Date; end: Date; location: string | null; video: boolean };
+export type GoogleEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  /** YYYY-MM-DD of an all-day event's first day, and of the day after its last. */
+  startDay: string | null;
+  endDay: string | null;
+  htmlLink: string | null;
+  meetUrl: string | null;
+  /** Set on events the app created for its own meetings. */
+  meetingId: string | null;
+};
+
+type RawEvent = {
+  id: string;
+  status?: string;
+  summary?: string;
+  htmlLink?: string;
+  hangoutLink?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  extendedProperties?: { private?: { caseManagerMeetingId?: string } };
+};
+
+/**
+ * Events in the user's primary calendar between two instants (recurring events expanded), or null when the
+ * calendar isn't connected or Google can't be reached. Cancelled events are left out.
+ */
+export async function listCalendarEvents(db: DbOrTx, userId: string, from: Date, to: Date): Promise<GoogleEvent[] | null> {
+  const out: GoogleEvent[] = [];
+  let pageToken: string | undefined;
+  // A few pages at most (250 events each): a month of even a very busy calendar.
+  for (let page = 0; page < 4; page++) {
+    const q = new URLSearchParams({
+      timeMin: from.toISOString(),
+      timeMax: to.toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "250",
+      fields: "nextPageToken,items(id,status,summary,htmlLink,hangoutLink,start,end,extendedProperties/private)",
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const r = await call<{ items?: RawEvent[]; nextPageToken?: string }>(db, userId, `/calendars/primary/events?${q}`);
+    if (!r) return page === 0 ? null : out;
+    for (const e of r.items ?? []) {
+      if (e.status === "cancelled" || !e.start || !e.end) continue;
+      const allDay = !e.start.dateTime && !!e.start.date;
+      const start = e.start.dateTime ?? e.start.date;
+      const end = e.end.dateTime ?? e.end.date;
+      if (!start || !end) continue;
+      out.push({
+        id: e.id,
+        title: e.summary?.trim() ?? "",
+        start,
+        end,
+        allDay,
+        startDay: allDay ? e.start.date! : null,
+        endDay: allDay ? (e.end.date ?? null) : null,
+        htmlLink: e.htmlLink?.startsWith("https://") ? e.htmlLink : null,
+        meetUrl: e.hangoutLink?.startsWith("https://") ? e.hangoutLink : null,
+        meetingId: e.extendedProperties?.private?.caseManagerMeetingId ?? null,
+      });
+    }
+    if (!r.nextPageToken) break;
+    pageToken = r.nextPageToken;
+  }
+  return out;
+}
+
+export type CalendarEventInput ={ meetingId: string; title: string; description: string; start: Date; end: Date; location: string | null; video: boolean };
 
 /** Adds the meeting to the user's calendar; returns the event id and Meet link, or null. */
 export async function createCalendarEvent(db: DbOrTx, userId: string, e: CalendarEventInput): Promise<{ id: string; meetUrl: string | null } | null> {
