@@ -1,0 +1,70 @@
+# Nightly backup of the production database: an encrypted copy of every table, restored into an empty database
+# to prove it works, kept as a workflow artifact for 30 days, and reported to the app (Settings → System health).
+#
+# Setup (repository secrets, Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  the production database's direct (non-pooled) connection string, ideally a read-only user
+#   APP_SECRET           the same value as the app's APP_SECRET (the backup's encryption key; restores need it)
+#   CRON_SECRET          the same value as the app's (to report the backup) — already set for the scheduled jobs
+# Optional variable: APP_URL (default: the production site).
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      APP_URL: ${{ vars.APP_URL || 'https://case-manager-eta.vercel.app' }}
+      # The backup only reads; nothing in production is migrated or seeded.
+      AUTO_MIGRATE: "false"
+    steps:
+      - name: Check the secrets
+        id: check
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$APP_SECRET" ]; then
+            echo "::warning::BACKUP_DATABASE_URL and APP_SECRET repository secrets aren't set, so no backup was made."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.check.outputs.skip != 'true'
+      - uses: actions/setup-node@v7
+        if: steps.check.outputs.skip != 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+        if: steps.check.outputs.skip != 'true'
+      - name: Back up and test the restore
+        id: backup
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          npm run --silent db:backup -- --out backups | tee backup.json
+          echo "summary=$(tail -n 1 backup.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        if: steps.check.outputs.skip != 'true'
+        with:
+          name: database-backup
+          path: backups/*.cmbk
+          retention-days: 30
+          if-no-files-found: error
+      - name: Report to the app
+        if: steps.check.outputs.skip != 'true' && env.CRON_SECRET != ''
+        run: |
+          body=$(tail -n 1 backup.json | node -e 'const j=JSON.parse(require("fs").readFileSync(0));process.stdout.write(JSON.stringify({createdAt:j.createdAt,bytes:j.bytes,tables:j.tables,rows:j.rows,restoreTested:j.restoreTested}))')
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 -X POST -H "Authorization: Bearer $CRON_SECRET" -H "content-type: application/json" --data "$body" "$APP_URL/api/jobs/backup-report")
+          echo "The app answered $code"
+          [ "$code" = "200" ] || echo "::warning::The backup is saved, but reporting it to the app failed ($code)."
