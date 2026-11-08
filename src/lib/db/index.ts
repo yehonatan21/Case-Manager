@@ -34,6 +34,22 @@ async function createPgDatabase(url: string): Promise<Database> {
   return db;
 }
 
+/**
+ * A connection for scripts that must not change the database (backups): no migrations, no seed.
+ * With `migrate`, migrations run first (a restore target), still without the seed.
+ */
+export async function connectDatabase(url: string, opts: { migrate?: boolean } = {}): Promise<{ db: Database; close: () => Promise<void> }> {
+  const { Pool } = await import("pg");
+  const { drizzle } = await import("drizzle-orm/node-postgres");
+  const pool = new Pool({ connectionString: url, max: 2 });
+  const db = drizzle({ client: pool, schema }) as unknown as Database;
+  if (opts.migrate) {
+    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
+    await migrate(db as never, { migrationsFolder: MIGRATIONS_FOLDER });
+  }
+  return { db, close: () => pool.end() };
+}
+
 export async function createPgliteDatabase(dataDir?: string): Promise<Database> {
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");

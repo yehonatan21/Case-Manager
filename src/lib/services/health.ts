@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { aiRuns, calendarConnections, invoices, notifications, payments, paymentEvents, settings, type User } from "../db/schema";
+import { aiRuns, calendarConnections, invoices, notifications, payments, paymentEvents, settings, users, type User } from "../db/schema";
 import { env } from "../env";
 import { getAiProvider } from "../ai/providers";
 import { AppError } from "../errors";
@@ -12,6 +12,7 @@ import { getInvoiceStatus, dispatchPendingInvoices } from "./invoices";
 import { googleEnabled } from "./google";
 import { dispatchPendingEmails } from "./notifications";
 import { dispatchPendingPushes } from "./push";
+import { DEMO_EMAILS } from "./demo-cleanup";
 
 export type HealthLevel = "ok" | "warning" | "error" | "off";
 export type RetryKind = "email" | "whatsapp" | "push" | "invoices";
@@ -32,11 +33,15 @@ export type HealthIssue =
   | "jobs_late"
   | "a11y_contact_missing"
   | "company_defaults"
-  | "demo_mode";
+  | "demo_mode"
+  | "demo_data"
+  | "backups_never"
+  | "backups_late"
+  | "backup_untested";
 
 export type HealthStats = { lastOkAt: string | null; lastFailedAt: string | null; lastError: string | null; failed7d: number; stuck: number };
 export type HealthCheck = {
-  id: "ai" | "email" | "whatsapp" | "push" | "payments" | "invoices" | "calendar" | "jobs" | "setup";
+  id: "ai" | "email" | "whatsapp" | "push" | "payments" | "invoices" | "calendar" | "jobs" | "backups" | "setup";
   level: HealthLevel;
   issues: HealthIssue[];
   /** Plain facts shown on the card (provider, model...). Never secrets. */
@@ -46,6 +51,14 @@ export type HealthCheck = {
 };
 
 const JOBS_KEY = "jobs.last_run";
+const BACKUP_KEY = "backup.last";
+
+export type BackupReport = { createdAt: string; bytes: number; tables: number; rows: number; restoreTested: boolean };
+/** Kept when the nightly backup workflow reports, so System health shows when the last backup was made and tested. */
+export async function recordBackup(db: DbOrTx, r: BackupReport) {
+  const value = { ...r, reportedAt: new Date().toISOString() };
+  await db.insert(settings).values({ key: BACKUP_KEY, value }).onConflictDoUpdate({ target: settings.key, set: { value, updatedAt: new Date() } });
+}
 const DAY = 24 * 3600 * 1000;
 const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : null);
 const worst = (levels: HealthLevel[]): HealthLevel => (levels.includes("error") ? "error" : levels.includes("warning") ? "warning" : levels.includes("ok") ? "ok" : "off");
@@ -231,10 +244,41 @@ export async function getSystemHealth(db: Database, actor: User): Promise<{ leve
     checks.push({ id: "jobs", level, issues, facts: { lastRunAt: last } });
   }
 
+  // Backups: the nightly workflow backs up the database, restores the file into an empty one, and reports here.
+  {
+    const [row] = await db.select().from(settings).where(eq(settings.key, BACKUP_KEY));
+    const b = row?.value as (BackupReport & { reportedAt: string }) | undefined;
+    const issues: HealthIssue[] = [];
+    let level: HealthLevel = "ok";
+    if (!b) {
+      issues.push("backups_never");
+      level = "warning";
+    } else {
+      const age = Date.now() - new Date(b.createdAt).getTime();
+      if (age > 48 * 3600 * 1000) {
+        issues.push("backups_late");
+        level = "error";
+      } else if (age > 26 * 3600 * 1000) {
+        issues.push("backups_late");
+        level = "warning";
+      }
+      if (!b.restoreTested) {
+        issues.push("backup_untested");
+        level = "error";
+      }
+    }
+    checks.push({ id: "backups", level, issues, facts: b ? { lastBackupAt: b.createdAt, rows: b.rows, size: `${Math.max(1, Math.round(b.bytes / 1024))} KB`, restoreTested: b.restoreTested } : {} });
+  }
+
   // Setup that the public pages depend on.
   {
     const s = await getSettings(db);
     const issues: HealthIssue[] = [];
+    // The demo accounts still there on a live site (not a demo): offer to remove them.
+    if (!env.demoMode) {
+      const [demo] = await db.select({ id: users.id }).from(users).where(inArray(users.email, DEMO_EMAILS)).limit(1);
+      if (demo) issues.push("demo_data");
+    }
     if (!s.accessibility_contact.name.trim()) issues.push("a11y_contact_missing");
     if (/@example\.com$/i.test(s.company.email) || s.company.phone === "03-0000000") issues.push("company_defaults");
     let level: HealthLevel = issues.length ? "warning" : "ok";
@@ -243,6 +287,7 @@ export async function getSystemHealth(db: Database, actor: User): Promise<{ leve
       issues.push("demo_mode");
       level = "error";
     }
+    if (issues.includes("demo_data") && level === "ok") level = "warning";
     checks.push({ id: "setup", level, issues, facts: {} });
   }
 

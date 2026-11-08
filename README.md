@@ -352,6 +352,35 @@ Vercel Hobby is for personal, non-commercial use. Neon's free compute pauses whe
 
 Without the secret the workflow only prints a warning. **Settings → System health** shows when the jobs last ran. On Docker or Render, `JOBS_INTERVAL_MINUTES` runs them inside the server instead.
 
+### Backups
+
+Two layers:
+- **Neon's own restore** (Neon console → your project → **Restore**) brings the whole database back to any moment within the plan's history window. That's the fastest way back after a mistake.
+- **Nightly backups of your own**, kept outside Neon. [`.github/workflows/backup.yml`](.github/workflows/backup.yml) runs every night (and by hand from **Actions → Nightly backup → Run workflow**). It:
+  - copies every table into one file, gzipped and encrypted with `APP_SECRET`;
+  - **restores that file into an empty database and checks that every table matches**, so a backup that can't be restored fails loudly;
+  - keeps the file as a workflow artifact for 30 days;
+  - reports to the app: **Settings → System health → Backups** shows the last backup, its size and "restore tested", and warns when it's more than a day old.
+
+**Setup:** add the repository secrets `BACKUP_DATABASE_URL` and `APP_SECRET` (GitHub → Settings → Secrets and variables → Actions).
+- `BACKUP_DATABASE_URL` is the production database's direct connection string. Neon → Connection details → turn off "Connection pooling"; a read-only role is best.
+- `APP_SECRET` must be the same value as on Vercel.
+
+`CRON_SECRET` is already there for the scheduled jobs. Without the secrets the workflow only prints a warning.
+
+**Restoring.** Download the artifact from the workflow run, then:
+
+```bash
+npm run db:restore -- case-manager-….cmbk --verify               # check the file (into a throwaway database)
+npm run db:restore -- case-manager-….cmbk --into "<new database url>"  # restore into a NEW, empty database
+```
+
+The restore never overwrites data: it refuses a database that has rows. Create a new Neon branch or database, restore into it, check it, then point `DATABASE_URL` at it and redeploy. Locally, `npm run db:backup` backs up `DATABASE_URL`, or the embedded database in `PGLITE_DIR`.
+
+### Removing the demo data
+
+A database that was once seeded with `DEMO_MODE` keeps the demo accounts (`…@example.com`) and their sample requests. **Settings → System health** flags them, and an admin removes them there with **Remove demo data** (after a confirmation; make sure a backup exists first). From a terminal, `npm run db:remove-demo` previews and `-- --apply` removes. Turn `DEMO_MODE` off first.
+
 ### Render (paid, long-running server)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yehonatan21/Case-Manager)

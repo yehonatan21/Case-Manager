@@ -28,7 +28,7 @@ export function HealthView({ level, checks, checkedAt }: { level: HealthLevel; c
   const t = d.health;
   const router = useRouter();
   const toast = useToast();
-  const [busy, setBusy] = useState<RetryKind | "refresh" | null>(null);
+  const [busy, setBusy] = useState<RetryKind | "refresh" | "demo" | null>(null);
   const OverallIcon = ICON[level];
 
   const retry = async (kind: RetryKind) => {
@@ -47,7 +47,7 @@ export function HealthView({ level, checks, checkedAt }: { level: HealthLevel; c
   const value = (k: string, v: string | number | boolean | null) => {
     if (v === null || v === "") return "—";
     if (typeof v === "boolean") return v ? d.common.yes : d.common.no;
-    if (k === "lastRunAt" || k === "lastWebhookAt") return formatDateTime(String(v), locale);
+    if (k === "lastRunAt" || k === "lastWebhookAt" || k === "lastBackupAt") return formatDateTime(String(v), locale);
     return (t.values as Record<string, string>)[String(v)] ?? String(v);
   };
   const when = (v: string | null) => (v ? <RelativeTime value={v} /> : t.never);
@@ -140,6 +140,30 @@ export function HealthView({ level, checks, checkedAt }: { level: HealthLevel; c
                         </>
                       )}
                     </dl>
+                  )}
+                  {c.issues.includes("demo_data") && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={busy === "demo"}
+                        onClick={async () => {
+                          if (!confirm(t.removeDemoConfirm)) return;
+                          setBusy("demo");
+                          try {
+                            const r = await api<{ users: string[]; cases: number }>("/api/admin/demo-data", { method: "POST" });
+                            toast("success", fmt(t.demoRemoved, { users: r.users.length, cases: r.cases }));
+                            router.refresh();
+                          } catch (e) {
+                            toast("error", errorText(e, d));
+                          } finally {
+                            setBusy(null);
+                          }
+                        }}
+                      >
+                        {t.removeDemo}
+                      </Button>
+                    </div>
                   )}
                   {c.retry && c.stats && c.stats.failed7d > 0 && (
                     <div className="flex justify-end">
