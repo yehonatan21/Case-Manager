@@ -357,14 +357,16 @@ Without the secret the workflow only prints a warning. **Settings → System hea
 Two layers:
 - **Neon's own restore** (Neon console → your project → **Restore**) brings the whole database back to any moment within the plan's history window. That's the fastest way back after a mistake.
 - **Nightly backups of your own**, kept outside Neon. [`.github/workflows/backup.yml`](.github/workflows/backup.yml) runs every night (and by hand from **Actions → Nightly backup → Run workflow**). It:
-  - copies every table into one file, gzipped and encrypted with `APP_SECRET`;
+  - copies every table into one file, gzipped and encrypted with its own key, `BACKUP_SECRET`;
   - **restores that file into an empty database and checks that every table matches**, so a backup that can't be restored fails loudly;
   - keeps the file as a workflow artifact for 30 days;
   - reports to the app: **Settings → System health → Backups** shows the last backup, its size and "restore tested", and warns when it's more than a day old.
 
-**Setup:** add the repository secrets `BACKUP_DATABASE_URL` and `APP_SECRET` (GitHub → Settings → Secrets and variables → Actions).
+**Setup:** add the repository secrets `BACKUP_DATABASE_URL` and `BACKUP_SECRET` (GitHub → Settings → Secrets and variables → Actions).
 - `BACKUP_DATABASE_URL` is the production database's direct connection string. Neon → Connection details → turn off "Connection pooling"; a read-only role is best.
-- `APP_SECRET` must be the same value as on Vercel.
+- `BACKUP_SECRET` is a new random value (`openssl rand -hex 32`). **Keep a copy in a password manager**: GitHub won't show it again, and without it the backups can't be read.
+
+Stored files and saved integration keys stay encrypted inside the backup with the app's `APP_SECRET`, so restore into a database that the same deployment (same `APP_SECRET`) will use.
 
 `CRON_SECRET` is already there for the scheduled jobs. Without the secrets the workflow only prints a warning.
 

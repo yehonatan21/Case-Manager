@@ -1,5 +1,5 @@
 /**
- * Backs up the whole database to an encrypted file (APP_SECRET is the key), then checks the file by restoring it
+ * Backs up the whole database to an encrypted file (BACKUP_SECRET is the key), then checks the file by restoring it
  * into a throwaway in-memory database. Nothing in the source database is changed.
  *   npm run db:backup                     # from DATABASE_URL_UNPOOLED / DATABASE_URL, into ./backups/
  *   npm run db:backup -- --out somewhere/

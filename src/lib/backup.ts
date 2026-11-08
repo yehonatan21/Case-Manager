@@ -3,15 +3,36 @@ import { getTableConfig, PgTable } from "drizzle-orm/pg-core";
 import { gunzipSync, gzipSync, strFromU8, strToU8 } from "fflate";
 import type { Database } from "./db";
 import * as schema from "./db/schema";
-import { decryptBuffer, encryptBuffer, sha256 } from "./crypto";
+import crypto from "node:crypto";
+import { sha256 } from "./crypto";
+import { env } from "./env";
 
 /**
- * Whole-database backups: every table's rows as JSON, gzipped and encrypted with the key derived from APP_SECRET
- * (the same secret is needed to read the stored files and settings anyway). A restore goes into an empty, migrated
+ * Whole-database backups: every table's rows as JSON, gzipped and encrypted (AES-256-GCM) with BACKUP_SECRET,
+ * a key of its own kept outside the app (in the backup workflow and the owner's password manager). Rows that the
+ * app itself encrypted (stored files, saved integration keys) stay encrypted inside, so a restored database is
+ * used by the same deployment, with the same APP_SECRET. Without BACKUP_SECRET (local use, tests) the key is
+ * derived from APP_SECRET. A restore goes into an empty, migrated
  * database and checks the row counts and a fingerprint of each table.
  */
 export const BACKUP_FORMAT = 1;
 const MAGIC = Buffer.from("CMBK1\n");
+
+function backupKey(): Buffer {
+  const secret = process.env.BACKUP_SECRET?.trim() || `app:${env.appSecret}`;
+  return crypto.createHash("sha256").update(`case-manager-backup:${secret}`).digest();
+}
+function seal(plain: Buffer): Buffer {
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv("aes-256-gcm", backupKey(), iv);
+  const enc = Buffer.concat([c.update(plain), c.final()]);
+  return Buffer.concat([iv, c.getAuthTag(), enc]);
+}
+function open(data: Buffer): Buffer {
+  const d = crypto.createDecipheriv("aes-256-gcm", backupKey(), data.subarray(0, 12));
+  d.setAuthTag(data.subarray(12, 28));
+  return Buffer.concat([d.update(data.subarray(28)), d.final()]);
+}
 
 type Meta = { format: number; createdAt: string; migration: string | null; tables: Record<string, { rows: number; sha256: string }> };
 type Dump = Meta & { data: Record<string, Record<string, unknown>[]> };
@@ -64,18 +85,18 @@ export async function createBackup(db: Database): Promise<{ file: Buffer; meta: 
   }
   const meta: Meta = { format: BACKUP_FORMAT, createdAt: new Date().toISOString(), migration: await lastMigration(db), tables };
   const json = JSON.stringify({ ...meta, data } satisfies Dump);
-  const file = Buffer.concat([MAGIC, encryptBuffer(Buffer.from(gzipSync(strToU8(json), { level: 9 })))]);
+  const file = Buffer.concat([MAGIC, seal(Buffer.from(gzipSync(strToU8(json), { level: 9 })))]);
   return { file, meta };
 }
 
-/** Opens a backup file (checks it's ours, and that it decrypts with this APP_SECRET). */
+/** Opens a backup file (checks it's ours, and that it decrypts with this BACKUP_SECRET). */
 export function readBackup(file: Buffer): Dump {
   if (!file.subarray(0, MAGIC.length).equals(MAGIC)) throw new Error("not a Case Manager backup file");
   let plain: Buffer;
   try {
-    plain = decryptBuffer(file.subarray(MAGIC.length));
+    plain = open(file.subarray(MAGIC.length));
   } catch {
-    throw new Error("the backup can't be decrypted: APP_SECRET differs from the one it was made with");
+    throw new Error("the backup can't be decrypted: BACKUP_SECRET differs from the one it was made with");
   }
   const dump = JSON.parse(strFromU8(gunzipSync(plain))) as Dump;
   if (dump.format !== BACKUP_FORMAT) throw new Error(`unsupported backup format ${dump.format}`);

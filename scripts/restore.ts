@@ -1,5 +1,5 @@
 /**
- * Restores a backup made by `npm run db:backup`. Needs the same APP_SECRET it was made with.
+ * Restores a backup made by `npm run db:backup`. Needs the same BACKUP_SECRET it was made with.
  *   npm run db:restore -- backups/file.cmbk --verify        # restore into a throwaway database and check it
  *   npm run db:restore -- backups/file.cmbk --into <url>    # restore into a NEW, empty database (migrated first)
  * The target must be empty: this never overwrites data. For a live site, restore into a new Neon branch or
