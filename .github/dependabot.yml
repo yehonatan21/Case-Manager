@@ -1,21 +1,31 @@
+# Weekly dependency updates, opened as pull requests into dev, so they go through the tests and the normal
+# dev → main release like any other change. Minor and patch updates come together in one PR per week;
+# a major update gets a PR of its own (read its release notes: it can need code changes).
+# Security fixes (Settings → Advanced Security → Dependabot security updates) are opened separately.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
+      day: sunday
+      time: "06:00"
+      timezone: Asia/Jerusalem
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
         update-types: [minor, patch]
-    ignore:
-      # TypeScript 7 (native compiler) is not supported by Next.js type checking yet.
-      - dependency-name: typescript
-        update-types: [version-update:semver-major]
-      # Type definitions must match the Node.js runtime major version (22).
-      - dependency-name: "@types/node"
-        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: deps
+
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
-      interval: weekly
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

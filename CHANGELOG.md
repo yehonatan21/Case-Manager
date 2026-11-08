@@ -4,6 +4,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- A security policy (`SECURITY.md`) on how to report a problem privately, and weekly Dependabot updates into `dev`.
+
 ## [1.1.0] — 2026-11-08
 
 ### Added
