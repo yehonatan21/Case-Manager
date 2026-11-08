@@ -118,7 +118,7 @@ export async function signDocument(db: Database, actor: User, signatureId: strin
   const [sig] = await db.select().from(signatures).where(eq(signatures.id, signatureId));
   if (!sig || !sig.documentId) throw new AppError("not_found");
   const { c, access } = await caseWithAccess(db, actor, sig.caseId);
-  if (!access.isClient) throw new AppError("forbidden");
+  if (!access.isClient || !access.sign) throw new AppError("forbidden");
   if (sig.status !== "requested") throw new AppError("signature_not_pending");
   if (!input.consent) throw new AppError("validation", "Consent to sign electronically is required");
   const name = validSignerName(input.name);

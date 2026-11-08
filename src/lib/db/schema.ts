@@ -181,6 +181,21 @@ export type ServiceTemplateStage = {
   clientVisible?: boolean;
 };
 
+export type OrgRole = "owner" | "contact" | "billing" | "signatory";
+export type OrgAccess = "all" | "own";
+
+/** The key details of an identity or official document, confirmed by staff (AI may pre-fill them). */
+export type DocumentDetails = {
+  docType?: string;
+  fullName?: string;
+  idNumber?: string;
+  birthDate?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  /** "ai" when filled by the AI and not yet confirmed; "staff" once a person saved them. */
+  source?: "ai" | "staff";
+};
+
 export type AutomationTrigger = "documents_complete" | "quote_approved" | "payment_succeeded" | "status_changed" | "milestone_completed" | "case_submitted";
 export type AutomationAction =
   | { type: "create_task"; title: string; dueInDays?: number | null; priority?: "low" | "normal" | "high" }
@@ -218,6 +233,8 @@ export const users = pgTable(
     /** The user chose not to allow AI (at registration or later). Unset with no consent = never asked (e.g. an account the team opened). */
     aiConsentDeclinedAt: timestamp("ai_consent_declined_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Staff only: what an hour of this person's time costs the business (for profit per case). Admins only. */
+    hourlyCostCents: integer("hourly_cost_cents"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("users_email_idx").on(t.email), index("users_whatsapp_idx").on(t.whatsappPhone)],
@@ -232,6 +249,10 @@ export const customers = pgTable(
       .references(() => users.id),
     type: customerTypeEnum("type").notNull().default("private"),
     organizationId: uuid("organization_id").references(() => organizations.id),
+    /** In a company: owner, contact, billing (approves quotes and pays) or signatory. */
+    orgRole: text("org_role").$type<OrgRole>().notNull().default("owner"),
+    /** In a company: "all" sees every company case, "own" only the ones opened for them. */
+    orgAccess: text("org_access").$type<OrgAccess>().notNull().default("own"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -416,6 +437,10 @@ export const documents = pgTable(
     reminderCount: integer("reminder_count").notNull().default(0),
     lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
     aiAnalysis: jsonb("ai_analysis").$type<Record<string, unknown> | null>(),
+    /** Confirmed key details (name, ID number, dates) used for the document checks. */
+    details: jsonb("details").$type<DocumentDetails | null>(),
+    detailsConfirmedById: uuid("details_confirmed_by_id").references(() => users.id),
+    detailsConfirmedAt: timestamp("details_confirmed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -654,6 +679,45 @@ export const caseMilestones = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("case_milestones_case_idx").on(t.caseId, t.sortOrder)],
+);
+
+/** Time spent on a case. A running timer has startedAt and no minutes yet. */
+export const timeEntries = pgTable(
+  "time_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    date: date("date", { mode: "string" }).notNull(),
+    minutes: integer("minutes"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    note: text("note").notNull().default(""),
+    billable: boolean("billable").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("time_entries_case_idx").on(t.caseId), index("time_entries_user_idx").on(t.userId, t.date)],
+);
+
+/** Money spent to deliver a case (fees to an authority, translation, courier...). */
+export const caseExpenses = pgTable(
+  "case_expenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => cases.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    description: text("description").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull().default("ILS"),
+    createdById: uuid("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("case_expenses_case_idx").on(t.caseId)],
 );
 
 /** "When X happens on a case, do Y": set by admins under Settings → Automation. */
@@ -948,6 +1012,8 @@ export type IntakeSession = typeof intakeSessions.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type ServiceTemplate = typeof serviceTemplates.$inferSelect;
 export type CaseMilestone = typeof caseMilestones.$inferSelect;
+export type TimeEntry = typeof timeEntries.$inferSelect;
+export type CaseExpense = typeof caseExpenses.$inferSelect;
 export type AutomationRule = typeof automationRules.$inferSelect;
 export type ReplyTemplate = typeof replyTemplates.$inferSelect;
 export type PriceListItem = typeof priceListItems.$inferSelect;

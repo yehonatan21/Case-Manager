@@ -33,7 +33,7 @@ export async function createCheckout(db: Database, actor: User, quoteId: string,
   const [q] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
   if (!q) throw new AppError("not_found");
   const { c, access } = await caseWithAccess(db, actor, q.caseId);
-  if (!access.isClient) throw new AppError("forbidden");
+  if (!access.isClient || !access.pay) throw new AppError("forbidden");
   if (q.status !== "approved" || c.status !== "awaiting_payment") throw new AppError("payment_not_allowed");
   const [paid] = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.quoteId, q.id), eq(payments.status, "succeeded")));
   if (paid) throw new AppError("already_paid");
@@ -237,7 +237,7 @@ export async function completeMockPayment(db: Database, actor: User, paymentId: 
   const [p] = await db.select().from(payments).where(eq(payments.id, paymentId));
   if (!p || p.provider !== "mock") throw new AppError("not_found");
   const { access } = await caseWithAccess(db, actor, p.caseId);
-  if (!access.isClient) throw new AppError("forbidden");
+  if (!access.isClient || !access.pay) throw new AppError("forbidden");
   const body = JSON.stringify({
     id: `mock_evt_${crypto.randomUUID()}`,
     type: `payment.${outcome}`,

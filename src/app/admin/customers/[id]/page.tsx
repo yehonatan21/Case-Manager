@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { CasesTable } from "@/components/admin/cases-table";
 import { toCaseRows } from "../../_rows";
+import { getCompany } from "@/lib/services/companies";
+import { CompanyCard } from "@/components/admin/customers/company-card";
 
 export default async function CustomerDetail({
   params,
@@ -35,6 +37,7 @@ export default async function CustomerDetail({
         }
       />
     );
+  const company = await getCompany(db, row.customer.id);
   const caseRows = await listStaffCases(db, user, {
     status: "all",
     customerId: id,
@@ -83,6 +86,11 @@ export default async function CustomerDetail({
           </div>
         </CardContent>
       </Card>
+      <CompanyCard
+        customerId={row.customer.id}
+        canEdit={user.role === "admin" || user.role === "case_manager"}
+        company={company ? { id: company.id, name: company.name, businessId: company.businessId, members: company.members.map((m) => ({ customerId: m.customerId, name: m.name, email: m.email, phone: m.phone, role: m.role, access: m.access })) } : null}
+      />
       <h2 className="mb-3 text-lg font-semibold">{d.customersPage.cases}</h2>
       <CasesTable
         rows={toCaseRows(caseRows)}
