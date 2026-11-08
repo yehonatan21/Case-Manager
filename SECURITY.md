@@ -4,8 +4,9 @@
 
 If you find a security problem in Case Manager, please report it privately, not in a public issue:
 
-- On GitHub: **Security and quality → Report a vulnerability** in this repository, or
-- Contact the repository owner directly.
+- Contact the repository owner ([@yehonatan21](https://github.com/yehonatan21)) directly.
+- If this repository becomes public, use **Security and quality → Report a vulnerability** (GitHub's private
+  vulnerability reporting, which GitHub offers on public repositories only).
 
 Include what you found, how to reproduce it and what it could affect. You'll get an answer within 5 working days,
 and we'll tell you when it's fixed. Please don't access other people's data, and give us a reasonable time to fix
