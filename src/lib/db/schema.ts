@@ -233,6 +233,12 @@ export const users = pgTable(
     /** The user chose not to allow AI (at registration or later). Unset with no consent = never asked (e.g. an account the team opened). */
     aiConsentDeclinedAt: timestamp("ai_consent_declined_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Staff two-step sign-in: the authenticator app's secret (AES-256-GCM, app key), when it was turned on, single-use
+     * recovery codes (hashed), and the last time step used (so a code can't be used twice). */
+    totpSecretEnc: text("totp_secret_enc"),
+    totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+    totpRecoveryHashes: jsonb("totp_recovery_hashes").$type<string[]>().notNull().default([]),
+    totpLastStep: integer("totp_last_step"),
     /** Staff only: what an hour of this person's time costs the business (for profit per case). Admins only. */
     hourlyCostCents: integer("hourly_cost_cents"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -284,6 +290,8 @@ export const sessions = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     userAgent: text("user_agent"),
+    /** Signed in with the email code (or Google) but the second step (the authenticator app) is still to come. */
+    mfaPending: boolean("mfa_pending").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("sessions_token_idx").on(t.tokenHash)],
@@ -955,6 +963,30 @@ export const auditLogs = pgTable(
   },
   (t) => [index("audit_logs_entity_idx").on(t.entityType, t.entityId)],
 );
+
+/**
+ * Errors the app hit (on the server, or in a browser), grouped: the same error from the same place is one row
+ * with a count. Admins see them in Settings → System health and are told about new ones.
+ */
+export const errorEvents = pgTable(
+  "error_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fingerprint: text("fingerprint").notNull(),
+    source: text("source").$type<"server" | "browser">().notNull(),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    /** The page or API path it happened on. */
+    path: text("path"),
+    lastUserId: uuid("last_user_id"),
+    count: integer("count").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (t) => [index("error_events_fp_idx").on(t.fingerprint), index("error_events_seen_idx").on(t.lastSeenAt)],
+);
+export type ErrorEvent = typeof errorEvents.$inferSelect;
 
 export const serviceTemplates = pgTable("service_templates", {
   id: uuid("id").primaryKey().defaultRandom(),

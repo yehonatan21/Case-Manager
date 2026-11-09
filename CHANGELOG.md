@@ -5,6 +5,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Two-step sign-in for staff.** An authenticator app (QR code to set up, 10 recovery codes) asked for after the email code or Google. Admins can require it for the whole team and reset it for someone who lost their phone. Under the new **My account** page.
+- **Activity log** (admins): who did what and when — sign-ins, cases, documents, quotes, payments, settings — with filters by person, kind, text and dates, paging, and CSV export.
+- **Error tracking.** Server and browser errors are recorded and grouped in the app (personal data removed), admins are notified of new ones, and System health has an Errors card and list with Mark as fixed.
 - **A calendar on the Meetings page**, by day, week or month: your meetings in the app and the events in your Google Calendar, with today, previous and next. Admins can show the whole team's meetings.
 - **Your own events on the calendar.** New event (a time or all day, notes, optionally a Google Meet link); with Google Calendar connected it's added there, and editing or deleting it here changes it there. Those times aren't offered to clients.
 - **Connect the email service in the app.** Settings → Integrations → Email: an SMTP server (Gmail, Outlook, your domain) or Resend, checked with a test email and stored encrypted, for sign-in codes and email updates. `SMTP_URL` on the server still works, as the fallback.

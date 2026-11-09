@@ -47,7 +47,7 @@ export function HealthView({ level, checks, checkedAt }: { level: HealthLevel; c
   const value = (k: string, v: string | number | boolean | null) => {
     if (v === null || v === "") return "—";
     if (typeof v === "boolean") return v ? d.common.yes : d.common.no;
-    if (k === "lastRunAt" || k === "lastWebhookAt" || k === "lastBackupAt") return formatDateTime(String(v), locale);
+    if (k === "lastRunAt" || k === "lastWebhookAt" || k === "lastBackupAt" || k === "lastErrorAt") return formatDateTime(String(v), locale);
     return (t.values as Record<string, string>)[String(v)] ?? String(v);
   };
   const when = (v: string | null) => (v ? <RelativeTime value={v} /> : t.never);

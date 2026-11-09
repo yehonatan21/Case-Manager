@@ -474,6 +474,23 @@ e2e/                   Playwright browser scripts
 
 ## Security
 
+### Two-step sign-in for staff
+
+Under **My account** (the link under your name in the menu), a team member turns on two-step sign-in: they scan a QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…), type its first code, and save 10 single-use recovery codes, shown once. From then on, after the email code (or Google) the app asks for the code from the app, or a recovery code; the session doesn't count as signed in until then. The secret is stored encrypted, recovery codes only as hashes, a code can't be used twice, and wrong codes are limited (10 in 15 minutes).
+
+- **Require it for everyone:** Settings → General → *Require two-step sign-in for all team members*. Team members without it are sent to My account to set it up before anything else (the API answers `mfa_setup_required`).
+- **Lost phone:** an admin presses the reset button next to the person in Settings → Users; they set it up again. New recovery codes can be made any time under My account.
+
+### Activity log
+
+**Activity log** (admins) lists everything the app records — sign-ins, case and status changes, documents, quotes, payments, settings, connections — with who, when and from which IP. Filter by person, kind, text and dates; export the filtered list as CSV (opens in Excel with Hebrew).
+
+### Error tracking
+
+Errors on the server (API routes and page rendering) and in browsers are recorded in the app, no outside service needed: the same error from the same place is one entry with a count. Emails, ids, long numbers and keys are removed from messages. A new error notifies the admins (in the app and by email, at most once an hour per error), System health shows an **Errors** card, and its list shows each error with where it happened and its technical details; **Mark as fixed** closes it (if it happens again it comes back).
+
+### More
+
 To report a security problem, see [SECURITY.md](SECURITY.md). Dependabot opens weekly dependency updates into `dev` (`.github/dependabot.yml`).
 
 - **Sessions:** httpOnly, SameSite cookies.

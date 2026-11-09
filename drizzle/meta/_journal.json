@@ -92,6 +92,13 @@
       "when": 1794163938978,
       "tag": "0012_staff_events",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794234521406,
+      "tag": "0013_staff_2fa_errors",
+      "breakpoints": true
     }
   ]
 }
