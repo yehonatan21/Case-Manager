@@ -117,6 +117,9 @@ async function draw(page, canvas) {
     await draw(client, sdlg.locator("canvas"));
     await sdlg.locator("[role=img][aria-label='החתימה צוירה']").waitFor();
     await sdlg.getByLabel("קראתי את המסמך ואני מסכים/ה לחתום עליו באופן אלקטרוני.").check();
+    // The Sign button turns from disabled to enabled with a short color fade: check contrast once it's done.
+    await client.waitForFunction((b) => b && !b.disabled, await signBtn.elementHandle());
+    await client.waitForTimeout(500);
     await axe(client, "sign dialog");
     await client.screenshot({ path: OUT + "/sign-dialog.png" });
     await signBtn.click();
