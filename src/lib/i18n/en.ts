@@ -76,6 +76,7 @@ export const en: typeof he = {
     he: "עברית",
     en: "English",
   },
+  navGroups: { workspace: "Workspace", operations: "Operations", business: "Business", system: "System" },
   nav: {
     accountMenu: "Account and language",
     footerMenu: "Links",
@@ -102,7 +103,7 @@ export const en: typeof he = {
     tasks: "Tasks",
     meetings: "Meetings",
     reports: "Reports",
-    queue: "Work queue",
+    queue: "My Work",
     conversations: "Conversations",
     customers: "Customers",
     payments: "Payments",
@@ -110,6 +111,8 @@ export const en: typeof he = {
     staffArea: "Staff area",
     clientArea: "My area",
     activity: "Activity log",
+    collapse: "Collapse menu",
+    expand: "Expand menu",
     mailbox: "Mailbox (dev)",
   },
   home: {
@@ -1274,7 +1277,7 @@ export const en: typeof he = {
     hint: "0 = off",
   },
   queue: {
-    title: "Work queue",
+    title: "My Work",
     subtitle: "Open cases, most pressing first: late ones, then by urgency and deadline.",
     views: {
       mine: "My work",

@@ -14,6 +14,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 - A security policy (`SECURITY.md`) on how to report a problem privately (GitHub's private vulnerability reporting, or the owner directly), and weekly Dependabot updates into `dev`.
 
 ### Changed
+- **The staff menu is grouped** (Workspace, Operations, Business, System), and the Work queue is now **My Work**. The desktop menu **collapses to icons** (names on hover and keyboard focus) and remembers it; the phone drawer keeps the page behind it from scrolling. One menu definition for desktop and mobile.
+- Cases open from the table by keyboard as by mouse: the case link covers the row (also "open in new tab").
+- The staff area loads its two counters in parallel.
 - **Dates are DD/MM/YYYY everywhere**, in Hebrew and English. Date fields always show and accept DD/MM/YYYY (the browser's own date field followed the browser's language, so a US-English browser showed MM/DD/YYYY), with a button for the calendar picker.
 - **Times are 24-hour HH:MM** in every time field (event times, staff booking, working hours), whatever the browser's language; the colon is added while typing and the arrow keys change the time.
 - The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.

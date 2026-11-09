@@ -74,6 +74,7 @@ export const he = {
     he: "עברית",
     en: "English",
   },
+  navGroups: { workspace: "סביבת עבודה", operations: "תפעול", business: "ניהול העסק", system: "מערכת" },
   nav: {
     accountMenu: "חשבון ושפה",
     footerMenu: "קישורים",
@@ -100,7 +101,7 @@ export const he = {
     tasks: "משימות",
     meetings: "פגישות",
     reports: "דוחות",
-    queue: "תור עבודה",
+    queue: "לטיפול שלי",
     conversations: "שיחות",
     customers: "לקוחות",
     payments: "תשלומים",
@@ -108,6 +109,8 @@ export const he = {
     staffArea: "ממשק צוות",
     clientArea: "האזור האישי",
     activity: "יומן פעילות",
+    collapse: "כיווץ התפריט",
+    expand: "הרחבת התפריט",
     mailbox: "תיבת דואר (פיתוח)",
   },
   home: {
@@ -1269,7 +1272,7 @@ export const he = {
     hint: "0 = כבוי",
   },
   queue: {
-    title: "תור עבודה",
+    title: "לטיפול שלי",
     subtitle: "תיקים פתוחים, הדחופים קודם: תיקים באיחור, ואז לפי דחיפות ומועד.",
     views: {
       mine: "העבודה שלי",
