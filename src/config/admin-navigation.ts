@@ -10,7 +10,7 @@ export type NavGroup = "workspace" | "operations" | "business" | "system";
 export const NAV_GROUPS: NavGroup[] = ["workspace", "operations", "business", "system"];
 
 export type NavKey = "dashboard" | "queue" | "inbox" | "quotes" | "cases" | "tasks" | "conversations" | "meetings" | "customers" | "payments" | "reports" | "settings" | "activity" | "mailbox";
-export type NavBadge = "inbox";
+export type NavBadge = "inbox" | "queue" | "tasks" | "conversations";
 
 export type NavItem = {
   key: NavKey;
@@ -29,12 +29,12 @@ const ALL_STAFF: UserRole[] = ["admin", "case_manager", "staff", "finance"];
 
 export const NAV_ITEMS: NavItem[] = [
   { key: "dashboard", href: "/admin", group: "workspace", icon: LayoutDashboard, roles: ALL_STAFF, exact: true },
-  { key: "queue", href: "/admin/queue", group: "workspace", icon: ListTodo, roles: ["admin", "case_manager", "staff"] },
+  { key: "queue", href: "/admin/queue", group: "workspace", icon: ListTodo, roles: ["admin", "case_manager", "staff"], badge: "queue" },
   { key: "inbox", href: "/admin/inbox", group: "operations", icon: Inbox, roles: ["admin", "case_manager"], badge: "inbox" },
   { key: "quotes", href: "/admin/quotes", group: "operations", icon: FileText, roles: ["admin", "case_manager", "finance"] },
   { key: "cases", href: "/admin/cases", group: "operations", icon: FolderKanban, roles: ALL_STAFF },
-  { key: "tasks", href: "/admin/tasks", group: "operations", icon: ListChecks, roles: ["admin", "case_manager", "staff"] },
-  { key: "conversations", href: "/admin/conversations", group: "operations", icon: MessagesSquare, roles: ["admin", "case_manager", "staff"] },
+  { key: "tasks", href: "/admin/tasks", group: "operations", icon: ListChecks, roles: ["admin", "case_manager", "staff"], badge: "tasks" },
+  { key: "conversations", href: "/admin/conversations", group: "operations", icon: MessagesSquare, roles: ["admin", "case_manager", "staff"], badge: "conversations" },
   { key: "meetings", href: "/admin/meetings", group: "operations", icon: CalendarClock, roles: ["admin", "case_manager", "staff"] },
   { key: "customers", href: "/admin/customers", group: "business", icon: Users, roles: ["admin", "case_manager"] },
   { key: "payments", href: "/admin/payments", group: "business", icon: CreditCard, roles: ["admin", "finance"] },

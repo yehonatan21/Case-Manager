@@ -1,7 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
 import { queueInvoiceForPayment, scheduleInvoiceDispatch } from "./invoices";
 import type { Database, DbOrTx } from "../db";
-import { cases, customers, paymentEvents, payments, quotes, users, type User } from "../db/schema";
+import { cases, customers, paymentEvents, payments, paymentStatusEnum, quotes, users, type User } from "../db/schema";
+import { likeTerm } from "./customers";
+import { dayRange, LIST_PAGE_SIZE, oneOf, paged, pageNumber, searchTerm, toCents } from "./list-filters";
 import { AppError } from "../errors";
 import { env } from "../env";
 import { paymentProvider, mockProvider, signMockEvent, type NormalizedPaymentEvent } from "../payments";
@@ -263,17 +265,70 @@ export async function getPaymentForCheckoutPage(db: DbOrTx, actor: User, payment
   return row;
 }
 
-export async function listPayments(db: DbOrTx, actor: User) {
-  return db
-    .select({ p: payments, caseNumber: cases.number, caseId: cases.id, customerName: users.name, serviceName: quotes.serviceName })
-    .from(payments)
-    .innerJoin(cases, eq(cases.id, payments.caseId))
-    .innerJoin(quotes, eq(quotes.id, payments.quoteId))
-    .innerJoin(customers, eq(customers.id, cases.customerId))
-    .innerJoin(users, eq(users.id, customers.userId))
-    .where(staffCaseScope(actor))
-    .orderBy(desc(payments.createdAt))
-    .limit(300);
+export const PAYMENT_STATUSES = paymentStatusEnum.enumValues;
+export const PAYMENT_SORTS = ["date_desc", "date_asc", "amount_desc", "amount_asc"] as const;
+export type PaymentSort = (typeof PAYMENT_SORTS)[number];
+export type PaymentListFilter = { q?: string; status?: string; provider?: string; from?: string; to?: string; min?: string; max?: string; sort?: string; page?: number };
+
+/** When a payment happened: when it was paid, or when it was started if it wasn't. */
+const paymentDay = sql`coalesce(${payments.paidAt}, ${payments.createdAt})`;
+
+/**
+ * Payments on the cases the user may see, a page at a time. Searched by case number, client or service; filtered
+ * by status, provider, day and amount (whole currency units); newest first unless sorted otherwise.
+ */
+export async function listPayments(db: DbOrTx, actor: User, f: PaymentListFilter = {}) {
+  const conds: (SQL | undefined)[] = [staffCaseScope(actor)];
+  const q = searchTerm(f.q);
+  if (q) {
+    const like = likeTerm(q);
+    conds.push(or(ilike(cases.number, like), ilike(cases.title, like), ilike(users.name, like), ilike(users.email, like), ilike(quotes.serviceName, like)));
+  }
+  const status = oneOf(f.status, PAYMENT_STATUSES);
+  if (status) conds.push(eq(payments.status, status));
+  if (f.provider && /^[a-z0-9_-]{1,40}$/i.test(f.provider)) conds.push(eq(payments.provider, f.provider));
+  conds.push(...dayRange(paymentDay, f.from, f.to));
+  const min = toCents(f.min);
+  const max = toCents(f.max);
+  if (min !== undefined) conds.push(gte(payments.amountCents, min));
+  if (max !== undefined) conds.push(lte(payments.amountCents, max));
+  const where = and(...conds.filter(Boolean));
+  const sort = oneOf(f.sort, PAYMENT_SORTS) ?? "date_desc";
+  const order = {
+    date_desc: [desc(paymentDay), desc(payments.id)],
+    date_asc: [asc(paymentDay), asc(payments.id)],
+    amount_desc: [desc(payments.amountCents), desc(paymentDay)],
+    amount_asc: [asc(payments.amountCents), desc(paymentDay)],
+  }[sort];
+  const page = pageNumber(f.page);
+  const [rows, [count]] = await Promise.all([
+    db
+      .select({ p: payments, caseNumber: cases.number, caseId: cases.id, customerName: users.name, serviceName: quotes.serviceName })
+      .from(payments)
+      .innerJoin(cases, eq(cases.id, payments.caseId))
+      .innerJoin(quotes, eq(quotes.id, payments.quoteId))
+      .innerJoin(customers, eq(customers.id, cases.customerId))
+      .innerJoin(users, eq(users.id, customers.userId))
+      .where(where)
+      .orderBy(...order)
+      .limit(LIST_PAGE_SIZE)
+      .offset((page - 1) * LIST_PAGE_SIZE),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(payments)
+      .innerJoin(cases, eq(cases.id, payments.caseId))
+      .innerJoin(quotes, eq(quotes.id, payments.quoteId))
+      .innerJoin(customers, eq(customers.id, cases.customerId))
+      .innerJoin(users, eq(users.id, customers.userId))
+      .where(where),
+  ]);
+  return { ...paged(rows, count?.n ?? 0, page), sort };
+}
+
+/** The providers payments have gone through, for the filter (only on cases the user may see). */
+export async function paymentProviders(db: DbOrTx, actor: User): Promise<string[]> {
+  const rows = await db.selectDistinct({ provider: payments.provider }).from(payments).innerJoin(cases, eq(cases.id, payments.caseId)).where(staffCaseScope(actor)).orderBy(asc(payments.provider));
+  return rows.map((r) => r.provider);
 }
 
 export { adminCaseLink };

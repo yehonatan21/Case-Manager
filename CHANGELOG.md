@@ -5,6 +5,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Search, filters and pages for Quotes, Payments and Tasks**, with one shared filter bar: the filters live in the address (reload, bookmark, share, Back), each list shows how many results match, and "Clear filters" keeps the tab you're on. Quotes: case number, client or service; status; dates. Payments: status, provider, dates, amount range, sort by date or amount. Tasks: assignee, priority, status, due dates, plus the existing My tasks / All tasks / Overdue tabs. A priority column on Tasks.
+- **Menu counters for what waits on you**: My Work (your late cases), Tasks (your overdue tasks) and Conversations (waiting for an answer), beside Incoming requests. Only for records you may see, never a zero, and read out as what they count.
+- **The Settings tab is kept in the address** (`?tab=users`): a reload or a shared link opens the same tab, Back returns to the previous one, and an unknown tab shows General.
 - **Two-step sign-in for staff.** An authenticator app (QR code to set up, 10 recovery codes) asked for after the email code or Google. Admins can require it for the whole team and reset it for someone who lost their phone. Under the new **My account** page.
 - **Activity log** (admins): who did what and when — sign-ins, cases, documents, quotes, payments, settings — with filters by person, kind, text and dates, paging, and CSV export.
 - **Error tracking.** Server and browser errors are recorded and grouped in the app (personal data removed), admins are notified of new ones, and System health has an Errors card and list with Mark as fixed.

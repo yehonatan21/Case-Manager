@@ -4,23 +4,62 @@ import { getDict } from "@/lib/i18n/server";
 import { formatDate } from "@/lib/i18n/format";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { listTasksForStaff } from "@/lib/services/tasks";
+import { listTasksForStaff, TASK_PRIORITIES } from "@/lib/services/tasks";
+import { listAssignableStaff } from "@/lib/services/users";
+import { taskStatusEnum } from "@/lib/db/schema";
+import { FilterBar, type FilterField } from "@/components/ui/filter-bar";
+import { Pager } from "@/components/ui/pager";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { TaskStatusBadge } from "@/components/app/status";
-import { todayIso, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { officeToday } from "@/lib/services/queue";
 
 export async function generateMetadata() {
   const { d } = await getDict();
   return { title: d.admin.tasksTitle };
 }
 
-export default async function TasksPage({ searchParams }: { searchParams: Promise<{ scope?: string; overdue?: string }> }) {
+type Search = { scope?: string; overdue?: string; q?: string; assignee?: string; priority?: string; status?: string; from?: string; to?: string; page?: string };
+
+export default async function TasksPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requirePageStaff("/admin/tasks");
   if (user.role === "finance") redirect("/admin");
   const sp = await searchParams;
   const { d, locale } = await getDict();
+  const t = d.filterBar;
+  const db = await getDb();
   const mine = sp.scope !== "all";
-  const rows = await listTasksForStaff(await getDb(), user, { mine, overdue: sp.overdue === "1" });
+  const overdueTab = sp.overdue === "1";
+  const [list, staff] = await Promise.all([
+    listTasksForStaff(db, user, { mine, overdue: overdueTab, q: sp.q, assignee: sp.assignee, priority: sp.priority, status: sp.status, from: sp.from, to: sp.to, page: Number(sp.page) || 1 }),
+    mine ? Promise.resolve([]) : listAssignableStaff(db),
+  ]);
+  const rows = list.rows;
+  const today = officeToday();
+  // The tab the list is on stays when filtering or clearing; the filters that don't apply to it aren't shown.
+  const keep = { scope: sp.scope === "all" ? "all" : undefined, overdue: overdueTab ? "1" : undefined };
+  const values = { q: sp.q, assignee: mine ? undefined : sp.assignee, priority: sp.priority, status: overdueTab ? undefined : sp.status, from: sp.from, to: sp.to };
+  const filtered = Object.values(values).some(Boolean);
+  const fields: FilterField[] = [
+    { type: "search", name: "q", label: t.search, placeholder: t.tasksSearch },
+    ...(mine
+      ? []
+      : [{ type: "select" as const, name: "assignee", label: t.assignee, options: [{ value: "none", label: t.noAssignee }, ...staff.map((s) => ({ value: s.id, label: s.name }))] }]),
+    { type: "select", name: "priority", label: t.priority, options: TASK_PRIORITIES.map((p) => ({ value: p, label: d.priority[p] })) },
+    ...(overdueTab
+      ? []
+      : [
+          {
+            type: "select" as const,
+            name: "status",
+            label: t.status,
+            any: false as const,
+            options: [{ value: "open", label: t.openTasks }, ...taskStatusEnum.enumValues.map((s) => ({ value: s, label: d.taskStatus[s] })), { value: "all", label: t.allStatuses }],
+          },
+        ]),
+    { type: "date", name: "from", label: t.dueFrom },
+    { type: "date", name: "to", label: t.dueTo },
+  ];
   const tabs = [
     { href: "/admin/tasks", label: d.admin.myTasks, active: mine && sp.overdue !== "1" },
     { href: "/admin/tasks?scope=all", label: d.admin.allTasks, active: !mine && sp.overdue !== "1" },
@@ -36,23 +75,26 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           </Link>
         ))}
       </nav>
+      <FilterBar d={d} basePath="/admin/tasks" values={values} keep={keep} total={list.total} fields={fields} />
       {rows.length === 0 ? (
-        <EmptyState title={d.admin.tasksEmpty} />
+        <EmptyState title={filtered ? t.noMatch : d.admin.tasksEmpty} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[44rem] text-sm">
+          <table className="w-full min-w-[50rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
               <tr>
                 <th className="px-4 py-3 text-start font-medium">{d.admin.col.task}</th>
                 <th className="px-4 py-3 text-start font-medium">{d.admin.col.case}</th>
                 <th className="px-4 py-3 text-start font-medium">{d.admin.col.assignee}</th>
+                <th className="px-4 py-3 text-start font-medium">{t.priority}</th>
                 <th className="px-4 py-3 text-start font-medium">{d.admin.col.due}</th>
                 <th className="px-4 py-3 text-start font-medium">{d.admin.col.status}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => {
-                const overdue = r.task.dueDate && r.task.dueDate < todayIso();
+                const open = r.task.status !== "done" && r.task.status !== "cancelled";
+                const overdue = open && r.task.dueDate && r.task.dueDate < today;
                 return (
                   <tr key={r.task.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -64,6 +106,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                       <span className="font-mono text-xs" dir="ltr">{r.caseNumber}</span> · <span className="bidi-auto">{r.caseTitle}</span>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{r.assigneeName ?? d.common.unassigned}</td>
+                    <td className={cn("px-4 py-3", r.task.priority === "high" ? "font-medium text-slate-900" : "text-slate-600")}>{d.priority[r.task.priority]}</td>
                     <td className={cn("px-4 py-3", overdue ? "font-semibold text-red-600" : "text-slate-600")}>{r.task.dueDate ? formatDate(r.task.dueDate, locale) : "—"}</td>
                     <td className="px-4 py-3">
                       <TaskStatusBadge status={r.task.status} />
@@ -75,6 +118,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           </table>
         </div>
       )}
+      <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/tasks" params={{ ...keep, ...values }} />
     </>
   );
 }

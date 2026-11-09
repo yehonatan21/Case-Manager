@@ -50,7 +50,7 @@ async function axe(page, label) {
     const side = admin.locator("aside");
     for (const g of ["סביבת עבודה", "תפעול", "ניהול העסק", "מערכת"]) await side.getByText(g, { exact: true }).waitFor();
     const names = await side.locator("nav a").allInnerTexts();
-    assert.deepEqual(names.map((s) => s.replace(/\d+$/, "").trim()).slice(0, 4), ["לוח בקרה", "לטיפול שלי", "בקשות נכנסות", "הצעות מחיר"]);
+    assert.deepEqual(names.map((s) => s.split("\n")[0].trim()).slice(0, 4), ["לוח בקרה", "לטיפול שלי", "בקשות נכנסות", "הצעות מחיר"]);
     assert.equal(await side.getByRole("link", { name: "תיקים" }).getAttribute("aria-current"), "page");
     // Hebrew: the sidebar is on the right.
     let box = await side.boundingBox();

@@ -195,12 +195,12 @@ describe("tasks", () => {
     const created = await applyTemplate(db, admin, c.id, tpl!.id);
     expect(created).toHaveLength(tpl!.tasks.length);
     const [t1] = await createTasks(db, admin, c.id, [{ title: "Late", dueDate: addDaysIso(-2), assigneeId: admin.id }]);
-    expect((await listTasksForStaff(db, admin, { overdue: true })).some((r) => r.task.id === t1!.id)).toBe(true);
+    expect((await listTasksForStaff(db, admin, { overdue: true })).rows.some((r) => r.task.id === t1!.id)).toBe(true);
     expect((await dashboardMetrics(db, admin)).overdueTasks).toBeGreaterThan(0);
     expect((await attentionItems(db, admin, 24)).some((i) => i.reason === "overdue_task")).toBe(true);
     const done = await updateTask(db, admin, t1!.id, { status: "done" });
     expect(done.completedAt).toBeTruthy();
-    expect((await listTasksForStaff(db, admin, { overdue: true })).some((r) => r.task.id === t1!.id)).toBe(false);
+    expect((await listTasksForStaff(db, admin, { overdue: true })).rows.some((r) => r.task.id === t1!.id)).toBe(false);
     await deleteTask(db, admin, t1!.id);
     await expectCode(updateTask(db, admin, t1!.id, { status: "todo" }), "not_found");
   });
