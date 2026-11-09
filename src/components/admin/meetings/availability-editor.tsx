@@ -1,5 +1,6 @@
 "use client";
 
+import { TimeInput } from "@/components/ui/time-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
@@ -7,7 +8,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { api, errorText } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox, Input } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/form";
 import { useToast } from "@/components/ui/toast";
 import type { WeeklyHours } from "@/lib/db/schema";
 
@@ -73,9 +74,9 @@ export function AvailabilityEditor({ initial }: { initial: { bookable: boolean; 
                 {weekly[day].length === 0 && <span className="text-sm text-slate-500">{t.dayOff}</span>}
                 {weekly[day].map((r, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5" role="group" aria-labelledby={`day-${day}`}>
-                    <Input type="time" dir="ltr" step={900} className="h-9 w-28" aria-label={`${t.days[Number(day)]} ${t.from}`} value={r.start} onChange={(e) => setRange(day, i, "start", e.target.value)} />
+                    <TimeInput step={15} className="h-9 w-20" aria-label={`${t.days[Number(day)]} ${t.from}`} value={r.start} onChange={(v) => setRange(day, i, "start", v)} />
                     <span className="text-sm text-slate-500">{t.to}</span>
-                    <Input type="time" dir="ltr" step={900} className="h-9 w-28" aria-label={`${t.days[Number(day)]} ${t.to}`} value={r.end} onChange={(e) => setRange(day, i, "end", e.target.value)} />
+                    <TimeInput step={15} className="h-9 w-20" aria-label={`${t.days[Number(day)]} ${t.to}`} value={r.end} onChange={(v) => setRange(day, i, "end", v)} />
                     <button type="button" onClick={() => remove(day, i)} className="rounded p-1 text-slate-500 hover:bg-slate-100" aria-label={`${t.removeRange}: ${t.days[Number(day)]} ${r.start}–${r.end}`}>
                       <X className="size-4" aria-hidden />
                     </button>

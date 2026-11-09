@@ -1,5 +1,6 @@
 "use client";
 
+import { TimeInput } from "@/components/ui/time-input";
 import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -81,10 +82,10 @@ function EventForm({ initial, id, google, onDone }: { initial: Form; id: string 
       {!f.allDay && (
         <div className="grid grid-cols-2 gap-4">
           <Field label={t.eventStart} required>
-            {(p) => <Input {...p} type="time" step={300} value={f.startTime} onChange={(e) => set({ startTime: e.target.value })} />}
+            {(p) => <TimeInput {...p} step={5} value={f.startTime} onChange={(startTime) => set({ startTime })} />}
           </Field>
           <Field label={t.eventEnd} required>
-            {(p) => <Input {...p} type="time" step={300} value={f.endTime} onChange={(e) => set({ endTime: e.target.value })} />}
+            {(p) => <TimeInput {...p} step={5} value={f.endTime} onChange={(endTime) => set({ endTime })} />}
           </Field>
         </div>
       )}

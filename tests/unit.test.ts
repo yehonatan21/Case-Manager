@@ -194,3 +194,18 @@ describe("dates are DD/MM/YYYY everywhere", () => {
     expect(autoSlash("5/3/2026")).toBe("5/3/2026");
   });
 });
+
+describe("times are 24-hour HH:MM", () => {
+  it("adds the colon while typing and reads only real times", async () => {
+    const { shapeTime, parseTime } = await import("@/components/ui/time-input");
+    let typed = "";
+    for (const ch of "1830") typed = shapeTime(typed + ch);
+    expect(typed).toBe("18:30");
+    expect(shapeTime("930")).toBe("9:30");
+    expect(shapeTime("9:")).toBe("9:");
+    expect(parseTime("9:30")).toBe("09:30");
+    expect(parseTime("18:30")).toBe("18:30");
+    expect(parseTime("24:00")).toBe("");
+    expect(parseTime("12:6")).toBe("");
+  });
+});
