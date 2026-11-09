@@ -1,5 +1,6 @@
 "use client";
 
+import { TimeInput } from "@/components/ui/time-input";
 import { DateInput } from "@/components/ui/date-input";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -373,7 +374,7 @@ function BookDialog({
             )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.staffDate}>{(p) => <DateInput {...p} min={zonedDay(new Date()).day} value={date} onChange={setDate} />}</Field>
-              <Field label={t.staffHour} hint={t.staffTime}>{(p) => <Input {...p} type="time" dir="ltr" step={300} value={time} onChange={(e) => setTime(e.target.value)} />}</Field>
+              <Field label={t.staffHour} hint={t.staffTime}>{(p) => <TimeInput {...p} step={5} value={time} onChange={setTime} />}</Field>
             </div>
           </>
         )}
