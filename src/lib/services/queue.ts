@@ -132,6 +132,26 @@ export async function queueCounts(db: DbOrTx, actor: User): Promise<Record<Queue
   return r as Record<QueueView, number>;
 }
 
+/** The menu's "My Work" counter: my open cases that are past their deadline or have overdue tasks. */
+export async function myOverdueCaseCount(db: DbOrTx, actor: User): Promise<number> {
+  const today = officeToday();
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(cases)
+    .where(and(staffCaseScope(actor), inArray(cases.status, OPEN_STATUSES), viewCondition("mine", actor, today), viewCondition("overdue", actor, today)));
+  return r?.n ?? 0;
+}
+
+/** The menu's Tasks counter: my open tasks past their due day (the office's today), on cases I may see. */
+export async function myOverdueTaskCount(db: DbOrTx, actor: User): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(tasks)
+    .innerJoin(cases, eq(cases.id, tasks.caseId))
+    .where(and(staffCaseScope(actor), eq(tasks.assigneeId, actor.id), inArray(tasks.status, OPEN_TASK), lt(tasks.dueDate, officeToday())));
+  return r?.n ?? 0;
+}
+
 /** Each team member's open work, for managers planning the day. */
 export async function teamWorkload(db: DbOrTx, actor: User) {
   if (actor.role !== "admin" && actor.role !== "case_manager") throw new AppError("forbidden");

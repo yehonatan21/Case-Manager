@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronsLeft, Menu, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
+import { fmt } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/db/schema";
 import { isActive, navForRole, SIDEBAR_COOKIE, SIDEBAR_WIDTH, type NavBadge, type NavItem } from "@/config/admin-navigation";
@@ -36,7 +37,7 @@ function NavLinks({ role, badges, devMailbox, collapsed = false, onNavigate, onT
           )}
           <ul className="space-y-1" {...(collapsed ? { "aria-label": d.navGroups[group] } : { "aria-labelledby": `nav-group-${group}` })}>
             {items.map((it) => (
-              <NavLink key={it.key} item={it} label={d.nav[it.key]} count={it.badge ? (badges[it.badge] ?? 0) : 0} active={isActive(it, path)} collapsed={collapsed} onNavigate={onNavigate} onShow={show} onHide={() => onTip?.(null)} />
+              <NavLink key={it.key} item={it} label={d.nav[it.key]} count={it.badge ? (badges[it.badge] ?? 0) : 0} countLabel={it.badge ? d.navBadges[it.badge] : ""} active={isActive(it, path)} collapsed={collapsed} onNavigate={onNavigate} onShow={show} onHide={() => onTip?.(null)} />
             ))}
           </ul>
         </div>
@@ -45,9 +46,11 @@ function NavLinks({ role, badges, devMailbox, collapsed = false, onNavigate, onT
   );
 }
 
-function NavLink({ item, label, count, active, collapsed, onNavigate, onShow, onHide }: { item: NavItem; label: string; count: number; active: boolean; collapsed: boolean; onNavigate?: () => void; onShow: (e: React.SyntheticEvent<HTMLElement>, label: string) => void; onHide: () => void }) {
+function NavLink({ item, label, count, countLabel, active, collapsed, onNavigate, onShow, onHide }: { item: NavItem; label: string; count: number; countLabel: string; active: boolean; collapsed: boolean; onNavigate?: () => void; onShow: (e: React.SyntheticEvent<HTMLElement>, label: string) => void; onHide: () => void }) {
   const Icon = item.icon;
-  const tip = count > 0 ? `${label} (${count})` : label;
+  // The number alone means little to a screen reader ("Tasks 3"), so it is read as what it counts ("3 overdue").
+  const what = count > 0 ? fmt(countLabel, { n: count }) : "";
+  const tip = what ? `${label} · ${what}` : label;
   return (
     <li>
       <Link
@@ -68,12 +71,15 @@ function NavLink({ item, label, count, active, collapsed, onNavigate, onShow, on
         <span className={collapsed ? "sr-only" : "flex-1 truncate"}>{label}</span>
         {count > 0 &&
           (collapsed ? (
-            <span className={cn("absolute end-1 top-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4", active ? "bg-white text-brand-800" : "bg-brand-700 text-white")}>
+            <span aria-hidden className={cn("absolute end-1 top-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4", active ? "bg-white text-brand-800" : "bg-brand-700 text-white")}>
               {count > 99 ? "99+" : count}
             </span>
           ) : (
-            <span className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>{count}</span>
+            <span aria-hidden className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>
+              {count > 99 ? "99+" : count}
+            </span>
           ))}
+        {what && <span className="sr-only">, {what}</span>}
       </Link>
     </li>
   );

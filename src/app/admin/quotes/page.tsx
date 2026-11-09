@@ -5,27 +5,48 @@ import { fmt } from "@/lib/i18n/config";
 import { formatDate, formatMoney } from "@/lib/i18n/format";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { listQuotesForStaff } from "@/lib/services/quotes";
+import { listQuotesForStaff, QUOTE_STATUSES } from "@/lib/services/quotes";
 import { isQuoteExpired } from "@/lib/services/cases";
 import { canSeeAllQuotes } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { QuoteStatusBadge } from "@/components/app/status";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Pager } from "@/components/ui/pager";
 
 export async function generateMetadata() {
   const { d } = await getDict();
   return { title: d.admin.quotesTitle };
 }
 
-export default async function QuotesPage() {
+type Search = { q?: string; status?: string; from?: string; to?: string; page?: string };
+
+export default async function QuotesPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requirePageStaff("/admin/quotes");
   if (!canSeeAllQuotes(user.role)) redirect("/admin");
+  const sp = await searchParams;
   const { d, locale } = await getDict();
-  const rows = await listQuotesForStaff(await getDb(), user);
+  const t = d.filterBar;
+  const list = await listQuotesForStaff(await getDb(), user, { ...sp, page: Number(sp.page) || 1 });
+  const rows = list.rows;
+  const values = { q: sp.q, status: sp.status, from: sp.from, to: sp.to };
+  const filtered = Object.values(values).some(Boolean);
   return (
     <>
       <PageHeader title={d.admin.quotesTitle} />
+      <FilterBar
+        d={d}
+        basePath="/admin/quotes"
+        values={values}
+        total={list.total}
+        fields={[
+          { type: "search", name: "q", label: t.search, placeholder: t.quotesSearch },
+          { type: "select", name: "status", label: t.status, options: QUOTE_STATUSES.map((s) => ({ value: s, label: d.quoteStatus[s] })) },
+          { type: "date", name: "from", label: t.from },
+          { type: "date", name: "to", label: t.to },
+        ]}
+      />
       {rows.length === 0 ? (
-        <EmptyState title={d.admin.quotesEmpty} />
+        <EmptyState title={filtered ? t.noMatch : d.admin.quotesEmpty} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full min-w-[48rem] text-sm">
@@ -66,6 +87,7 @@ export default async function QuotesPage() {
           </table>
         </div>
       )}
+      <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/quotes" params={values} />
     </>
   );
 }

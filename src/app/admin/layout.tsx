@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { AccessibilityLink } from "@/components/app/accessibility-link";
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDict } from "@/lib/i18n/server";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { cases } from "@/lib/db/schema";
 import { unreadCount } from "@/lib/services/notifications";
-import { staffCaseScope } from "@/lib/services/cases";
-import { OPEN_STATUSES } from "@/lib/domain";
+import { navCounts } from "@/lib/services/nav-counts";
 import { env } from "@/lib/env";
 import { SIDEBAR_COOKIE } from "@/config/admin-navigation";
 import { Logo } from "@/components/app/logo";
@@ -22,18 +19,8 @@ import { Avatar } from "@/components/ui/misc";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePageStaff("/admin", { allowWithoutSecondStep: true });
   const [{ d }, db, jar] = await Promise.all([getDict(), getDb(), cookies()]);
-  const seesInbox = user.role === "admin" || user.role === "case_manager";
-  // The two counters don't depend on each other: load them together.
-  const [inboxCount, unread] = await Promise.all([
-    seesInbox
-      ? db
-          .select({ n: sql<number>`count(*)::int` })
-          .from(cases)
-          .where(and(staffCaseScope(user), or(eq(cases.status, "submitted"), and(isNull(cases.assigneeId), inArray(cases.status, OPEN_STATUSES)))))
-          .then((r) => r[0]?.n ?? 0)
-      : Promise.resolve(0),
-    unreadCount(db, user),
-  ]);
+  // The menu's counters and the unread notifications don't depend on each other: load them together.
+  const [badges, unread] = await Promise.all([navCounts(db, user), unreadCount(db, user)]);
   const header = <Logo href="/admin" name={d.common.appName} />;
   const footer = (
     <>
@@ -65,7 +52,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <LogoutButton withLabel={false} />
     </div>
   );
-  const nav = { role: user.role, badges: { inbox: inboxCount }, devMailbox: env.devMailbox };
+  const nav = { role: user.role, badges, devMailbox: env.devMailbox };
   return (
     <div className="min-h-dvh">
       <RealtimeRefresher />

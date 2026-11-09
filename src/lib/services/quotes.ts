@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, max, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, max, or, sql, type SQL } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { aiRuns, cases, customers, quoteItems, quotes, users, type Case, type Quote, type QuoteItem, type User } from "../db/schema";
+import { aiRuns, cases, customers, quoteItems, quotes, quoteStatusEnum, users, type Case, type Quote, type QuoteItem, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { sha256 } from "../crypto";
 import { addDaysIso, todayIso } from "../utils";
@@ -10,6 +10,8 @@ import { audit } from "./audit";
 import { notify, staffRecipients } from "./notifications";
 import { getSettings } from "./settings";
 import { postMessage } from "./messages";
+import { likeTerm } from "./customers";
+import { dayRange, LIST_PAGE_SIZE, oneOf, paged, pageNumber, searchTerm } from "./list-filters";
 
 export type QuoteItemInput = { description: string; quantity: number; unitPriceCents: number; priceListItemId?: string | null };
 
@@ -285,17 +287,45 @@ export async function deleteDraftQuote(db: Database, actor: User, quoteId: strin
   await db.delete(quotes).where(eq(quotes.id, q.id));
 }
 
-export async function listQuotesForStaff(db: DbOrTx, actor: User) {
-  const scope = staffCaseScope(actor);
-  return db
-    .select({ quote: quotes, caseNumber: cases.number, caseTitle: cases.title, caseId: cases.id, customerName: users.name })
-    .from(quotes)
-    .innerJoin(cases, eq(cases.id, quotes.caseId))
-    .innerJoin(customers, eq(customers.id, cases.customerId))
-    .innerJoin(users, eq(users.id, customers.userId))
-    .where(scope)
-    .orderBy(desc(quotes.updatedAt))
-    .limit(300);
+export const QUOTE_STATUSES = quoteStatusEnum.enumValues;
+export type QuoteListFilter = { q?: string; status?: string; from?: string; to?: string; page?: number };
+
+/**
+ * Quotes on the cases the user may see, the latest changed first, a page at a time. Searched by case number or
+ * title, client name or email, or service; filtered by status and by the day it last changed.
+ */
+export async function listQuotesForStaff(db: DbOrTx, actor: User, f: QuoteListFilter = {}) {
+  const conds: (SQL | undefined)[] = [staffCaseScope(actor)];
+  const q = searchTerm(f.q);
+  if (q) {
+    const like = likeTerm(q);
+    conds.push(or(ilike(cases.number, like), ilike(cases.title, like), ilike(users.name, like), ilike(users.email, like), ilike(quotes.serviceName, like)));
+  }
+  const status = oneOf(f.status, QUOTE_STATUSES);
+  if (status) conds.push(eq(quotes.status, status));
+  conds.push(...dayRange(quotes.updatedAt, f.from, f.to));
+  const where = and(...conds.filter(Boolean));
+  const page = pageNumber(f.page);
+  const [rows, [count]] = await Promise.all([
+    db
+      .select({ quote: quotes, caseNumber: cases.number, caseTitle: cases.title, caseId: cases.id, customerName: users.name })
+      .from(quotes)
+      .innerJoin(cases, eq(cases.id, quotes.caseId))
+      .innerJoin(customers, eq(customers.id, cases.customerId))
+      .innerJoin(users, eq(users.id, customers.userId))
+      .where(where)
+      .orderBy(desc(quotes.updatedAt), desc(quotes.id))
+      .limit(LIST_PAGE_SIZE)
+      .offset((page - 1) * LIST_PAGE_SIZE),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(quotes)
+      .innerJoin(cases, eq(cases.id, quotes.caseId))
+      .innerJoin(customers, eq(customers.id, cases.customerId))
+      .innerJoin(users, eq(users.id, customers.userId))
+      .where(where),
+  ]);
+  return paged(rows, count?.n ?? 0, page);
 }
 
 /** Job: mark quotes past their validity date as expired. */

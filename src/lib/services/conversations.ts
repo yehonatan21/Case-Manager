@@ -114,6 +114,21 @@ export async function conversationCounts(db: DbOrTx, actor: User): Promise<Recor
   return { needs_reply: Number(r.needs_reply ?? 0), mine: Number(r.mine ?? 0), unassigned: Number(r.unassigned ?? 0), all: Number(r.all_count ?? 0) };
 }
 
+/** The menu's Conversations counter: conversations whose latest message is the client's (they wait for an answer). */
+export async function awaitingReplyCount(db: DbOrTx, actor: User): Promise<number> {
+  const scope = staffCaseScope(actor);
+  const result = await db.execute(sql`
+    select count(*)::int as n
+    from cases
+    join customers on customers.id = cases.customer_id
+    join lateral (
+      select coalesce(m.sender_id = customers.user_id, false) as from_client from messages m
+      where m.case_id = cases.id and m.kind = 'thread' order by m.created_at desc limit 1
+    ) lm on true
+    where lm.from_client and ${scope ?? sql`true`}`);
+  return Number(rowsOf(result)[0]?.n ?? 0);
+}
+
 // ---------------- Saved replies ----------------
 
 export type ReplyTemplateInput = { title: string; bodyHe: string; bodyEn: string };

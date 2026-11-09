@@ -1,11 +1,14 @@
-import { and, asc, eq, inArray, lt, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, isNull, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import type { Database, DbOrTx } from "../db";
-import { aiRuns, caseMilestones, cases, serviceTemplates, tasks, users, type Case, type Task, type TaskStatus, type User } from "../db/schema";
+import { aiRuns, caseMilestones, cases, priorityEnum, serviceTemplates, tasks, taskStatusEnum, users, type Case, type Task, type TaskStatus, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { adminCaseLink, caseWithAccess, staffCaseScope } from "./cases";
 import { addEvent } from "./events";
 import { notify } from "./notifications";
 import { addDaysIso, todayIso } from "../utils";
+import { zonedDay } from "../meetings";
+import { likeTerm } from "./customers";
+import { isDay, isUuid, LIST_PAGE_SIZE, oneOf, paged, pageNumber, searchTerm } from "./list-filters";
 
 export type TaskInput = {
   title: string;
@@ -211,22 +214,67 @@ export async function deleteTask(db: Database, actor: User, taskId: string) {
   await db.delete(tasks).where(eq(tasks.id, t.id));
 }
 
-export async function listTasksForStaff(db: DbOrTx, actor: User, filter: { mine?: boolean; overdue?: boolean; open?: boolean }) {
+export const TASK_STATUS_FILTERS = ["open", ...taskStatusEnum.enumValues, "all"] as const;
+export const TASK_PRIORITIES = priorityEnum.enumValues;
+export type TaskListFilter = {
+  mine?: boolean;
+  overdue?: boolean;
+  /** Only open tasks (the default); false for every status. Overridden by `status`. */
+  open?: boolean;
+  q?: string;
+  /** A team member's id, or "none" for tasks no one has. */
+  assignee?: string;
+  priority?: string;
+  /** "open" (to do, in progress, waiting), one status, or "all". */
+  status?: string;
+  /** Due between these days (both included). */
+  from?: string;
+  to?: string;
+  page?: number;
+};
+
+const OPEN_TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "waiting"];
+
+/**
+ * Tasks on the cases the user may see, the nearest due first, a page at a time: mine or everyone's, overdue, and
+ * searched by title or case, by assignee, priority, status and due date. "Overdue" uses the office's today.
+ */
+export async function listTasksForStaff(db: DbOrTx, actor: User, f: TaskListFilter = {}) {
   const conds: (SQL | undefined)[] = [staffCaseScope(actor)];
-  if (filter.mine) conds.push(eq(tasks.assigneeId, actor.id));
-  if (filter.open !== false) conds.push(inArray(tasks.status, ["todo", "in_progress", "waiting"]));
-  if (filter.overdue) conds.push(lt(tasks.dueDate, todayIso()));
-  return db
-    .select({
-      task: tasks,
-      caseNumber: cases.number,
-      caseTitle: cases.title,
-      assigneeName: users.name,
-    })
-    .from(tasks)
-    .innerJoin(cases, eq(cases.id, tasks.caseId))
-    .leftJoin(users, eq(users.id, tasks.assigneeId))
-    .where(and(...conds.filter(Boolean)))
-    .orderBy(sql`${tasks.dueDate} asc nulls last`, asc(tasks.createdAt))
-    .limit(300);
+  if (f.mine) conds.push(eq(tasks.assigneeId, actor.id));
+  const status = oneOf(f.status, TASK_STATUS_FILTERS) ?? (f.open === false ? "all" : "open");
+  if (status === "open" || f.overdue) conds.push(inArray(tasks.status, OPEN_TASK_STATUSES));
+  else if (status !== "all") conds.push(eq(tasks.status, status));
+  if (f.overdue) conds.push(lt(tasks.dueDate, zonedDay(new Date()).day));
+  const q = searchTerm(f.q);
+  if (q) {
+    const like = likeTerm(q);
+    conds.push(or(ilike(tasks.title, like), ilike(cases.number, like), ilike(cases.title, like)));
+  }
+  if (!f.mine && f.assignee === "none") conds.push(isNull(tasks.assigneeId));
+  else if (!f.mine && isUuid(f.assignee)) conds.push(eq(tasks.assigneeId, f.assignee));
+  const priority = oneOf(f.priority, TASK_PRIORITIES);
+  if (priority) conds.push(eq(tasks.priority, priority));
+  if (isDay(f.from)) conds.push(gte(tasks.dueDate, f.from));
+  if (isDay(f.to)) conds.push(lte(tasks.dueDate, f.to));
+  const where = and(...conds.filter(Boolean));
+  const page = pageNumber(f.page);
+  const [rows, [count]] = await Promise.all([
+    db
+      .select({
+        task: tasks,
+        caseNumber: cases.number,
+        caseTitle: cases.title,
+        assigneeName: users.name,
+      })
+      .from(tasks)
+      .innerJoin(cases, eq(cases.id, tasks.caseId))
+      .leftJoin(users, eq(users.id, tasks.assigneeId))
+      .where(where)
+      .orderBy(sql`${tasks.dueDate} asc nulls last`, asc(tasks.createdAt), asc(tasks.id))
+      .limit(LIST_PAGE_SIZE)
+      .offset((page - 1) * LIST_PAGE_SIZE),
+    db.select({ n: sql<number>`count(*)::int` }).from(tasks).innerJoin(cases, eq(cases.id, tasks.caseId)).where(where),
+  ]);
+  return paged(rows, count?.n ?? 0, page);
 }
