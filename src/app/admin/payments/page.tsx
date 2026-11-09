@@ -4,7 +4,7 @@ import { getDict } from "@/lib/i18n/server";
 import { formatDateTime, formatMoney } from "@/lib/i18n/format";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { listPayments } from "@/lib/services/payments";
+import { listPayments, PAYMENT_SORTS, PAYMENT_STATUSES, paymentProviders } from "@/lib/services/payments";
 import { canSeePayments } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +14,27 @@ import { invoicesForPayments } from "@/lib/services/invoices";
 import { InvoiceCell } from "@/components/admin/invoice-cell";
 import { documentFiles } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Pager } from "@/components/ui/pager";
 
 export async function generateMetadata() {
   const { d } = await getDict();
   return { title: d.admin.paymentsTitle };
 }
 
-export default async function PaymentsPage() {
+type Search = { q?: string; status?: string; provider?: string; from?: string; to?: string; min?: string; max?: string; sort?: string; page?: string };
+
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requirePageStaff("/admin/payments");
   if (!canSeePayments(user.role)) redirect("/admin");
+  const sp = await searchParams;
   const { d, locale } = await getDict();
+  const t = d.filterBar;
   const db = await getDb();
-  const [rows, providerStatus] = await Promise.all([listPayments(db, user), getPaymentProviderStatus(db)]);
+  const [list, providerStatus, providers] = await Promise.all([listPayments(db, user, { ...sp, page: Number(sp.page) || 1 }), getPaymentProviderStatus(db), paymentProviders(db, user)]);
+  const rows = list.rows;
+  const values = { q: sp.q, status: sp.status, provider: sp.provider, from: sp.from, to: sp.to, min: sp.min, max: sp.max };
+  const filtered = Object.values(values).some(Boolean);
   const invs = await invoicesForPayments(db, rows.map((r) => r.p.id));
   const docIds = [...invs.values()].map((i) => i.documentId).filter((x): x is string => !!x);
   const files = docIds.length ? await db.select({ id: documentFiles.id, documentId: documentFiles.documentId }).from(documentFiles).where(inArray(documentFiles.documentId, docIds)) : [];
@@ -33,8 +42,24 @@ export default async function PaymentsPage() {
     <>
       <PageHeader title={d.admin.paymentsTitle} subtitle={d.quote.receiptsNote} />
       <GrowConnect status={providerStatus} canEdit={user.role === "admin"} />
+      <FilterBar
+        d={d}
+        basePath="/admin/payments"
+        values={{ ...values, sort: sp.sort }}
+        total={list.total}
+        fields={[
+          { type: "search", name: "q", label: t.search, placeholder: t.paymentsSearch },
+          { type: "select", name: "status", label: t.status, options: PAYMENT_STATUSES.map((s) => ({ value: s, label: d.paymentStatus[s] })) },
+          { type: "select", name: "provider", label: t.provider, options: providers.map((p) => ({ value: p, label: p })) },
+          { type: "date", name: "from", label: t.from },
+          { type: "date", name: "to", label: t.to },
+          { type: "amount", name: "min", label: t.minAmount },
+          { type: "amount", name: "max", label: t.maxAmount },
+          { type: "select", name: "sort", label: t.sort, any: false, options: PAYMENT_SORTS.map((s) => ({ value: s, label: t.sorts[s] })) },
+        ]}
+      />
       {rows.length === 0 ? (
-        <EmptyState title={d.admin.paymentsEmpty} />
+        <EmptyState title={filtered ? t.noMatch : d.admin.paymentsEmpty} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full min-w-[56rem] text-sm">
@@ -85,6 +110,7 @@ export default async function PaymentsPage() {
           </table>
         </div>
       )}
+      <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/payments" params={{ ...values, sort: sp.sort }} />
     </>
   );
 }

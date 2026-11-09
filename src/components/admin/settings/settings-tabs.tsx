@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
@@ -23,6 +23,7 @@ type Template = { id: string; name: string; category: string; description: strin
 type Price = { id: string; code: string; name: string; category: string; unitPriceCents: number; currency: string; active: boolean };
 
 const STAFF_ROLES: UserRole[] = ["admin", "case_manager", "staff", "finance"];
+const SETTINGS_TABS = ["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations", "health"];
 
 /** Documents are edited one per line: "Title" or "Title | note". */
 const docsToText = (docs: ServiceTemplateDocument[], required: boolean) =>
@@ -68,7 +69,18 @@ export function SettingsTabs({
   const { d, locale } = useI18n();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState(["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations", "health"].includes(initialTab ?? "") ? initialTab! : "general");
+  // The open tab lives in the address (?tab=…): a reload, a shared link and Back/Forward all show the same tab.
+  // An unknown value shows General. Switching tabs adds a history entry without reloading the page.
+  const params = useSearchParams();
+  const asTab = (v: string | null | undefined) => (v && SETTINGS_TABS.includes(v) ? v : "general");
+  const tab = asTab(params.get("tab") ?? initialTab);
+  const setTab = (next: string) => {
+    if (next === tab) return;
+    const sp = new URLSearchParams(params.toString());
+    sp.set("tab", next);
+    sp.delete("calendar"); // a one-time result from connecting a calendar
+    window.history.pushState(null, "", `?${sp.toString()}`);
+  };
   const [busy, setBusy] = useState<string | null>(null);
   const [s, setS] = useState(settings);
   const [durationsText, setDurationsText] = useState(settings.meeting_durations.join(", "));
