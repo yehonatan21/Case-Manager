@@ -115,7 +115,80 @@ export async function calendarBusy(db: DbOrTx, userId: string, from: Date, to: D
   return (r?.calendars?.primary?.busy ?? []).map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
 }
 
-export type CalendarEventInput = { meetingId: string; title: string; description: string; start: Date; end: Date; location: string | null; video: boolean };
+export type GoogleEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  /** YYYY-MM-DD of an all-day event's first day, and of the day after its last. */
+  startDay: string | null;
+  endDay: string | null;
+  htmlLink: string | null;
+  meetUrl: string | null;
+  /** Set on events the app created for its own meetings, and for team members' own events made in the app. */
+  meetingId: string | null;
+  staffEventId: string | null;
+};
+
+type RawEvent = {
+  id: string;
+  status?: string;
+  summary?: string;
+  htmlLink?: string;
+  hangoutLink?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  extendedProperties?: { private?: { caseManagerMeetingId?: string; caseManagerEventId?: string } };
+};
+
+/**
+ * Events in the user's primary calendar between two instants (recurring events expanded), or null when the
+ * calendar isn't connected or Google can't be reached. Cancelled events are left out.
+ */
+export async function listCalendarEvents(db: DbOrTx, userId: string, from: Date, to: Date): Promise<GoogleEvent[] | null> {
+  const out: GoogleEvent[] = [];
+  let pageToken: string | undefined;
+  // A few pages at most (250 events each): a month of even a very busy calendar.
+  for (let page = 0; page < 4; page++) {
+    const q = new URLSearchParams({
+      timeMin: from.toISOString(),
+      timeMax: to.toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "250",
+      fields: "nextPageToken,items(id,status,summary,htmlLink,hangoutLink,start,end,extendedProperties/private)",
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const r = await call<{ items?: RawEvent[]; nextPageToken?: string }>(db, userId, `/calendars/primary/events?${q}`);
+    if (!r) return page === 0 ? null : out;
+    for (const e of r.items ?? []) {
+      if (e.status === "cancelled" || !e.start || !e.end) continue;
+      const allDay = !e.start.dateTime && !!e.start.date;
+      const start = e.start.dateTime ?? e.start.date;
+      const end = e.end.dateTime ?? e.end.date;
+      if (!start || !end) continue;
+      out.push({
+        id: e.id,
+        title: e.summary?.trim() ?? "",
+        start,
+        end,
+        allDay,
+        startDay: allDay ? e.start.date! : null,
+        endDay: allDay ? (e.end.date ?? null) : null,
+        htmlLink: e.htmlLink?.startsWith("https://") ? e.htmlLink : null,
+        meetUrl: e.hangoutLink?.startsWith("https://") ? e.hangoutLink : null,
+        meetingId: e.extendedProperties?.private?.caseManagerMeetingId ?? null,
+        staffEventId: e.extendedProperties?.private?.caseManagerEventId ?? null,
+      });
+    }
+    if (!r.nextPageToken) break;
+    pageToken = r.nextPageToken;
+  }
+  return out;
+}
+
+export type CalendarEventInput ={ meetingId: string; title: string; description: string; start: Date; end: Date; location: string | null; video: boolean };
 
 /** Adds the meeting to the user's calendar; returns the event id and Meet link, or null. */
 export async function createCalendarEvent(db: DbOrTx, userId: string, e: CalendarEventInput): Promise<{ id: string; meetUrl: string | null } | null> {
@@ -139,6 +212,37 @@ export async function createCalendarEvent(db: DbOrTx, userId: string, e: Calenda
   if (!r?.id) return null;
   const meetUrl = r.hangoutLink ?? r.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri ?? null;
   return { id: r.id, meetUrl };
+}
+
+export type OwnEventInput = { eventId: string; title: string; notes: string | null; start: Date; end: Date; allDay: boolean; startDay: string; endDay: string; video: boolean };
+
+const ownEventBody = (e: OwnEventInput) => ({
+  summary: e.title,
+  description: e.notes ?? "",
+  // All-day events are dates; Google's end date is the day after the last.
+  start: e.allDay ? { date: e.startDay } : { dateTime: e.start.toISOString() },
+  end: e.allDay ? { date: e.endDay } : { dateTime: e.end.toISOString() },
+});
+
+/** A team member's own event (made on the Meetings page), added to their calendar: its id and Meet link, or null. */
+export async function createOwnCalendarEvent(db: DbOrTx, userId: string, e: OwnEventInput): Promise<{ id: string; meetUrl: string | null } | null> {
+  const body = {
+    ...ownEventBody(e),
+    ...(e.video ? { conferenceData: { createRequest: { requestId: `event-${e.eventId}`, conferenceSolutionKey: { type: "hangoutsMeet" } } } } : {}),
+    extendedProperties: { private: { caseManagerEventId: e.eventId } },
+  };
+  const r = await call<{ id: string; hangoutLink?: string }>(db, userId, `/calendars/primary/events?conferenceDataVersion=1&sendUpdates=none`, { method: "POST", body: JSON.stringify(body) });
+  return r?.id ? { id: r.id, meetUrl: r.hangoutLink ?? null } : null;
+}
+
+/** Updates it; `conference` adds a Meet link, removes it, or keeps the one it has. */
+export async function updateOwnCalendarEvent(db: DbOrTx, userId: string, externalId: string, e: OwnEventInput, conference: "add" | "remove" | "keep"): Promise<{ meetUrl: string | null } | null> {
+  const body = {
+    ...ownEventBody(e),
+    ...(conference === "add" ? { conferenceData: { createRequest: { requestId: `event-${e.eventId}-${Date.now()}`, conferenceSolutionKey: { type: "hangoutsMeet" } } } } : conference === "remove" ? { conferenceData: null } : {}),
+  };
+  const r = await call<{ id: string; hangoutLink?: string }>(db, userId, `/calendars/primary/events/${encodeURIComponent(externalId)}?conferenceDataVersion=1&sendUpdates=none`, { method: "PATCH", body: JSON.stringify(body) });
+  return r ? { meetUrl: r.hangoutLink ?? null } : null;
 }
 
 export async function moveCalendarEvent(db: DbOrTx, userId: string, eventId: string, start: Date, end: Date) {

@@ -4,11 +4,14 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- **A calendar on the Meetings page**, by day, week or month: your meetings in the app and the events in your Google Calendar, with today, previous and next. Admins can show the whole team's meetings.
+- **Your own events on the calendar.** New event (a time or all day, notes, optionally a Google Meet link); with Google Calendar connected it's added there, and editing or deleting it here changes it there. Those times aren't offered to clients.
+- **Connect the email service in the app.** Settings → Integrations → Email: an SMTP server (Gmail, Outlook, your domain) or Resend, checked with a test email and stored encrypted, for sign-in codes and email updates. `SMTP_URL` on the server still works, as the fallback.
+- A security policy (`SECURITY.md`) on how to report a problem privately (GitHub's private vulnerability reporting, or the owner directly), and weekly Dependabot updates into `dev`.
+
 ### Changed
 - The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.
-
-### Added
-- A security policy (`SECURITY.md`) on how to report a problem privately (to the owner directly), and weekly Dependabot updates into `dev`.
 
 ## [1.1.0] — 2026-11-08
 

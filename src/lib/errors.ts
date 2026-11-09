@@ -43,6 +43,7 @@ export type ErrorCode =
   | "meeting_limit"
   | "meeting_in_past"
   | "invoices_refused"
+  | "email_refused"
   | "feedback_exists"
   | "feedback_not_ready"
   | "file_too_large"
@@ -96,6 +97,7 @@ const STATUS: Record<ErrorCode, number> = {
   meeting_limit: 400,
   meeting_in_past: 400,
   invoices_refused: 400,
+  email_refused: 400,
   feedback_exists: 409,
   feedback_not_ready: 400,
   file_too_large: 413,

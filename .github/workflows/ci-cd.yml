@@ -85,9 +85,12 @@ jobs:
           WHATSAPP_API_URL: http://localhost:4014
           # e2e/invoices.cjs runs a stand-in for Green Invoice's API here.
           INVOICE_API_URL: http://localhost:4016/api/v1
+          # e2e/email-calendar.cjs runs a stand-in for Resend's API here.
+          RESEND_API_URL: http://localhost:4018
           # Many test scripts sign in to the same demo accounts on one server.
           OTP_MAX_PER_EMAIL: "50"
           OTP_MAX_PER_IP: "500"
+          OTP_VERIFY_MAX_PER_IP: "500"
       - name: HTTP API tests (auth, permissions, CSRF, headers)
         run: npm run test:api
         env:

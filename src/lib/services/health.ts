@@ -146,14 +146,17 @@ export async function getSystemHealth(db: Database, actor: User): Promise<{ leve
     const issues: HealthIssue[] = [];
     const stats = await channelStats(db, "email");
     let level: HealthLevel;
-    if (env.emailProvider === "console") {
+    const { readEmailConfig } = await import("../email/config");
+    const connected = await readEmailConfig(db);
+    const provider = connected ? connected.provider : env.emailProvider;
+    if (!connected && env.emailProvider === "console") {
       // Without SMTP nothing leaves the server: fine on a laptop or a demo, broken for real clients.
       if (env.isProd && !env.demoMode) {
         issues.push("email_console");
         level = "error";
       } else level = "off";
     } else level = deliveryLevel(stats, issues);
-    checks.push({ id: "email", level, issues, facts: { provider: env.emailProvider }, stats, retry: env.emailProvider === "console" ? undefined : "email" });
+    checks.push({ id: "email", level, issues, facts: { provider, ...(connected ? { sender: connected.fromAddress } : {}) }, stats, retry: provider === "console" ? undefined : "email" });
   }
 
   // WhatsApp.
