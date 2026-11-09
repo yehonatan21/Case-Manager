@@ -11,19 +11,23 @@ export const TIME_ZONE = process.env.NEXT_PUBLIC_TIME_ZONE || "Asia/Jerusalem";
 /** Date-only values (YYYY-MM-DD) are anchored at midday UTC so they never shift a day. */
 const toDate = (value: Date | string) => (typeof value === "string" ? new Date(value.length === 10 ? value + "T12:00:00Z" : value) : value);
 
-export function formatDate(value: Date | string | null | undefined, locale: Locale): string {
+// Dates are always DD/MM/YYYY (and times 24-hour), in Hebrew and in English alike: en-GB numbers give exactly that.
+const numeric = "en-GB";
+
+export function formatDate(value: Date | string | null | undefined, _locale?: Locale): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat(intlLocale(locale), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE }).format(toDate(value));
+  return new Intl.DateTimeFormat(numeric, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE }).format(toDate(value));
 }
 
-export function formatDateTime(value: Date | string | null | undefined, locale: Locale): string {
+export function formatDateTime(value: Date | string | null | undefined, _locale?: Locale): string {
   if (!value) return "";
-  return new Intl.DateTimeFormat(intlLocale(locale), {
+  return new Intl.DateTimeFormat(numeric, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZone: TIME_ZONE,
   }).format(toDate(value));
 }

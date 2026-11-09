@@ -171,3 +171,26 @@ describe("email sender", () => {
     Object.assign(env, saved);
   });
 });
+
+describe("dates are DD/MM/YYYY everywhere", () => {
+  it("shows and reads dates day first, in Hebrew and in English", async () => {
+    const { formatDate, formatDateTime } = await import("@/lib/i18n/format");
+    const { displayToIso, isoToDisplay } = await import("@/components/ui/date-input");
+    expect(formatDate("2026-11-08", "he")).toBe("08/11/2026");
+    expect(formatDate("2026-11-08", "en")).toBe("08/11/2026");
+    expect(formatDateTime(new Date("2026-11-08T16:30:00Z"), "he")).toBe("08/11/2026, 18:30");
+    expect(isoToDisplay("2026-03-05")).toBe("05/03/2026");
+    expect(displayToIso("05/03/2026")).toBe("2026-03-05");
+    expect(displayToIso("5/3/2026")).toBe("2026-03-05");
+    expect(displayToIso("2026-03-05")).toBe("2026-03-05");
+    expect(displayToIso("31/02/2026")).toBe("");
+    expect(displayToIso("05/03/26")).toBe("");
+    // Typing digits one by one adds the slashes.
+    const { autoSlash } = await import("@/components/ui/date-input");
+    let typed = "";
+    for (const ch of "24122026") typed = autoSlash(typed + ch);
+    expect(typed).toBe("24/12/2026");
+    expect(autoSlash("24/1")).toBe("24/1");
+    expect(autoSlash("5/3/2026")).toBe("5/3/2026");
+  });
+});

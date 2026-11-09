@@ -5,6 +5,7 @@ export const he = {
     description: "מבקשה חופשית ועד השלמת השירות — בתהליך אחד, ברור, חכם ושקוף.",
   },
   common: {
+    pickDate: "בחירת תאריך",
     appName: "Case Manager",
     save: "שמירה",
     saving: "שומר…",

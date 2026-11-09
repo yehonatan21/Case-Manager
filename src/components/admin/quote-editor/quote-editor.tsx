@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -354,7 +355,7 @@ export function QuoteEditor({ q, priceList, canManage, autoDraft }: { q: EditorQ
                   <Field label={d.quoteEditor.terms} className="md:col-span-2">
                     {(p) => <Textarea {...p} value={terms} onChange={(e) => mark(setTerms)(e.target.value)} rows={3} className="bidi-auto" />}
                   </Field>
-                  <Field label={d.quoteEditor.validUntil}>{(p) => <Input {...p} type="date" dir="ltr" value={validUntil} onChange={(e) => mark(setValidUntil)(e.target.value)} />}</Field>
+                  <Field label={d.quoteEditor.validUntil}>{(p) => <DateInput {...p} value={validUntil} onChange={(v) => mark(setValidUntil)(v)} />}</Field>
                 </CardContent>
               </Card>
             </>
