@@ -57,8 +57,8 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
     setError(null);
     setCodeError(null);
     try {
-      const r = await api<{ home: string }>("/api/auth/verify", { body: { email: email.trim(), code } });
-      router.push(next ?? r.home);
+      const r = await api<{ home: string; secondStep?: boolean }>("/api/auth/verify", { body: { email: email.trim(), code } });
+      router.push(r.secondStep ? `/login/2fa?next=${encodeURIComponent(next ?? r.home)}` : (next ?? r.home));
       router.refresh();
     } catch (err) {
       const msg = err instanceof ApiClientError && err.code === "signup_required" ? d.login.noAccount : errorText(err, d);

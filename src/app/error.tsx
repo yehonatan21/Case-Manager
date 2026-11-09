@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { useI18n } from "@/lib/i18n/client";
+import { reportBrowserError } from "@/components/app/error-reporter";
 import { Button, ButtonLink } from "@/components/ui/button";
 
-export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const { d } = useI18n();
+  // Errors in server-rendered pages are recorded on the server already (their digest is all the browser gets).
+  useEffect(() => {
+    if (!error.digest) reportBrowserError(error);
+  }, [error]);
   return (
     <main id="main" className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
       <h1 className="text-2xl font-bold">{d.states.errorTitle}</h1>

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { needsSecondStep } from "@/lib/services/two-factor";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -35,8 +36,13 @@ export async function GET(req: Request) {
     }
     const res = await resolveGoogleUser(await getDb(), profile);
     if ("user" in res) {
+      const home = next ?? (isStaffRole(res.user.role) ? "/admin" : "/portal");
+      if (needsSecondStep(res.user)) {
+        await createSession(res.user.id, { mfaPending: true });
+        return NextResponse.redirect(new URL(`/login/2fa?next=${encodeURIComponent(home)}`, env.appUrl));
+      }
       await createSession(res.user.id);
-      return NextResponse.redirect(new URL(next ?? (isStaffRole(res.user.role) ? "/admin" : "/portal"), env.appUrl));
+      return NextResponse.redirect(new URL(home, env.appUrl));
     }
     // New email: finish registration (terms, customer type) before the account is created.
     jar.set(GOOGLE_SIGNUP_COOKIE, res.pendingToken, { httpOnly: true, secure: env.isProd, sameSite: "lax", path: "/", maxAge: 1800 });

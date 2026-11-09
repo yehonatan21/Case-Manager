@@ -37,11 +37,13 @@ export type HealthIssue =
   | "demo_data"
   | "backups_never"
   | "backups_late"
-  | "backup_untested";
+  | "backup_untested"
+  | "errors_recent"
+  | "errors_open";
 
 export type HealthStats = { lastOkAt: string | null; lastFailedAt: string | null; lastError: string | null; failed7d: number; stuck: number };
 export type HealthCheck = {
-  id: "ai" | "email" | "whatsapp" | "push" | "payments" | "invoices" | "calendar" | "jobs" | "backups" | "setup";
+  id: "ai" | "email" | "whatsapp" | "push" | "payments" | "invoices" | "calendar" | "jobs" | "backups" | "errors" | "setup";
   level: HealthLevel;
   issues: HealthIssue[];
   /** Plain facts shown on the card (provider, model...). Never secrets. */
@@ -271,6 +273,22 @@ export async function getSystemHealth(db: Database, actor: User): Promise<{ leve
       }
     }
     checks.push({ id: "backups", level, issues, facts: b ? { lastBackupAt: b.createdAt, rows: b.rows, size: `${Math.max(1, Math.round(b.bytes / 1024))} KB`, restoreTested: b.restoreTested } : {} });
+  }
+
+  // Errors the app hit (server and browsers): new ones in the last day are a problem until marked fixed.
+  {
+    const { errorSummary } = await import("./error-tracking");
+    const e = await errorSummary(db);
+    const issues: HealthIssue[] = [];
+    let level: HealthLevel = "ok";
+    if (e.recent > 0) {
+      issues.push("errors_recent");
+      level = "error";
+    } else if (e.open > 0) {
+      issues.push("errors_open");
+      level = "warning";
+    }
+    checks.push({ id: "errors", level, issues, facts: { openErrors: e.open, lastErrorAt: e.lastAt ? e.lastAt.toISOString() : null } });
   }
 
   // Setup that the public pages depend on.

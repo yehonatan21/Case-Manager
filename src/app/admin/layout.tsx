@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AccessibilityLink } from "@/components/app/accessibility-link";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDict } from "@/lib/i18n/server";
@@ -17,7 +18,7 @@ import { AdminMobileMenu, AdminSidebar } from "@/components/admin/admin-nav";
 import { Avatar } from "@/components/ui/misc";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await requirePageStaff("/admin");
+  const user = await requirePageStaff("/admin", { allowWithoutSecondStep: true });
   const { d } = await getDict();
   const db = await getDb();
   const [{ n: inboxCount } = { n: 0 }] = await db
@@ -32,6 +33,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-800">{user.name}</p>
         <p className="truncate text-xs text-slate-500">{d.roles[user.role]}</p>
+        <Link href="/admin/account" className="text-xs font-medium text-brand-700 hover:underline">
+          {d.twoFactor.accountTitle}
+        </Link>
       </div>
       <LogoutButton withLabel={false} />
     </div>

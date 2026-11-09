@@ -53,7 +53,17 @@ export function route<P extends Record<string, string> = Record<string, string>>
       const params = ctx?.params ? await ctx.params : ({} as P);
       return await fn(req, params);
     } catch (err) {
+      // An unexpected error (not an AppError the code meant to throw) is recorded for the admins.
+      if (!(err instanceof AppError)) void reportServerError(err, new URL(req.url).pathname);
       return errorResponse(err);
     }
   };
+}
+
+async function reportServerError(err: unknown, path: string) {
+  try {
+    const [{ getDb }, { recordError }] = await Promise.all([import("./db"), import("./services/error-tracking")]);
+    const e = err instanceof Error ? err : new Error(String(err));
+    await recordError(await getDb(), { source: "server", message: `${e.name}: ${e.message}`, stack: e.stack, path });
+  } catch {}
 }

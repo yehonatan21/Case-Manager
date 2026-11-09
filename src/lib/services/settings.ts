@@ -28,6 +28,8 @@ export type AppSettings = {
   /** Remind the client about a quote with no answer after N days, and tell the handler after M days (0 = off). */
   quote_followup_client_days: number;
   quote_followup_staff_days: number;
+  /** Every team member must use two-step sign-in (an authenticator app). */
+  require_staff_2fa: boolean;
 };
 
 export async function getSettings(db: DbOrTx): Promise<AppSettings> {

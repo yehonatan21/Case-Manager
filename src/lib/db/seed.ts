@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
   accessibility_contact: { name: "", phone: "", email: "", response_days: 0 },
   quote_followup_client_days: 3,
   quote_followup_staff_days: 5,
+  require_staff_2fa: false,
 };
 
 /** Idempotent: inserts base configuration on an empty database, and demo data when enabled. */
