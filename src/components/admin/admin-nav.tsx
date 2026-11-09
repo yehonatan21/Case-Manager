@@ -3,94 +3,163 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BarChart3, ListTodo, MessagesSquare, CalendarClock, CreditCard, FileText, FolderKanban, Inbox, LayoutDashboard, ListChecks, Mail, Menu, Settings, Users, X, History } from "lucide-react";
+import { ChevronsLeft, Menu, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/db/schema";
+import { isActive, navForRole, SIDEBAR_COOKIE, SIDEBAR_WIDTH, type NavBadge, type NavItem } from "@/config/admin-navigation";
 
-type Item = { href: string; key: "dashboard" | "queue" | "conversations" | "inbox" | "cases" | "quotes" | "tasks" | "meetings" | "customers" | "payments" | "reports" | "settings" | "activity" | "mailbox"; icon: React.ComponentType<{ className?: string }>; roles: UserRole[]; exact?: boolean };
+type NavProps = { role: UserRole; badges: Partial<Record<NavBadge, number>>; devMailbox: boolean };
 
-const ITEMS: Item[] = [
-  { href: "/admin", key: "dashboard", icon: LayoutDashboard, roles: ["admin", "case_manager", "staff", "finance"], exact: true },
-  { href: "/admin/queue", key: "queue", icon: ListTodo, roles: ["admin", "case_manager", "staff"] },
-  { href: "/admin/conversations", key: "conversations", icon: MessagesSquare, roles: ["admin", "case_manager", "staff"] },
-  { href: "/admin/inbox", key: "inbox", icon: Inbox, roles: ["admin", "case_manager"] },
-  { href: "/admin/cases", key: "cases", icon: FolderKanban, roles: ["admin", "case_manager", "staff", "finance"] },
-  { href: "/admin/quotes", key: "quotes", icon: FileText, roles: ["admin", "case_manager", "finance"] },
-  { href: "/admin/tasks", key: "tasks", icon: ListChecks, roles: ["admin", "case_manager", "staff"] },
-  { href: "/admin/meetings", key: "meetings", icon: CalendarClock, roles: ["admin", "case_manager", "staff"] },
-  { href: "/admin/customers", key: "customers", icon: Users, roles: ["admin", "case_manager"] },
-  { href: "/admin/payments", key: "payments", icon: CreditCard, roles: ["admin", "finance"] },
-  { href: "/admin/reports", key: "reports", icon: BarChart3, roles: ["admin", "case_manager", "finance"] },
-  { href: "/admin/settings", key: "settings", icon: Settings, roles: ["admin"] },
-  { href: "/admin/activity", key: "activity", icon: History, roles: ["admin"] },
-  { href: "/admin/mailbox", key: "mailbox", icon: Mail, roles: ["admin"] },
-];
+/** A collapsed item's name, shown beside it on hover or keyboard focus (the sidebar clips anything outside it). */
+type Tip = { label: string; top: number } | null;
 
-function NavList({ role, inboxCount, devMailbox, onNavigate }: { role: UserRole; inboxCount: number; devMailbox: boolean; onNavigate?: () => void }) {
+function NavLinks({ role, badges, devMailbox, collapsed = false, onNavigate, onTip }: NavProps & { collapsed?: boolean; onNavigate?: () => void; onTip?: (t: Tip) => void }) {
   const { d } = useI18n();
   const path = usePathname();
+  const groups = navForRole(role, { devMailbox });
+  const show = (e: React.SyntheticEvent<HTMLElement>, label: string) => {
+    if (!collapsed || !onTip) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    onTip({ label, top: r.top + r.height / 2 });
+  };
   return (
-    <ul className="space-y-0.5">
-      {ITEMS.filter((i) => i.roles.includes(role) && (i.key !== "mailbox" || devMailbox)).map((it) => {
-        const active = it.exact ? path === it.href : path.startsWith(it.href);
-        return (
-          <li key={it.href}>
-            <Link
-              href={it.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active ? "bg-brand-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-              )}
-            >
-              <it.icon className="size-4.5 shrink-0" aria-hidden />
-              <span className="flex-1">{d.nav[it.key]}</span>
-              {it.key === "inbox" && inboxCount > 0 && (
-                <span className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>{inboxCount}</span>
-              )}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-4">
+      {groups.map(({ group, items }, gi) => (
+        <div key={group}>
+          {collapsed ? (
+            gi > 0 && <div aria-hidden className="mx-3 mb-3 border-t border-slate-200" />
+          ) : (
+            <p id={`nav-group-${group}`} className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {d.navGroups[group]}
+            </p>
+          )}
+          <ul className="space-y-1" {...(collapsed ? { "aria-label": d.navGroups[group] } : { "aria-labelledby": `nav-group-${group}` })}>
+            {items.map((it) => (
+              <NavLink key={it.key} item={it} label={d.nav[it.key]} count={it.badge ? (badges[it.badge] ?? 0) : 0} active={isActive(it, path)} collapsed={collapsed} onNavigate={onNavigate} onShow={show} onHide={() => onTip?.(null)} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 
-export function AdminSidebar(props: { role: UserRole; inboxCount: number; devMailbox: boolean; header: React.ReactNode; footer: React.ReactNode }) {
+function NavLink({ item, label, count, active, collapsed, onNavigate, onShow, onHide }: { item: NavItem; label: string; count: number; active: boolean; collapsed: boolean; onNavigate?: () => void; onShow: (e: React.SyntheticEvent<HTMLElement>, label: string) => void; onHide: () => void }) {
+  const Icon = item.icon;
+  const tip = count > 0 ? `${label} (${count})` : label;
+  return (
+    <li>
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        onMouseEnter={(e) => onShow(e, tip)}
+        onFocus={(e) => onShow(e, tip)}
+        onMouseLeave={onHide}
+        onBlur={onHide}
+        className={cn(
+          "relative flex h-10 items-center rounded-lg text-sm font-medium outline-offset-2 transition-colors",
+          collapsed ? "justify-center px-0" : "gap-3 px-3",
+          active ? "bg-brand-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        )}
+      >
+        <Icon className="size-5 shrink-0" aria-hidden />
+        <span className={collapsed ? "sr-only" : "flex-1 truncate"}>{label}</span>
+        {count > 0 &&
+          (collapsed ? (
+            <span className={cn("absolute end-1 top-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4", active ? "bg-white text-brand-800" : "bg-brand-700 text-white")}>
+              {count > 99 ? "99+" : count}
+            </span>
+          ) : (
+            <span className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>{count}</span>
+          ))}
+      </Link>
+    </li>
+  );
+}
+
+/**
+ * The staff area's frame on large screens: the sidebar (expanded or collapsed, remembered in a cookie so the first
+ * render is already right) and the page beside it, offset by the same width.
+ */
+export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header: React.ReactNode; compactHeader: React.ReactNode; footer: React.ReactNode; compactFooter: React.ReactNode; children: React.ReactNode }) {
   const { d } = useI18n();
+  const [collapsed, setCollapsed] = useState(props.initialCollapsed);
+  const [tip, setTip] = useState<Tip>(null);
+  const width = collapsed ? SIDEBAR_WIDTH.collapsed : SIDEBAR_WIDTH.expanded;
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    setTip(null);
+    try {
+      document.cookie = `${SIDEBAR_COOKIE}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+    } catch {}
+  };
   return (
-    <aside className="fixed inset-y-0 start-0 z-30 hidden w-60 flex-col border-e border-slate-200 bg-white lg:flex">
-      <div className="flex h-16 items-center px-5">{props.header}</div>
-      <nav aria-label={d.nav.staffMenu} className="flex-1 overflow-y-auto px-3 py-2">
-        <NavList {...props} />
-      </nav>
-      <div className="border-t border-slate-100 p-3">{props.footer}</div>
-    </aside>
+    <div style={{ "--nav-w": `${width}px` } as React.CSSProperties}>
+      <aside
+        className="fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col border-e border-slate-200 bg-white motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
+        data-collapsed={collapsed ? "true" : "false"}
+      >
+        <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>{collapsed ? props.compactHeader : props.header}</div>
+        <nav id="admin-sidebar-nav" aria-label={d.nav.staffMenu} className={cn("flex-1 overflow-y-auto py-2", collapsed ? "px-3" : "px-3")} onScroll={() => setTip(null)}>
+          <NavLinks role={props.role} badges={props.badges} devMailbox={props.devMailbox} collapsed={collapsed} onTip={setTip} />
+        </nav>
+        <div className="shrink-0 border-t border-slate-100 p-3">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!collapsed}
+            aria-controls="admin-sidebar-nav"
+            className={cn("mb-2 flex h-9 w-full items-center gap-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900", collapsed ? "justify-center" : "px-3")}
+          >
+            <ChevronsLeft className={cn("size-4.5 shrink-0 motion-safe:transition-transform", collapsed ? "ltr:rotate-180" : "rtl:rotate-180")} aria-hidden />
+            <span className={collapsed ? "sr-only" : ""}>{collapsed ? d.nav.expand : d.nav.collapse}</span>
+          </button>
+          {collapsed ? props.compactFooter : props.footer}
+        </div>
+      </aside>
+      {collapsed && tip && (
+        <div
+          role="presentation"
+          aria-hidden
+          className="pointer-events-none fixed z-40 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white shadow-lg lg:block"
+          style={{ top: tip.top, insetInlineStart: SIDEBAR_WIDTH.collapsed + 6 }}
+        >
+          {tip.label}
+        </div>
+      )}
+      <div className="motion-safe:transition-[padding] motion-safe:duration-200 lg:ps-(--nav-w)">{props.children}</div>
+    </div>
   );
 }
 
-export function AdminMobileMenu(props: { role: UserRole; inboxCount: number; devMailbox: boolean; header: React.ReactNode; footer: React.ReactNode }) {
+/** The menu on small screens: a native modal dialog from the start edge (the right in Hebrew). */
+export function AdminMobileMenu(props: NavProps & { header: React.ReactNode; footer: React.ReactNode }) {
   const { d } = useI18n();
   const [open, setOpen] = useState(false);
   const path = usePathname();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => setOpen(false), [path]);
   // A native modal <dialog>: the browser moves focus into it, keeps Tab inside, makes the page behind inert,
-  // closes it on Esc and returns focus to the menu button.
+  // closes it on Esc and returns focus to the menu button. The page behind doesn't scroll while it's open.
   useEffect(() => {
     const dlg = ref.current;
     if (!dlg) return;
     if (open && !dlg.open) dlg.showModal();
     if (!open && dlg.open) dlg.close();
+    document.documentElement.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.documentElement.style.overflow = "";
+    };
   }, [open]);
   return (
     <div className="lg:hidden">
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex size-9 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100"
+        className="inline-flex size-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100"
         aria-label={d.nav.menu}
         aria-expanded={open}
         aria-controls="admin-mobile-menu"
@@ -112,12 +181,12 @@ export function AdminMobileMenu(props: { role: UserRole; inboxCount: number; dev
           <div className="flex h-full flex-col">
             <div className="flex h-16 items-center justify-between px-4">
               {props.header}
-              <button onClick={() => setOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" aria-label={d.common.close}>
+              <button onClick={() => setOpen(false)} className="inline-flex size-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label={d.common.close}>
                 <X className="size-5" aria-hidden />
               </button>
             </div>
             <nav aria-label={d.nav.staffMenu} className="flex-1 overflow-y-auto px-3 py-2">
-              <NavList {...props} onNavigate={() => setOpen(false)} />
+              <NavLinks role={props.role} badges={props.badges} devMailbox={props.devMailbox} onNavigate={() => setOpen(false)} />
             </nav>
             <div className="border-t border-slate-100 p-3">{props.footer}</div>
           </div>

@@ -84,7 +84,7 @@ const isoDay = (n) => {
     // ---- 2. The queue's views ----
     await manager.goto(`${BASE}/admin/queue?q=${encodeURIComponent(tag)}`);
     await settle(manager);
-    await manager.getByRole("heading", { name: "תור עבודה", level: 1 }).waitFor();
+    await manager.getByRole("heading", { name: "לטיפול שלי", level: 1 }).waitFor();
     const rows = manager.locator("tbody tr");
     assert.equal(await rows.count(), 3, "my three new cases");
     // The late one comes first.

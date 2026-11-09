@@ -2,7 +2,6 @@
 
 import { RelativeTime } from "@/components/ui/relative-time";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Bot } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
@@ -30,7 +29,6 @@ export type CaseRow = {
 export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant: "inbox" | "cases"; empty: string }) {
   const { d, locale } = useI18n();
   const categories = useCategories();
-  const router = useRouter();
   if (rows.length === 0) return <EmptyState title={empty} />;
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -50,10 +48,15 @@ export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant:
         </thead>
         <tbody className="divide-y divide-slate-100">
           {rows.map((r) => (
-            <tr key={r.id} className="cursor-pointer hover:bg-brand-50/40" onClick={() => router.push(`/admin/cases/${r.id}`)}>
+            // The case link covers the whole row (a real link: keyboard, middle-click and "open in new tab" all work).
+            <tr key={r.id} className="relative hover:bg-brand-50/40">
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-600" dir="ltr">
-                <Link href={`/admin/cases/${r.id}`} className="hover:text-brand-700 hover:underline" onClick={(e) => e.stopPropagation()}>
+                <Link
+                  href={`/admin/cases/${r.id}`}
+                  className="outline-none after:absolute after:inset-0 after:content-[''] hover:text-brand-700 hover:underline focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-brand-600"
+                >
                   {r.number}
+                  <span className="sr-only"> — {r.title}</span>
                 </Link>
               </td>
               <td className="bidi-auto px-4 py-3 text-slate-800">{r.customerName}</td>
