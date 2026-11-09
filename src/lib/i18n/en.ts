@@ -7,6 +7,7 @@ export const en: typeof he = {
     description: "From a free-text request to a completed service — one clear, smart and transparent process.",
   },
   common: {
+    pickDate: "Choose a date",
     appName: "Case Manager",
     save: "Save",
     saving: "Saving…",

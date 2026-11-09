@@ -109,7 +109,7 @@ async function axe(page, label) {
     const next = new Date();
     next.setDate(next.getDate() + ((7 - next.getDay()) % 7 || 7));
     const iso = next.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
-    await mdlg.getByLabel("תאריך").fill(iso);
+    await mdlg.getByLabel("תאריך", { exact: true }).fill(iso);
     await mdlg.getByLabel("שעה").fill("18:30");
     await axe(manager, "move meeting dialog");
     await mdlg.locator("button:has-text('שינוי מועד')").click();

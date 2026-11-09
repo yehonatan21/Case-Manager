@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useCallback, useEffect, useState } from "react";
 import { Play, Plus, Square, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
@@ -124,7 +125,7 @@ export function TimePanel({ caseId, currentUserId, canEdit, currency }: { caseId
           <div className="flex flex-wrap items-end gap-2">
             <Field label={t.hours} className="w-20">{(p) => <Input {...p} type="number" min={0} max={24} dir="ltr" value={entry.hours} onChange={(e) => setEntry({ ...entry, hours: e.target.value })} />}</Field>
             <Field label={t.minutes} className="w-20">{(p) => <Input {...p} type="number" min={0} max={59} dir="ltr" value={entry.minutes} onChange={(e) => setEntry({ ...entry, minutes: e.target.value })} />}</Field>
-            <Field label={t.date}>{(p) => <Input {...p} type="date" dir="ltr" value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} />}</Field>
+            <Field label={t.date}>{(p) => <DateInput {...p} value={entry.date} onChange={(date) => setEntry({ ...entry, date })} />}</Field>
             <Field label={t.note} className="min-w-40 flex-1">{(p) => <Input {...p} value={entry.note} maxLength={500} onChange={(e) => setEntry({ ...entry, note: e.target.value })} />}</Field>
             <Checkbox label={t.billable} checked={entry.billable} onChange={(e) => setEntry({ ...entry, billable: e.target.checked })} className="mb-2" />
             <Button
@@ -213,7 +214,7 @@ export function TimePanel({ caseId, currentUserId, canEdit, currency }: { caseId
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <Field label={t.expenseDesc} className="min-w-48 flex-1">{(p) => <Input {...p} value={expense.description} maxLength={300} onChange={(e) => setExpense({ ...expense, description: e.target.value })} />}</Field>
           <Field label={t.amount} className="w-28">{(p) => <Input {...p} type="number" min={0} step="0.01" dir="ltr" value={expense.amount} onChange={(e) => setExpense({ ...expense, amount: e.target.value })} />}</Field>
-          <Field label={t.date}>{(p) => <Input {...p} type="date" dir="ltr" value={expense.date} onChange={(e) => setExpense({ ...expense, date: e.target.value })} />}</Field>
+          <Field label={t.date}>{(p) => <DateInput {...p} value={expense.date} onChange={(date) => setExpense({ ...expense, date })} />}</Field>
           <Button
             variant="outline"
             loading={busy === "expense"}

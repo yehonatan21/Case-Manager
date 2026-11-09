@@ -11,6 +11,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 - A security policy (`SECURITY.md`) on how to report a problem privately (GitHub's private vulnerability reporting, or the owner directly), and weekly Dependabot updates into `dev`.
 
 ### Changed
+- **Dates are DD/MM/YYYY everywhere**, in Hebrew and English. Date fields always show and accept DD/MM/YYYY (the browser's own date field followed the browser's language, so a US-English browser showed MM/DD/YYYY), with a button for the calendar picker.
 - The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.
 
 ## [1.1.0] — 2026-11-08

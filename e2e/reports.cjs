@@ -73,8 +73,10 @@ async function axe(page, label) {
     await admin.getByRole("heading", { name: "הכנסות לפי חודש" }).waitFor();
     // A custom range.
     await admin.selectOption("select[name=preset]", "");
-    await admin.fill("input[name=from]", "2021-01-01");
-    await admin.fill("input[name=to]", "2021-01-31");
+    // The date fields read DD/MM/YYYY; the form sends YYYY-MM-DD.
+    await admin.locator("input[name=from]").locator("xpath=..").locator("input[type=text]").fill("01/01/2021");
+    await admin.locator("input[name=to]").locator("xpath=..").locator("input[type=text]").fill("31/01/2021");
+    assert.equal(await admin.locator("input[name=from]").inputValue(), "2021-01-01");
     await admin.click("button:has-text('הצגה')");
     await settle(admin);
     await admin.getByText("לא נפתחו פניות בתקופה הזו.").first().waitFor();
