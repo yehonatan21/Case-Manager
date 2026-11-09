@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/i18n/format";
@@ -18,7 +18,7 @@ import type { AppSettings } from "@/lib/services/settings";
 import type { ServiceTemplateDocument, ServiceTemplateStage, ServiceTemplateTask, UserRole } from "@/lib/db/schema";
 import { formatWorkPlan, parseWorkPlan } from "@/lib/work-plan";
 
-type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled"; hourlyCostCents?: number | null };
+type Staff = { id: string; name: string; email: string; role: UserRole; status: "active" | "invited" | "disabled"; hourlyCostCents?: number | null; twoFactor?: boolean };
 type Template = { id: string; name: string; category: string; description: string; tasks: ServiceTemplateTask[]; stages?: ServiceTemplateStage[]; documents: ServiceTemplateDocument[]; active: boolean };
 type Price = { id: string; code: string; name: string; category: string; unitPriceCents: number; currency: string; active: boolean };
 
@@ -183,6 +183,11 @@ export function SettingsTabs({
               <Field label={d.followups.staffDays} hint={d.followups.hint}>
                 {(p) => <Input {...p} type="number" dir="ltr" min={0} max={60} value={s.quote_followup_staff_days} onChange={(e) => setS({ ...s, quote_followup_staff_days: Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))) })} />}
               </Field>
+              <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.twoFactor.securityTitle}</h3>
+              <div className="sm:col-span-2">
+                <Checkbox label={d.twoFactor.requireLabel} checked={s.require_staff_2fa} onChange={(e) => setS({ ...s, require_staff_2fa: e.target.checked })} />
+                <p className="ms-6 mt-1 text-xs text-slate-600">{d.twoFactor.requireHint}</p>
+              </div>
               <h3 className="sm:col-span-2 mt-2 border-t border-slate-100 pt-4 text-sm font-semibold">{d.settingsPage.a11yTitle}</h3>
               <p className="sm:col-span-2 -mt-2 text-xs text-slate-500">
                 {d.settingsPage.a11yHint}{" "}
@@ -267,6 +272,7 @@ export function SettingsTabs({
                   <th className="px-4 py-3 text-start font-medium">{d.common.email}</th>
                   <th className="px-4 py-3 text-start font-medium">{d.admin.col.role}</th>
                   <th className="px-4 py-3 text-start font-medium">{d.common.status}</th>
+                  <th className="px-4 py-3 text-start font-medium">{d.twoFactor.usersColumn}</th>
                   <th className="px-4 py-3 text-start font-medium">
                     <span title={d.time.hourlyCostHint}>{d.time.hourlyCost}</span>
                   </th>
@@ -295,6 +301,25 @@ export function SettingsTabs({
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={u.status === "active" ? "success" : u.status === "invited" ? "info" : "muted"}>{d.userStatus[u.status]}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Badge tone={u.twoFactor ? "success" : "muted"}>{u.twoFactor ? d.twoFactor.statusOn : d.twoFactor.statusOff}</Badge>
+                        {u.twoFactor && u.id !== currentUserId && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`${d.twoFactor.reset}: ${u.name}`}
+                            title={d.twoFactor.reset}
+                            loading={busy === `2fa-${u.id}`}
+                            onClick={() => {
+                              if (window.confirm(fmt(d.twoFactor.resetConfirm, { name: u.name }))) void call(`2fa-${u.id}`, () => api(`/api/admin/users/${u.id}/2fa`, { method: "DELETE" }));
+                            }}
+                          >
+                            <RotateCcw className="size-3.5" aria-hidden />
+                          </Button>
+                        )}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <Input

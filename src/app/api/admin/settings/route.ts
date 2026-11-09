@@ -24,6 +24,7 @@ export const PATCH = route(async (req) => {
       meeting_office_address: z.string().max(300).optional(),
       quote_followup_client_days: z.number().int().min(0).max(60).optional(),
       quote_followup_staff_days: z.number().int().min(0).max(60).optional(),
+      require_staff_2fa: z.boolean().optional(),
       accessibility_contact: z
         .object({ name: z.string().trim().max(120), phone: z.string().trim().max(60), email: z.string().trim().max(200), response_days: z.number().int().min(0).max(60) })
         .optional(),

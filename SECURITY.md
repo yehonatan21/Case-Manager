@@ -19,6 +19,8 @@ Only the latest release (the `main` branch, deployed to production) gets securit
 ## How the app protects data
 
 - Sign-in with single-use codes stored only as hashes, or Google; rate limits on sign-in and AI use.
+- Two-step sign-in (authenticator app) for staff, which an admin can require for the whole team.
+- An activity log of who did what, and error tracking that tells the admins about new errors.
 - Same-origin checks on every change, role-based permissions on every case, and an audit log.
 - Stored files and saved integration keys are encrypted; payment and messaging webhooks are verified.
 - Personal details are removed from text before it's sent to the AI provider.

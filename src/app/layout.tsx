@@ -6,6 +6,7 @@ import { I18nProvider } from "@/lib/i18n/client";
 import { ToastProvider } from "@/components/ui/toast";
 import { env } from "@/lib/env";
 import { WebAnalytics } from "@/components/app/web-analytics";
+import { ErrorReporter } from "@/components/app/error-reporter";
 import { CategoriesProvider } from "@/components/app/categories";
 import { getDb } from "@/lib/db";
 import { listServiceCategories } from "@/lib/services/categories";
@@ -45,6 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ToastProvider>{children}</ToastProvider>
           </CategoriesProvider>
         </I18nProvider>
+        <ErrorReporter />
         {env.isVercel && <WebAnalytics />}
       </body>
     </html>
