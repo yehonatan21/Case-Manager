@@ -12,6 +12,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ### Changed
 - **Dates are DD/MM/YYYY everywhere**, in Hebrew and English. Date fields always show and accept DD/MM/YYYY (the browser's own date field followed the browser's language, so a US-English browser showed MM/DD/YYYY), with a button for the calendar picker.
+- **Times are 24-hour HH:MM** in every time field (event times, staff booking, working hours), whatever the browser's language; the colon is added while typing and the arrow keys change the time.
 - The unused "Deploy to Vercel" CI job is removed; Vercel's Git integration deploys, and every preview uses the dev settings.
 
 ## [1.1.0] — 2026-11-08
