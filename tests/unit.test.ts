@@ -209,3 +209,25 @@ describe("times are 24-hour HH:MM", () => {
     expect(parseTime("12:6")).toBe("");
   });
 });
+
+describe("the staff menu", () => {
+  it("groups items in order, shows each role only its pages, and the dev mailbox only when on", async () => {
+    const { navForRole, isActive, NAV_ITEMS } = await import("@/config/admin-navigation");
+    const admin = navForRole("admin", { devMailbox: false });
+    expect(admin.map((g) => g.group)).toEqual(["workspace", "operations", "business", "system"]);
+    expect(admin.flatMap((g) => g.items.map((i) => i.key))).toEqual(["dashboard", "queue", "inbox", "quotes", "cases", "tasks", "conversations", "meetings", "customers", "payments", "reports", "settings", "activity"]);
+    expect(navForRole("admin", { devMailbox: true }).at(-1)!.items.map((i) => i.key)).toContain("mailbox");
+    // Staff see no business or system groups at all.
+    const staff = navForRole("staff", { devMailbox: true });
+    expect(staff.map((g) => g.group)).toEqual(["workspace", "operations"]);
+    expect(staff.flatMap((g) => g.items.map((i) => i.key))).not.toContain("inbox");
+    const finance = navForRole("finance", { devMailbox: false }).flatMap((g) => g.items.map((i) => i.key));
+    expect(finance).toEqual(["dashboard", "quotes", "cases", "payments", "reports"]);
+    // Every route appears once.
+    expect(new Set(NAV_ITEMS.map((i) => i.href)).size).toBe(NAV_ITEMS.length);
+    const dash = NAV_ITEMS.find((i) => i.key === "dashboard")!;
+    const cases = NAV_ITEMS.find((i) => i.key === "cases")!;
+    expect([isActive(dash, "/admin"), isActive(dash, "/admin/cases")]).toEqual([true, false]);
+    expect([isActive(cases, "/admin/cases"), isActive(cases, "/admin/cases/123"), isActive(cases, "/admin/casesx")]).toEqual([true, true, false]);
+  });
+});

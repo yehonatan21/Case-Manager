@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export function Logo({ href = "/", className, name }: { href?: string; className?: string; name: string }) {
+export function Logo({ href = "/", className, name, compact = false }: { href?: string; className?: string; name: string; compact?: boolean }) {
   return (
     <Link href={href} className={cn("inline-flex items-center gap-2 font-bold text-slate-900", className)}>
       <span aria-hidden className="flex size-8 items-center justify-center rounded-lg bg-brand-700 text-white shadow-sm">
@@ -10,7 +10,7 @@ export function Logo({ href = "/", className, name }: { href?: string; className
           <circle cx="18" cy="16" r="3" />
         </svg>
       </span>
-      <span className="text-[15px] tracking-tight">{name}</span>
+      <span className={compact ? "sr-only" : "text-[15px] tracking-tight"}>{name}</span>
     </Link>
   );
 }
