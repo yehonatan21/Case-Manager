@@ -12,6 +12,7 @@ import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { QuoteStatusBadge } from "@/components/app/status";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Pager } from "@/components/ui/pager";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -48,7 +49,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
       {rows.length === 0 ? (
         <EmptyState title={filtered ? t.noMatch : d.admin.quotesEmpty} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <TableFrame>
           <table className="w-full min-w-[48rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
               <tr>
@@ -85,7 +87,31 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
               ))}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
+        <CardList>
+          {rows.map((r) => (
+            <RecordCard
+              key={r.quote.id}
+              href={`/admin/quotes/${r.quote.id}`}
+              eyebrow={
+                <>
+                  <span className="font-mono" dir="ltr">
+                    {r.caseNumber}
+                  </span>{" "}
+                  · <span className="bidi-auto">{r.customerName}</span>
+                </>
+              }
+              title={r.quote.serviceName || "—"}
+              status={<QuoteStatusBadge status={r.quote.status} expired={isQuoteExpired(r.quote)} />}
+              details={[
+                { label: d.admin.col.total, value: <span className="tabular-nums">{formatMoney(r.quote.totalCents, r.quote.currency, locale)}</span> },
+                { label: d.admin.col.updated, value: formatDate(r.quote.updatedAt, locale) },
+                { label: d.admin.col.version, value: fmt(d.quote.version, { n: r.quote.version }) },
+              ]}
+            />
+          ))}
+        </CardList>
+        </>
       )}
       <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/quotes" params={values} />
     </>

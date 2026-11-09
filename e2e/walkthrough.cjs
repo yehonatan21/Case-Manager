@@ -103,9 +103,10 @@ async function logout(ctx) {
   await page.goto(BASE + "/admin"); await page.waitForTimeout(1200);
   await page.screenshot({ path: `${OUT}/06-admin-dashboard-he.png`, fullPage: true });
   await page.goto(BASE + "/admin/inbox"); await page.waitForTimeout(1200);
-  await page.locator(`text=${caseNumber}`).waitFor();
+  // The list is a table on a wide screen and cards on a phone; use the one on screen.
+  await page.locator(`text=${caseNumber} >> visible=true`).waitFor();
   await page.screenshot({ path: `${OUT}/07-admin-inbox-he.png`, fullPage: true });
-  await page.click(`text=${caseNumber}`);
+  await page.click(`text=${caseNumber} >> visible=true`);
   await page.waitForURL(/\/admin\/cases\//);
   const adminCaseUrl = page.url().split("?")[0];
   await page.locator("text=/מה הלקוח מבקש|יצירת סיכום/").first().waitFor({ timeout: 20000 });

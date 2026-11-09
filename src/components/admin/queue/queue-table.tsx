@@ -1,5 +1,6 @@
 "use client";
 
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 import { DateInput } from "@/components/ui/date-input";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -139,7 +140,7 @@ export function QueueTable({ rows, today, canBulk, staff }: { rows: QueueItem[];
           </span>
         </div>
       )}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full min-w-[60rem] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
             <tr>
@@ -209,7 +210,43 @@ export function QueueTable({ rows, today, canBulk, staff }: { rows: QueueItem[];
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
+      <CardList>
+        {rows.map((r) => (
+          <RecordCard
+            key={r.id}
+            href={`/admin/cases/${r.id}`}
+            eyebrow={
+              <>
+                <span dir="ltr" className="font-mono">
+                  {r.number}
+                </span>{" "}
+                · <span className="bidi-auto">{r.customerName}</span>
+              </>
+            }
+            title={r.title}
+            status={<CaseStatusBadge status={r.status} />}
+            details={[
+              { label: t.col.due, value: <DueBadge due={r.dueDate} today={today} /> },
+              { label: t.col.urgency, value: <UrgencyBadge urgency={r.urgency} /> },
+              {
+                label: t.col.tasks,
+                value: r.overdueTasks > 0 ? <Badge tone="danger">{fmt(t.overdueTasks, { n: r.overdueTasks })}</Badge> : r.nextTaskDue ? fmt(t.nextTask, { date: formatDate(r.nextTaskDue, locale) }) : "—",
+              },
+              { label: t.col.assignee, value: r.assigneeName ?? d.common.unassigned },
+              r.waitingOnThirdParty && { label: t.col.waiting, value: r.waitingNote || d.queue.views.waiting_third_party, wide: true },
+            ]}
+            footer={
+              canBulk ? (
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" className="size-5 accent-brand-700" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
+                  {fmt(t.selectCase, { number: r.number })}
+                </label>
+              ) : undefined
+            }
+          />
+        ))}
+      </CardList>
     </div>
   );
 }

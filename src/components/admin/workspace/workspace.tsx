@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, FilePlus2, Megaphone } from "lucide-react";
@@ -39,6 +39,7 @@ export function CaseWorkspace({
   currentRole,
   aiMock,
   initialTab,
+  startNew,
   maxMb,
   meetings = [],
   meetingDurations = [30, 60],
@@ -51,6 +52,8 @@ export function CaseWorkspace({
   currentRole?: string;
   aiMock: boolean;
   initialTab?: string;
+  /** Opened from Quick Create: have the new-task field or the booking form ready. */
+  startNew?: "task" | "meeting";
   maxMb: number;
   meetings?: MeetingItem[];
   meetingDurations?: number[];
@@ -69,6 +72,13 @@ export function CaseWorkspace({
     ...(a.edit || currentRole === "finance" ? (["time"] as WorkTab[]) : []),
     "timeline",
   ];
+  // "?new=" is a one-time instruction from Quick Create; drop it so a reload doesn't open the form again.
+  useEffect(() => {
+    if (!startNew) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("new");
+    window.history.replaceState(null, "", url.toString());
+  }, [startNew]);
   const [tab, setTab] = useState<WorkTab>(available.includes(initialTab as WorkTab) ? (initialTab as WorkTab) : available[0]!);
   const [pane, setPane] = useState<Pane>("work");
   const [draft, setDraft] = useState<{ text: string; runId: string } | null>(null);
@@ -216,7 +226,7 @@ export function CaseWorkspace({
                   <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="internal_note" canPost={a.internal} staffComposer />
                 </TabPanel>
                 <TabPanel id="tasks" active={tab === "tasks"}>
-                  <TasksPanel caseId={c.id} tasks={c.tasks} milestones={c.milestones} today={c.today} staff={staff} templates={templates} canEdit={a.edit} />
+                  <TasksPanel caseId={c.id} tasks={c.tasks} milestones={c.milestones} today={c.today} staff={staff} templates={templates} canEdit={a.edit} focusNew={startNew === "task"} />
                 </TabPanel>
                 <TabPanel id="quotes" active={tab === "quotes"} className="space-y-4">
                   {a.manageQuotes && !c.quotes.some((q) => q.status === "draft") && !["active", "awaiting_client", "completed", "closed", "cancelled"].includes(c.status) && (
@@ -284,7 +294,7 @@ export function CaseWorkspace({
                   />
                 </TabPanel>
                 <TabPanel id="meetings" active={tab === "meetings"}>
-                  <MeetingsPanel caseId={c.id} mode="staff" meetings={meetings} durations={meetingDurations} canBook={a.edit} staff={staff} currentUserId={currentUserId} />
+                  <MeetingsPanel caseId={c.id} mode="staff" meetings={meetings} durations={meetingDurations} canBook={a.edit} staff={staff} currentUserId={currentUserId} openBooking={startNew === "meeting"} />
                 </TabPanel>
                 {available.includes("time") && (
                   <TabPanel id="time" active={tab === "time"}>

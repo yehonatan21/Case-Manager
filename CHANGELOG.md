@@ -5,6 +5,8 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Quick Create** (**+ New** in the staff header): a new client request, a new task, a client meeting or a calendar event from any page, opening the existing forms. A task or meeting asks which case first, then opens that case on the right tab with the form ready. Only the actions the role may do; works by keyboard and on a phone.
+- **Staff lists as cards on phones**: cases, incoming requests, My Work, quotes, payments, tasks, clients and the activity log show cards instead of wide tables below tablet width — no sideways scrolling, and tapping a card opens the record.
 - **Search, filters and pages for Quotes, Payments and Tasks**, with one shared filter bar: the filters live in the address (reload, bookmark, share, Back), each list shows how many results match, and "Clear filters" keeps the tab you're on. Quotes: case number, client or service; status; dates. Payments: status, provider, dates, amount range, sort by date or amount. Tasks: assignee, priority, status, due dates, plus the existing My tasks / All tasks / Overdue tabs. A priority column on Tasks.
 - **Menu counters for what waits on you**: My Work (your late cases), Tasks (your overdue tasks) and Conversations (waiting for an answer), beside Incoming requests. Only for records you may see, never a zero, and read out as what they count.
 - **The Settings tab is kept in the address** (`?tab=users`): a reload or a shared link opens the same tab, Back returns to the previous one, and an unknown tab shows General.

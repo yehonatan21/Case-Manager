@@ -9,6 +9,7 @@ import { listAssignableStaff } from "@/lib/services/users";
 import { taskStatusEnum } from "@/lib/db/schema";
 import { FilterBar, type FilterField } from "@/components/ui/filter-bar";
 import { Pager } from "@/components/ui/pager";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { TaskStatusBadge } from "@/components/app/status";
 import { cn } from "@/lib/utils";
@@ -79,7 +80,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       {rows.length === 0 ? (
         <EmptyState title={filtered ? t.noMatch : d.admin.tasksEmpty} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <TableFrame>
           <table className="w-full min-w-[50rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
               <tr>
@@ -116,7 +118,35 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               })}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
+        <CardList>
+          {rows.map((r) => {
+            const open = r.task.status !== "done" && r.task.status !== "cancelled";
+            const overdue = open && r.task.dueDate && r.task.dueDate < today;
+            return (
+              <RecordCard
+                key={r.task.id}
+                href={`/admin/cases/${r.task.caseId}?tab=tasks`}
+                eyebrow={
+                  <>
+                    <span className="font-mono" dir="ltr">
+                      {r.caseNumber}
+                    </span>{" "}
+                    · <span className="bidi-auto">{r.caseTitle}</span>
+                  </>
+                }
+                title={r.task.title}
+                status={<TaskStatusBadge status={r.task.status} />}
+                details={[
+                  { label: d.admin.col.due, value: <span className={overdue ? "font-semibold text-red-700" : undefined}>{r.task.dueDate ? formatDate(r.task.dueDate, locale) : "—"}</span> },
+                  { label: t.priority, value: d.priority[r.task.priority] },
+                  { label: d.admin.col.assignee, value: r.assigneeName ?? d.common.unassigned, wide: true },
+                ]}
+              />
+            );
+          })}
+        </CardList>
+        </>
       )}
       <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/tasks" params={{ ...keep, ...values }} />
     </>

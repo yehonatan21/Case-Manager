@@ -9,6 +9,7 @@ import { CaseStatusBadge, UrgencyBadge } from "@/components/app/status";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/misc";
 import { useCategories } from "@/components/app/categories";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 import type { CaseStatus, Urgency } from "@/lib/db/schema";
 
 export type CaseRow = {
@@ -31,7 +32,8 @@ export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant:
   const categories = useCategories();
   if (rows.length === 0) return <EmptyState title={empty} />;
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <>
+    <TableFrame>
       <table className="w-full min-w-[56rem] text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
           <tr>
@@ -80,6 +82,29 @@ export function CasesTable({ rows, variant, empty }: { rows: CaseRow[]; variant:
           ))}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
+    <CardList>
+      {rows.map((r) => (
+        <RecordCard
+          key={r.id}
+          href={`/admin/cases/${r.id}`}
+          eyebrow={
+            <span className="font-mono" dir="ltr">
+              {r.number}
+            </span>
+          }
+          title={r.title}
+          status={<CaseStatusBadge status={r.status} />}
+          details={[
+            { label: d.admin.col.customer, value: <span className="bidi-auto">{r.customerName}</span> },
+            { label: d.admin.col.urgency, value: <UrgencyBadge urgency={r.urgency} /> },
+            { label: variant === "inbox" ? d.admin.col.received : d.admin.col.updated, value: <RelativeTime value={variant === "inbox" ? r.createdAt : r.updatedAt} /> },
+            { label: d.admin.col.assignee, value: r.assigneeName ?? d.common.unassigned },
+            variant === "inbox" && r.missingCount > 0 && { label: d.admin.col.missing, value: <Badge tone="warning">{fmt(d.admin.missingCount, { n: r.missingCount })}</Badge>, wide: true },
+          ]}
+        />
+      ))}
+    </CardList>
+    </>
   );
 }

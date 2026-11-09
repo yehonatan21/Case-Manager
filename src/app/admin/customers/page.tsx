@@ -12,6 +12,7 @@ import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Input, Select } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Pager } from "@/components/ui/pager";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -50,7 +51,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       {list.rows.length === 0 ? (
         <EmptyState title={filtered ? d.admin.customersNoMatch : d.admin.customersEmpty} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <TableFrame>
           <table className="w-full min-w-[44rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
               <tr>
@@ -85,7 +87,25 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               ))}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
+        <CardList>
+          {list.rows.map((r) => (
+            <RecordCard
+              key={r.id}
+              href={`/admin/customers/${r.id}`}
+              title={r.name}
+              eyebrow={r.organization ? <span className="bidi-auto">{r.organization}</span> : undefined}
+              details={[
+                { label: d.common.email, value: <span dir="ltr">{r.email}</span>, wide: true },
+                r.phone && { label: d.common.phone, value: <span dir="ltr">{r.phone}</span> },
+                { label: d.admin.col.type, value: d.customerType[r.type] },
+                { label: d.admin.col.cases, value: <span className="tabular-nums">{r.caseCount}</span> },
+                { label: d.admin.col.joined, value: formatDate(r.createdAt, locale) },
+              ]}
+            />
+          ))}
+        </CardList>
+        </>
       )}
       <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/customers" params={{ q: sp.q, type: sp.type }} />
     </>

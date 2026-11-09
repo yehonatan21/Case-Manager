@@ -2,7 +2,7 @@
 
 import { TimeInput } from "@/components/ui/time-input";
 import { DateInput } from "@/components/ui/date-input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Video } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
@@ -114,10 +114,17 @@ const roundedHour = () => {
 };
 
 /** "New event", on the day shown (or today). */
-export function NewEventButton({ date, google }: { date: string; google: boolean }) {
+export function NewEventButton({ date, google, initialOpen = false }: { date: string; google: boolean; initialOpen?: boolean }) {
   const { d } = useI18n();
   const t = d.meetings.cal;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
+  // "?new=event" (from Quick Create) opens the form once; drop it so a reload doesn't open it again.
+  useEffect(() => {
+    if (!initialOpen) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("new");
+    window.history.replaceState(null, "", url.toString());
+  }, [initialOpen]);
   const [start, end] = roundedHour();
   return (
     <>

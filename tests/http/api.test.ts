@@ -159,6 +159,22 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect((await fetch(BASE + "/admin/cases?status=all", { headers: { Cookie: admin.cookie } })).status).toBe(200);
   });
 
+  describe("Quick Create's case picker (GET /api/admin/cases)", () => {
+    it("needs a staff session; finds open cases the user may work on; finance gets none", async () => {
+      expect((await call("/api/admin/cases?q=CASE")).status).toBe(401);
+      expect((await call("/api/admin/cases?q=CASE", { cookie: (await session("client@example.com")).cookie })).status).toBe(403);
+      const admin = await call("/api/admin/cases?q=", { cookie: (await session("admin@example.com")).cookie });
+      expect(admin.status).toBe(200);
+      const found = admin.json!.data.cases as { id: string; number: string; title: string; customerName: string }[];
+      expect(found.length).toBeGreaterThan(0);
+      expect(found.length).toBeLessThanOrEqual(8);
+      expect(Object.keys(found[0]!).sort()).toEqual(["customerName", "id", "number", "title"]);
+      const one = await call(`/api/admin/cases?q=${encodeURIComponent(found[0]!.number)}`, { cookie: (await session("admin@example.com")).cookie });
+      expect((one.json!.data.cases as { number: string }[]).every((c) => c.number === found[0]!.number)).toBe(true);
+      expect((await call("/api/admin/cases?q=", { cookie: (await session("finance@example.com")).cookie })).json!.data.cases).toEqual([]);
+    });
+  });
+
   describe("opening a request for a client (POST /api/admin/cases)", () => {
     const newClient = () => ({ email: `phone-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`, name: "Phone Client", customerType: "private", locale: "he" });
     const request = { title: "From a call", description: "Details", serviceCategory: "other", urgency: "normal" };
