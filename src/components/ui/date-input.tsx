@@ -73,6 +73,7 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
 
   return (
     <span className={cn("relative inline-flex w-full min-w-36 items-center", className)}>
+      {/* The date always reads left to right, so the button sits on the right on Hebrew pages too. */}
       <input
         {...rest}
         type="text"
@@ -93,7 +94,7 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
           if (parsed) setText(isoToDisplay(parsed));
           rest.onBlur?.(e);
         }}
-        className={cn(fieldBase, "h-10 pe-10 text-start")}
+        className={cn(fieldBase, "h-10 pl-3 pr-10 text-left")}
       />
       {name && <input type="hidden" name={name} value={iso} />}
       <button
@@ -110,7 +111,7 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
             p.focus();
           }
         }}
-        className="absolute end-1 grid size-8 place-items-center rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        className="absolute right-1 grid size-8 place-items-center rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-50"
       >
         <CalendarDays className="size-4" aria-hidden />
       </button>
@@ -122,7 +123,7 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
         aria-hidden
         min={min}
         max={max}
-        className="pointer-events-none absolute bottom-0 end-0 h-0 w-0 opacity-0"
+        className="pointer-events-none absolute bottom-0 right-0 h-0 w-0 opacity-0"
         onChange={(e) => {
           const next = validIso(e.target.value);
           setText(isoToDisplay(next));
