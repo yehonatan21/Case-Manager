@@ -112,6 +112,8 @@ export const env = {
   /** Graph API base URL (with version). Override only for tests. */
   /** Invoicing service API base URL override (tests). */
   invoiceApiUrl: str("INVOICE_API_URL").replace(/\/+$/, ""),
+  /** Resend's API base URL. Override only for tests. */
+  resendApiUrl: str("RESEND_API_URL", "https://api.resend.com").replace(/\/+$/, ""),
   whatsappApiUrl: str("WHATSAPP_API_URL", "https://graph.facebook.com/v23.0").replace(/\/+$/, ""),
 
   // local disk by default; Vercel Blob when connected; the database when the host has no persistent disk.
@@ -136,6 +138,8 @@ export const env = {
   otpMaxPerEmail: Math.max(1, Number(str("OTP_MAX_PER_EMAIL", "5")) || 5),
   /** Sign-in codes per IP address per 15 minutes. Raise only for test servers. */
   otpMaxPerIp: Math.max(1, Number(str("OTP_MAX_PER_IP", "30")) || 30),
+  /** Code checks per IP per 15 minutes. */
+  otpVerifyMaxPerIp: Math.max(1, Number(str("OTP_VERIFY_MAX_PER_IP", "60")) || 60),
   /** Web Push keys. Optional: without them the app generates a key pair once and stores it encrypted. */
   vapidPublicKey: str("VAPID_PUBLIC_KEY"),
   vapidPrivateKey: str("VAPID_PRIVATE_KEY"),

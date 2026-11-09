@@ -8,7 +8,7 @@ import { hmac, safeEqual } from "../crypto";
 import { rateLimit } from "./rate-limit";
 import { audit } from "./audit";
 import { createCustomerAccount, findUserByEmail, normalizeEmail } from "./users";
-import { sendEmail, renderEmail } from "../email";
+import { emailDelivers, sendEmail, renderEmail } from "../email";
 import { dictionaries } from "../i18n/dictionaries";
 import { fmt, type Locale } from "../i18n/config";
 
@@ -17,9 +17,12 @@ const MAX_ATTEMPTS = 5;
 
 const codeHash = (email: string, code: string) => hmac(`otp:${email}:${code}`);
 
-/** Sign-in codes are shown on screen only in local development or an explicit public demo. */
-export function devCodeVisible() {
-  return env.demoMode || (env.emailProvider === "console" && !env.isProd);
+/**
+ * Sign-in codes are shown on screen only in an explicit public demo, or in local development when no email
+ * service is connected (so the code isn't emailed anywhere).
+ */
+export function devCodeVisible(delivers = env.emailProvider !== "console") {
+  return env.demoMode || (!delivers && !env.isProd);
 }
 
 /** Passwordless sign-in: emails a 6-digit one-time code. Rate limited per email and per IP. */
@@ -55,8 +58,8 @@ export async function requestLoginCode(
     body,
     footer: fmt(d.email.footer, { app: env.appName }),
   });
-  await sendEmail({ to: email, subject, text, html });
-  return { existingUser: !!existing, devCode: devCodeVisible() ? code : undefined };
+  await sendEmail({ to: email, subject, text, html }, db);
+  return { existingUser: !!existing, devCode: devCodeVisible(await emailDelivers(db)) ? code : undefined };
 }
 
 export type SignupInput = {
@@ -78,7 +81,7 @@ export async function verifyLoginCode(
   input: { email: string; code: string; ip: string | null; locale: Locale; signup?: SignupInput | null },
 ): Promise<{ user: User; created: boolean }> {
   const email = normalizeEmail(input.email);
-  if (input.ip) await rateLimit(db, `verify:ip:${input.ip}`, 60, 15 * 60);
+  if (input.ip) await rateLimit(db, `verify:ip:${input.ip}`, env.otpVerifyMaxPerIp, 15 * 60);
 
   const [latest] = await db
     .select()

@@ -1,11 +1,16 @@
 import { env } from "../env";
 import { dirOf, type Locale } from "../i18n/config";
 
+import type { DbOrTx } from "../db";
+import { readEmailConfig, type EmailConfig } from "./config";
+
 /**
- * Resolves the sender. EMAIL_FROM may be "Name <address>" or a bare address; EMAIL_FROM_NAME, when set,
- * replaces the display name. Falls back to the SMTP username as the address and APP_NAME as the name.
+ * Resolves the sender. With an email service connected in Settings → Integrations, its sender is used.
+ * Otherwise EMAIL_FROM may be "Name <address>" or a bare address; EMAIL_FROM_NAME, when set, replaces the
+ * display name. Falls back to the SMTP username as the address and APP_NAME as the name.
  */
-export function senderAddress(): { name: string; address: string } {
+export function senderAddress(cfg?: EmailConfig | null): { name: string; address: string } {
+  if (cfg) return { name: cfg.fromName || env.emailFromName || env.appName, address: cfg.fromAddress };
   const raw = env.emailFrom.trim();
   const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
   let name = m ? m[1]!.trim() : "";
@@ -20,27 +25,63 @@ export function senderAddress(): { name: string; address: string } {
 }
 
 export type EmailMessage = { to: string; subject: string; text: string; html: string };
+type Transport = { sendMail: (m: Record<string, unknown>) => Promise<unknown>; verify?: () => Promise<unknown> };
 
-let transporter: { sendMail: (m: Record<string, unknown>) => Promise<unknown> } | null = null;
+let envTransport: Transport | null = null;
+const appTransports = new Map<string, Transport>();
 
-async function smtp() {
-  if (!transporter) {
+async function smtpTransport(cfg: EmailConfig): Promise<Transport> {
+  const key = JSON.stringify([cfg.host, cfg.port, cfg.secure, cfg.username, cfg.password]);
+  let t = appTransports.get(key);
+  if (!t) {
     const nodemailer = await import("nodemailer");
-    transporter = nodemailer.createTransport(env.smtpUrl);
+    t = nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: !!cfg.secure, auth: cfg.username ? { user: cfg.username, pass: cfg.password } : undefined, connectionTimeout: 15_000 }) as Transport;
+    appTransports.clear();
+    appTransports.set(key, t);
   }
-  return transporter;
+  return t;
 }
 
-/** Sends an email through the configured provider. "console" logs instead of sending (development). */
-export async function sendEmail(msg: EmailMessage): Promise<void> {
+/** Sends one message through a connected service (also used to test a connection before it's saved). */
+export async function sendWithConfig(cfg: EmailConfig, msg: EmailMessage): Promise<void> {
+  const from = senderAddress(cfg);
+  if (cfg.provider === "smtp") {
+    const t = await smtpTransport(cfg);
+    await t.sendMail({ from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+    return;
+  }
+  const res = await fetch(`${env.resendApiUrl}/emails`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: from.name ? `${from.name.replace(/[<>"]/g, "")} <${from.address}>` : from.address, to: [msg.to], subject: msg.subject, text: msg.text, html: msg.html }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`Resend answered ${res.status}: ${(await res.text().catch(() => "")).slice(0, 300)}`);
+}
+
+/**
+ * Sends an email: through the service connected in Settings → Integrations when there is one (pass the
+ * database), else through SMTP_URL, else "console" logs instead of sending (development).
+ */
+export async function sendEmail(msg: EmailMessage, db?: DbOrTx): Promise<void> {
+  const cfg = db ? await readEmailConfig(db) : null;
+  if (cfg) return sendWithConfig(cfg, msg);
   if (env.emailProvider === "smtp" && env.smtpUrl) {
-    const t = await smtp();
-    await t.sendMail({ from: senderAddress(), to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+    if (!envTransport) {
+      const nodemailer = await import("nodemailer");
+      envTransport = nodemailer.createTransport(env.smtpUrl) as Transport;
+    }
+    await envTransport.sendMail({ from: senderAddress(), to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
     return;
   }
   if (!env.isTest) {
     console.log(`\n[email:console] To: ${msg.to}\nSubject: ${msg.subject}\n${msg.text}\n`);
   }
+}
+
+/** Whether emails really leave the server (a connected service or SMTP_URL), not just the console. */
+export async function emailDelivers(db: DbOrTx): Promise<boolean> {
+  return !!(await readEmailConfig(db)) || env.emailProvider !== "console";
 }
 
 function escapeHtml(s: string) {
