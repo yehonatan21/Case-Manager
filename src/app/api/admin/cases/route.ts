@@ -2,7 +2,7 @@ import { z } from "zod";
 import { route, readJson, ok } from "@/lib/api";
 import { getDb } from "@/lib/db";
 import { requireApiStaff } from "@/lib/auth/session";
-import { createCaseForCustomer } from "@/lib/services/cases";
+import { createCaseForCustomer, listStaffCases } from "@/lib/services/cases";
 
 const NewCustomer = z.object({
   email: z.email().max(200),
@@ -34,4 +34,16 @@ export const POST = route(async (req) => {
     number: r.case.number,
     customerCreated: r.customerCreated,
   });
+});
+
+/**
+ * Open cases the user may work on, matching a search (case number, title, client), for Quick Create's case picker
+ * ("New task" / "Client meeting" first ask which case). At most 8; the newest activity first.
+ */
+export const GET = route(async (req) => {
+  const user = await requireApiStaff();
+  if (user.role === "finance") return ok({ cases: [] });
+  const q = new URL(req.url).searchParams.get("q")?.slice(0, 100) ?? "";
+  const rows = await listStaffCases(await getDb(), user, { q, status: "open", limit: 8 });
+  return ok({ cases: rows.map((r) => ({ id: r.id, number: r.number, title: r.title, customerName: r.customerName })) });
 });

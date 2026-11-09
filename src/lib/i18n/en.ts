@@ -78,6 +78,17 @@ export const en: typeof he = {
   },
   navGroups: { workspace: "Workspace", operations: "Operations", business: "Business", system: "System" },
   navBadges: { inbox: "{n} new", queue: "{n} overdue", tasks: "{n} overdue", conversations: "{n} awaiting a reply" },
+  quickCreate: {
+    button: "New",
+    label: "Quick create",
+    items: { request: "New client request", task: "New task", meeting: "Client meeting", event: "Calendar event" },
+    pickForTask: "Which case is the task for?",
+    pickForMeeting: "Which case is the meeting for?",
+    search: "Find a case",
+    searchHint: "Case number, title or client name",
+    noCases: "No open cases match.",
+    failed: "Couldn't load the cases. Try again.",
+  },
   filterBar: {
     label: "Filter the list",
     search: "Search",

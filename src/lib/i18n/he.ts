@@ -77,6 +77,17 @@ export const he = {
   navGroups: { workspace: "סביבת עבודה", operations: "תפעול", business: "ניהול העסק", system: "מערכת" },
   /** What each menu counter means, for screen readers and the collapsed menu's tooltip. */
   navBadges: { inbox: "{n} חדשות", queue: "{n} באיחור", tasks: "{n} באיחור", conversations: "{n} ממתינות לתשובה" },
+  quickCreate: {
+    button: "חדש",
+    label: "יצירה מהירה",
+    items: { request: "בקשה חדשה ללקוח", task: "משימה חדשה", meeting: "פגישה עם לקוח", event: "אירוע ביומן" },
+    pickForTask: "לאיזה תיק להוסיף את המשימה?",
+    pickForMeeting: "לאיזה תיק לקבוע את הפגישה?",
+    search: "חיפוש תיק",
+    searchHint: "מספר תיק, כותרת או שם הלקוח",
+    noCases: "לא נמצאו תיקים פתוחים שתואמים לחיפוש.",
+    failed: "לא הצלחנו לטעון את התיקים. נסו שוב.",
+  },
   filterBar: {
     label: "סינון הרשימה",
     search: "חיפוש",

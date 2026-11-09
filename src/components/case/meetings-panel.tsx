@@ -47,6 +47,7 @@ export function MeetingsPanel({
   canBook,
   staff = [],
   currentUserId,
+  openBooking = false,
 }: {
   caseId: string;
   mode: "client" | "staff";
@@ -56,12 +57,14 @@ export function MeetingsPanel({
   /** Staff: colleagues a meeting can be booked for. */
   staff?: { id: string; name: string }[];
   currentUserId: string;
+  /** Open the booking form straight away (staff, from Quick Create). */
+  openBooking?: boolean;
 }) {
   const { d, locale } = useI18n();
   const t = d.meetings;
   const router = useRouter();
   const toast = useToast();
-  const [dialog, setDialog] = useState<{ kind: "book" } | { kind: "move"; meeting: MeetingItem } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "book" } | { kind: "move"; meeting: MeetingItem } | null>(openBooking && canBook ? { kind: "book" } : null);
   const [busy, setBusy] = useState<string | null>(null);
   const now = Date.now();
   const upcoming = meetings.filter((m) => m.status === "scheduled" && new Date(m.endAt).getTime() > now).sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt));

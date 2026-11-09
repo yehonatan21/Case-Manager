@@ -194,11 +194,14 @@ export function CopilotPane({
                   <dt className="text-xs font-semibold text-brand-800">{d.copilot.next}</dt>
                   <dd className="bidi-auto mt-0.5 font-medium text-brand-900">{summary.recommended_next_step}</dd>
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  <Badge tone="brand" className="me-1">{d.common.aiSuggestion}</Badge>
-                  <RelativeTime value={summary.generated_at} />
-                </p>
               </dl>
+            )}
+            {summary && busy !== "summary" && (
+              // Outside the list: a <dl> may hold only terms and their descriptions.
+              <p className="mt-3 text-[11px] text-slate-500">
+                <Badge tone="brand" className="me-1">{d.common.aiSuggestion}</Badge>
+                <RelativeTime value={summary.generated_at} />
+              </p>
             )}
           </section>
 

@@ -15,9 +15,9 @@ import { getCaseFeedback } from "@/lib/services/feedback";
 import { getSettings } from "@/lib/services/settings";
 import { officeToday } from "@/lib/services/queue";
 
-export default async function CaseWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function CaseWorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; new?: string }> }) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, new: startNew } = await searchParams;
   const user = await requirePageStaff(`/admin/cases/${id}`);
   const { d } = await getDict();
   const db = await getDb();
@@ -34,10 +34,13 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
     <>
       <RealtimeRefresher caseId={id} />
       <CaseWorkspace
+        // A fresh workspace for another case, or when Quick Create opens this one on another tab with a form ready.
+        key={`${id}:${startNew ?? ""}:${startNew ? (tab ?? "") : ""}`}
         currentUserId={user.id}
         currentRole={user.role}
         aiMock={aiIsMock()}
         initialTab={tab}
+        startNew={startNew === "task" || startNew === "meeting" ? startNew : undefined}
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}
         staff={staff}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, documents: t.documents }))}

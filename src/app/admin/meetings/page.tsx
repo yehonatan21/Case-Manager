@@ -27,10 +27,11 @@ export default async function MeetingsPage({
     calendar?: string;
     view?: string;
     date?: string;
+    new?: string;
   }>;
 }) {
   const user = await requirePageStaff("/admin/meetings");
-  const { all, calendar, view, date } = await searchParams;
+  const { all, calendar, view, date, new: startNew } = await searchParams;
   const { d, locale } = await getDict();
   const t = d.meetings;
   const db = await getDb();
@@ -47,7 +48,7 @@ export default async function MeetingsPage({
       <PageHeader title={t.pageTitle} subtitle={t.pageSub} />
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="min-w-0 space-y-8">
-          <CalendarView range={range} items={shown.items} google={shown.google} connected={cal.connected} locale={locale} t={t.cal} all={showAll} />
+          <CalendarView range={range} items={shown.items} google={shown.google} connected={cal.connected} locale={locale} t={t.cal} all={showAll} openNew={startNew === "event"} />
           <section aria-labelledby="upcoming-title" className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 id="upcoming-title" className="text-lg font-semibold">

@@ -21,8 +21,8 @@ type T = Dict["meetings"]["cal"];
 const intl = (l: Locale) => (l === "he" ? "he-IL" : "en-GB");
 const atNoon = (day: string) => new Date(`${day}T12:00:00Z`);
 
-export function CalendarView(props: { range: CalendarRange; items: CalendarItem[]; google: "ok" | "off" | "error"; connected: boolean; locale: Locale; t: T; all: boolean; now?: Date }) {
-  const { range, items, google, connected, locale, t, all } = props;
+export function CalendarView(props: { range: CalendarRange; items: CalendarItem[]; google: "ok" | "off" | "error"; connected: boolean; locale: Locale; t: T; all: boolean; openNew?: boolean; now?: Date }) {
+  const { range, items, google, connected, locale, t, all, openNew = false } = props;
   const now = props.now ?? new Date();
   const today = todayIn(TIME_ZONE, now);
   const href = (mode: CalendarMode, date: string) => `/admin/meetings?${new URLSearchParams({ view: mode, date, ...(all ? { all: "1" } : {}) })}#calendar`;
@@ -56,7 +56,7 @@ export function CalendarView(props: { range: CalendarRange; items: CalendarItem[
           {label}
         </p>
         <div className="ms-auto flex flex-wrap items-center gap-2">
-          <NewEventButton date={range.mode === "day" || !range.days.includes(today) ? range.anchor : today} google={connected} />
+          <NewEventButton date={range.mode === "day" || !range.days.includes(today) ? range.anchor : today} google={connected} initialOpen={openNew} />
           <nav aria-label={t.viewLabel} className="flex rounded-lg border border-slate-300 p-0.5 text-sm">
             {CALENDAR_MODES.map((m) => (
               <Link

@@ -59,3 +59,23 @@ export function isActive(item: Pick<NavItem, "href" | "exact">, path: string): b
 /** The sidebar's two widths (px), shared by the sidebar and the page's offset so they always match. */
 export const SIDEBAR_WIDTH = { expanded: 256, collapsed: 72 } as const;
 export const SIDEBAR_COOKIE = "cm_nav_collapsed";
+
+/**
+ * Quick Create ("+ New" in the staff header): the common things to start from anywhere, each opening the form
+ * that already exists for it. "pickCase" asks which case first (a task or a client meeting belongs to a case),
+ * then opens that case on the right tab with the form ready.
+ */
+export type QuickCreateKey = "request" | "task" | "meeting" | "event";
+export type QuickCreateItem = { key: QuickCreateKey; roles: UserRole[] } & ({ href: string } | { pickCase: { tab: "tasks" | "meetings"; intent: "task" | "meeting" } });
+
+export const QUICK_CREATE: QuickCreateItem[] = [
+  { key: "request", roles: ["admin", "case_manager"], href: "/admin/cases/new" },
+  { key: "task", roles: ["admin", "case_manager", "staff"], pickCase: { tab: "tasks", intent: "task" } },
+  { key: "meeting", roles: ["admin", "case_manager", "staff"], pickCase: { tab: "meetings", intent: "meeting" } },
+  { key: "event", roles: ["admin", "case_manager", "staff"], href: "/admin/meetings?new=event" },
+];
+
+export const quickCreateFor = (role: UserRole) => QUICK_CREATE.filter((i) => i.roles.includes(role));
+
+/** Where a picked case opens for a Quick Create action. */
+export const caseCreateHref = (caseId: string, pick: { tab: string; intent: string }) => `/admin/cases/${caseId}?tab=${pick.tab}&new=${pick.intent}`;
