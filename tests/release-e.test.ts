@@ -115,7 +115,9 @@ describe("activity log", () => {
     await audit(db, { actorId: m.id, action: "quote.send", entityType: "quote", entityId: "=1+1", details: { total: 590 } });
     const mine = await listActivity(db, admin, { actor: m.id });
     expect(mine.total).toBe(2);
-    expect(mine.rows[0]).toMatchObject({ action: "quote.send", actorName: "Activity Tester" });
+    // Both entries are written within the same millisecond, so their order isn't fixed; check both are there.
+    expect(mine.rows.map((r) => r.action).sort()).toEqual(["case.status", "quote.send"]);
+    expect(mine.rows.every((r) => r.actorName === "Activity Tester")).toBe(true);
     expect((await listActivity(db, admin, { actor: m.id, group: "case" })).rows.map((r) => r.action)).toEqual(["case.status"]);
     expect((await listActivity(db, admin, { q: "under_review" })).rows.some((r) => r.entityId === "c-123")).toBe(true);
     expect((await listActivity(db, admin, { q: "10.0.0.7" })).total).toBe(1);
