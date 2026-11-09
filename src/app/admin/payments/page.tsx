@@ -16,6 +16,7 @@ import { documentFiles } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Pager } from "@/components/ui/pager";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -35,6 +36,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const rows = list.rows;
   const values = { q: sp.q, status: sp.status, provider: sp.provider, from: sp.from, to: sp.to, min: sp.min, max: sp.max };
   const filtered = Object.values(values).some(Boolean);
+  const invoiceCell = (p: (typeof rows)[number]["p"]) => {
+    const inv = invs.get(p.id);
+    return (
+      <InvoiceCell
+        paymentId={p.id}
+        paid={p.status === "succeeded"}
+        canIssue={user.role === "admin" || user.role === "finance"}
+        invoice={inv ? { status: inv.status, number: inv.number, url: inv.url, error: inv.error, documentFileId: files.find((f) => f.documentId === inv.documentId)?.id ?? null } : null}
+      />
+    );
+  };
+  const statusBadge = (p: (typeof rows)[number]["p"]) => <Badge tone={p.status === "succeeded" ? "success" : p.status === "failed" ? "danger" : "neutral"}>{d.paymentStatus[p.status]}</Badge>;
   const invs = await invoicesForPayments(db, rows.map((r) => r.p.id));
   const docIds = [...invs.values()].map((i) => i.documentId).filter((x): x is string => !!x);
   const files = docIds.length ? await db.select({ id: documentFiles.id, documentId: documentFiles.documentId }).from(documentFiles).where(inArray(documentFiles.documentId, docIds)) : [];
@@ -61,7 +74,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       {rows.length === 0 ? (
         <EmptyState title={filtered ? t.noMatch : d.admin.paymentsEmpty} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <TableFrame>
           <table className="w-full min-w-[56rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
               <tr>
@@ -89,26 +103,46 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td className="px-4 py-3 text-slate-600">{r.p.provider}</td>
                   <td className="px-4 py-3 text-slate-600">{formatDateTime(r.p.paidAt ?? r.p.createdAt, locale)}</td>
                   <td className="px-4 py-3">
-                    <Badge tone={r.p.status === "succeeded" ? "success" : r.p.status === "failed" ? "danger" : "neutral"}>{d.paymentStatus[r.p.status]}</Badge>
+                    {statusBadge(r.p)}
                   </td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const inv = invs.get(r.p.id);
-                      return (
-                        <InvoiceCell
-                          paymentId={r.p.id}
-                          paid={r.p.status === "succeeded"}
-                          canIssue={user.role === "admin" || user.role === "finance"}
-                          invoice={inv ? { status: inv.status, number: inv.number, url: inv.url, error: inv.error, documentFileId: files.find((f) => f.documentId === inv.documentId)?.id ?? null } : null}
-                        />
-                      );
-                    })()}
+                    {invoiceCell(r.p)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
+        <CardList>
+          {rows.map((r) => (
+            <RecordCard
+              key={r.p.id}
+              href={`/admin/cases/${r.caseId}?tab=quotes`}
+              eyebrow={
+                <>
+                  <span className="font-mono" dir="ltr">
+                    {r.caseNumber}
+                  </span>{" "}
+                  · <span className="bidi-auto">{r.customerName}</span>
+                </>
+              }
+              title={<span className="tabular-nums">{formatMoney(r.p.amountCents, r.p.currency, locale)}</span>}
+              status={statusBadge(r.p)}
+              details={[
+                { label: d.quote.service, value: <span className="bidi-auto">{r.serviceName}</span>, wide: true },
+                { label: d.common.date, value: formatDateTime(r.p.paidAt ?? r.p.createdAt, locale) },
+                { label: d.admin.col.provider, value: r.p.provider },
+              ]}
+              footer={
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="text-xs text-slate-500">{d.invoices.document}</span>
+                  {invoiceCell(r.p)}
+                </div>
+              }
+            />
+          ))}
+        </CardList>
+        </>
       )}
       <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/payments" params={{ ...values, sort: sp.sort }} />
     </>

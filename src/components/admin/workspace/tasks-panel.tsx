@@ -27,6 +27,7 @@ export function TasksPanel({
   staff,
   templates,
   canEdit,
+  focusNew = false,
 }: {
   caseId: string;
   tasks: WorkspaceTask[];
@@ -35,6 +36,8 @@ export function TasksPanel({
   staff: StaffOption[];
   templates: TemplateOption[];
   canEdit: boolean;
+  /** Put the cursor in the new task's title (opened from Quick Create). */
+  focusNew?: boolean;
 }) {
   const { d, locale } = useI18n();
   const router = useRouter();
@@ -78,7 +81,7 @@ export function TasksPanel({
       {canEdit && (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap gap-2">
-            <Input aria-label={d.tasks.title} placeholder={d.tasks.new} value={title} onChange={(e) => setTitle(e.target.value)} className="min-w-48 flex-1" onKeyDown={(e) => e.key === "Enter" && title.trim() && add()} />
+            <Input autoFocus={focusNew} aria-label={d.tasks.title} placeholder={d.tasks.new} value={title} onChange={(e) => setTitle(e.target.value)} className="min-w-48 flex-1" onKeyDown={(e) => e.key === "Enter" && title.trim() && add()} />
             <Select aria-label={d.tasks.assignee} value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-auto">
               <option value="">{d.tasks.assignee}…</option>
               {staff.map((s) => (

@@ -9,6 +9,7 @@ import { requirePageStaff } from "@/lib/auth/session";
 import { activityFilters, listActivity, type ActivityFilter } from "@/lib/services/activity";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Pager } from "@/components/ui/pager";
+import { CardList, RecordCard, TableFrame } from "@/components/ui/record-card";
 import { DateInput } from "@/components/ui/date-input";
 
 export async function generateMetadata() {
@@ -104,7 +105,8 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
       {list.rows.length === 0 ? (
         <EmptyState icon={<History className="size-10" />} title={t.none} />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <>
+        <TableFrame>
           <table className="w-full min-w-[48rem] text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
               <tr>
@@ -155,7 +157,28 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
               })}
             </tbody>
           </table>
-        </div>
+        </TableFrame>
+        <CardList>
+          {list.rows.map((r) => {
+            const caseId = r.entityType === "case" && r.entityId ? r.entityId : typeof r.details?.caseId === "string" ? (r.details.caseId as string) : null;
+            const more = summary(r.details);
+            return (
+              <RecordCard
+                key={r.id}
+                href={caseId ? `/admin/cases/${caseId}` : undefined}
+                eyebrow={<span className="tabular-nums">{formatDateTime(r.at, locale)}</span>}
+                title={label(r.action)}
+                details={[
+                  { label: t.colWho, value: r.actorName ?? t.system, wide: true },
+                  more && { label: t.colWhat, value: <span className="bidi-auto">{more}</span>, wide: true },
+                  !caseId && { label: t.colOn, value: t.groups[r.entityType] ?? r.entityType },
+                  r.ip && { label: t.colIp, value: <span dir="ltr" className="font-mono text-xs">{r.ip}</span> },
+                ]}
+              />
+            );
+          })}
+        </CardList>
+        </>
       )}
       <Pager d={d} page={list.page} pages={list.pages} basePath="/admin/activity" params={params} />
     </>
