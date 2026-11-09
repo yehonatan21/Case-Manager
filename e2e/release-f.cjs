@@ -130,7 +130,8 @@ async function axe(page, label) {
     await phone.screenshot({ path: OUT + "/mobile-menu.png" });
     await phone.keyboard.press("Escape");
     await drawer.waitFor({ state: "hidden" });
-    assert.equal(await phone.evaluate(() => document.documentElement.style.overflow), "");
+    // The browser closes the dialog first; the page is unlocked right after, when the app sees it closed.
+    await phone.waitForFunction(() => document.documentElement.style.overflow === "", null, { timeout: 5000 });
     await phone.getByRole("button", { name: "תפריט" }).click();
     await drawer.getByRole("link", { name: "לטיפול שלי" }).click();
     await phone.waitForURL(/\/admin\/queue/);
