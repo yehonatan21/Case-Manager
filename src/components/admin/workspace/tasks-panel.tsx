@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Lock, Milestone, Plus, Trash2, UserRoundCheck } from "lucide-react";
@@ -86,7 +87,7 @@ export function TasksPanel({
                 </option>
               ))}
             </Select>
-            <Input aria-label={d.tasks.dueDate} type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-auto" />
+            <DateInput aria-label={d.tasks.dueDate} value={due} onChange={setDue} className="w-40" />
             <Button onClick={add} loading={busy === "add"} disabled={!title.trim()}>
               <Plus className="size-4" aria-hidden /> {d.common.add}
             </Button>

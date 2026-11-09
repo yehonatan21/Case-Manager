@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Info, Sparkles, XCircle } from "lucide-react";
@@ -39,7 +40,15 @@ export function DocumentDetailsForm({ documentId, details, confirmedBy, findings
   const [busy, setBusy] = useState<"save" | "ai" | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const field = (k: keyof DocumentDetails, label: string, type: "text" | "date" = "text") => (
-    <Field label={label}>{(p) => <Input {...p} type={type} dir={type === "date" || k === "idNumber" ? "ltr" : undefined} value={(v[k] as string | undefined) ?? ""} disabled={!canEdit} onChange={(e) => setV({ ...v, [k]: e.target.value })} />}</Field>
+    <Field label={label}>
+      {(p) =>
+        type === "date" ? (
+          <DateInput {...p} value={(v[k] as string | undefined) ?? ""} disabled={!canEdit} onChange={(date) => setV({ ...v, [k]: date })} />
+        ) : (
+          <Input {...p} dir={k === "idNumber" ? "ltr" : undefined} value={(v[k] as string | undefined) ?? ""} disabled={!canEdit} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
+        )
+      }
+    </Field>
   );
 
   const save = async () => {

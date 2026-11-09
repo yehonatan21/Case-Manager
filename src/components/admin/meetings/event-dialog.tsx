@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Video } from "lucide-react";
@@ -74,7 +75,7 @@ function EventForm({ initial, id, google, onDone }: { initial: Form; id: string 
         {(p) => <Input {...p} autoFocus maxLength={200} value={f.title} onChange={(e) => set({ title: e.target.value })} />}
       </Field>
       <Field label={t.eventDate} required>
-        {(p) => <Input {...p} type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} />}
+        {(p) => <DateInput {...p} value={f.date} onChange={(date) => set({ date })} />}
       </Field>
       <Checkbox label={t.allDay} checked={f.allDay} onChange={(e) => set({ allDay: e.target.checked })} />
       {!f.allDay && (

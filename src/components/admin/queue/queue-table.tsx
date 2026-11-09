@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -128,7 +129,7 @@ export function QueueTable({ rows, today, canBulk, staff }: { rows: QueueItem[];
             ))}
           </Select>
           <span className="flex items-center gap-1">
-            <Input type="date" aria-label={t.bulkDue} className="w-auto" dir="ltr" value={due} onChange={(e) => setDue(e.target.value)} />
+            <DateInput aria-label={t.bulkDue} className="w-40" value={due} onChange={setDue} />
             <Button size="sm" variant="outline" disabled={busy || !due} onClick={() => apply({ type: "due_date", dueDate: due })}>
               {t.bulkApply}
             </Button>

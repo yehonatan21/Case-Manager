@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { formatDate } from "@/lib/i18n/format";
+import { DateInput } from "@/components/ui/date-input";
 import { Download } from "lucide-react";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
@@ -44,7 +46,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader
         title={t.title}
-        subtitle={fmt(t.periodLine, { from: new Date(`${period.from}T12:00:00Z`).toLocaleDateString(locale === "he" ? "he-IL" : "en-GB"), to: new Date(`${period.to}T12:00:00Z`).toLocaleDateString(locale === "he" ? "he-IL" : "en-GB") })}
+        subtitle={fmt(t.periodLine, { from: formatDate(period.from, locale), to: formatDate(period.to, locale) })}
         actions={
           <a href={exportHref} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 hover:bg-slate-50">
             <Download className="size-4" aria-hidden /> {t.export}
@@ -67,11 +69,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.from}</span>
-          <input type="date" name="from" dir="ltr" defaultValue={period.preset === "custom" ? period.from : ""} className="h-10 rounded-lg border border-slate-300 px-3" />
+          <DateInput name="from" defaultValue={period.preset === "custom" ? period.from : ""} className="w-40" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.to}</span>
-          <input type="date" name="to" dir="ltr" defaultValue={period.preset === "custom" ? period.to : ""} className="h-10 rounded-lg border border-slate-300 px-3" />
+          <DateInput name="to" defaultValue={period.preset === "custom" ? period.to : ""} className="w-40" />
         </label>
         <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
           {t.apply}

@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, CalendarPlus, Download, Phone, Video, Building2 } from "lucide-react";
@@ -371,7 +372,7 @@ function BookDialog({
               </Field>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t.staffDate}>{(p) => <Input {...p} type="date" dir="ltr" min={zonedDay(new Date()).day} value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
+              <Field label={t.staffDate}>{(p) => <DateInput {...p} min={zonedDay(new Date()).day} value={date} onChange={setDate} />}</Field>
               <Field label={t.staffHour} hint={t.staffTime}>{(p) => <Input {...p} type="time" dir="ltr" step={300} value={time} onChange={(e) => setTime(e.target.value)} />}</Field>
             </div>
           </>

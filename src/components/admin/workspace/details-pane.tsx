@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Mail, Phone, ShieldOff, UserRound } from "lucide-react";
@@ -223,7 +224,7 @@ export function DetailsPane({ c, staff, currentUserId, currentRole }: { c: Works
           <div>
             <Label htmlFor="ws-due">{d.queue.dueLabel}</Label>
             <div className="flex gap-2">
-              <Input id="ws-due" type="date" dir="ltr" value={due} disabled={!canEdit} onChange={(e) => setDue(e.target.value)} aria-describedby="ws-due-hint" />
+              <DateInput id="ws-due" value={due} disabled={!canEdit} onChange={setDue} aria-describedby="ws-due-hint" />
               {canEdit && (due || null) !== c.dueDate && (
                 <Button variant="outline" loading={busy === "due"} onClick={() => patch("due", { dueDate: due || null })}>
                   {d.queue.saveDue}
