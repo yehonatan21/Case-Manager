@@ -4,6 +4,11 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Security
+- Fixed the two open Dependabot alerts with npm `overrides` (`npm audit`: 0 vulnerabilities). Neither parent package has an upstream fix yet.
+  - `zod` < 4.6.6 (high: memory exhaustion on oversized input), pulled in by `@vercel/blob` → `@vercel/oidc` → `@vercel/cli-config`. That copy now uses the app's `zod` 4.6.7.
+  - `esbuild` ≤ 0.24.2 (moderate: a website could read the dev server), pulled in by `drizzle-kit`'s `@esbuild-kit` loader. That copy now uses `esbuild` 0.25.
+
 ### Added
 - **Attention center** on the dashboard: "Needs attention now" shows **your** items by default (your cases, tasks and meetings, and what only your role handles), or **everyone's**. It now also brings in today's meetings and, for admins and finance, failed payments and payment documents that couldn't be issued. Each item opens where it's handled.
 - **Performance budgets in CI** (`npm run perf`, `e2e/perf-budget.json`): JavaScript size, server time and load time per page; the build fails when a page goes over, and the numbers are in the run's summary.
