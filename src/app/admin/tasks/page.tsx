@@ -56,8 +56,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             options: [{ value: "open", label: t.openTasks }, ...taskStatusEnum.enumValues.map((s) => ({ value: s, label: d.taskStatus[s] })), { value: "all", label: t.allStatuses }],
           },
         ]),
-    { type: "date", name: "from", label: t.dueFrom },
-    { type: "date", name: "to", label: t.dueTo },
+    { type: "date", name: "from", label: t.dueFrom, range: "from" },
+    { type: "date", name: "to", label: t.dueTo, range: "to" },
   ];
   const tabs = [
     { href: "/admin/tasks", label: d.admin.myTasks, active: mine && sp.overdue !== "1" },

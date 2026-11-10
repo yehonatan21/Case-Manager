@@ -4,6 +4,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- **The app's own date picker** in every date field, instead of the browser's: a month grid (Sunday first, today ringed), quick picks (today, tomorrow, in a week, in a month), the chosen day spelled out, and ranges for From/To filters (last 7 days, this month, last month, this year; the days between shaded). Full keyboard support; a bottom sheet on phones; Hebrew right to left and English left to right.
+
 ### Security
 - Fixed the two open Dependabot alerts with npm `overrides` (`npm audit`: 0 vulnerabilities). Neither parent package has an upstream fix yet.
   - `zod` < 4.6.6 (high: memory exhaustion on oversized input), pulled in by `@vercel/blob` → `@vercel/oidc` → `@vercel/cli-config`. That copy now uses the app's `zod` 4.6.7.

@@ -67,11 +67,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.from}</span>
-          <DateInput name="from" defaultValue={period.preset === "custom" ? period.from : ""} className="w-40" />
+          <DateInput name="from" range={{ group: "reports", part: "from" }} defaultValue={period.preset === "custom" ? period.from : ""} className="w-40" />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.to}</span>
-          <DateInput name="to" defaultValue={period.preset === "custom" ? period.to : ""} className="w-40" />
+          <DateInput name="to" range={{ group: "reports", part: "to" }} defaultValue={period.preset === "custom" ? period.to : ""} className="w-40" />
         </label>
         <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
           {t.apply}
