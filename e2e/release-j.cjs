@@ -92,7 +92,8 @@ const options = (p) => p.getByRole("option");
     await box(admin).waitFor({ state: "detached" });
     log("pages are found by name; Esc closes; the header button opens the search");
 
-    // ---- 3. Nothing found says so ----
+    // ---- 3. Nothing found says so (and Ctrl+K reopens it straight after Esc) ----
+    await admin.waitForTimeout(300);
     await admin.keyboard.press("Control+k");
     await box(admin).fill("zzzz-no-such-thing");
     await admin.getByText("לא נמצאו תוצאות.").waitFor();

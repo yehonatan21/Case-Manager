@@ -24,12 +24,14 @@ export function Dialog({
   const { d } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  // Kept in step with `open` on every render, not only when it changes: closing with Esc and reopening at once
+  // (Esc, then Ctrl+K) can leave `open` true while the browser's dialog is already closed.
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
-  }, [open]);
+  });
   return (
     <dialog
       ref={ref}

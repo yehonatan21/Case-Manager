@@ -71,7 +71,9 @@ jobs:
       - run: npm run build
       - name: Start the production server (demo mode, embedded database)
         run: |
-          npm start > server.log 2>&1 &
+          # Connections stay open between test steps (Node closes idle ones after 5 s, and a request sent on one
+          # as it closes fails with ECONNRESET).
+          npm start -- --keepAliveTimeout 120000 > server.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3000/api/health && break; sleep 2; done
         env:
           APP_SECRET: ci-only-secret-0123456789abcdef0123456789
