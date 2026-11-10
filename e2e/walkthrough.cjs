@@ -217,7 +217,7 @@ async function logout(ctx) {
   await mob.goto(caseUrl); await mob.waitForTimeout(1200);
   await mob.getByRole("button", { name: /^(English|EN)\b/ }).first().click();
   await mob.waitForFunction(() => document.documentElement.dir === "ltr", null, { timeout: 15000 });
-  await mob.locator("text=/The whole process is complete|What needs to be done now/").first().waitFor({ timeout: 15000 });
+  await mob.locator("text=/The whole process is complete|Your next step|Nothing is needed from you right now/").first().waitFor({ timeout: 15000 });
   await mob.screenshot({ path: `${OUT}/17-mobile-case-completed-en.png`, fullPage: true });
   log("switched to English, dir =", await mob.getAttribute("html", "dir"));
 

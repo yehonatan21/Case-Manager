@@ -111,8 +111,10 @@ async function axe(page, label) {
     watch(client);
     await client.goto(`${BASE}/portal/cases/${caseId}`);
     await settle(client);
-    await client.getByText("העלאת 4 מסמכים שהתבקשו").waitFor();
-    assert.equal(await client.getByText("העלאת מסמך שהתבקש").count(), 0, "one combined action, not four");
+    // One next step (the first document), with the other three folded into "and 3 more documents after this".
+    const step = client.locator("section[aria-labelledby=next-step-title]");
+    await step.getByText("ועוד 3 מסמכים אחרי זה").waitFor();
+    assert.equal(await client.locator("section[aria-labelledby=next-step-title]").count(), 1, "one step, not four");
     await client.goto(`${BASE}/portal/cases/${caseId}?tab=documents`);
     await settle(client);
     const summary = client.locator("section[aria-labelledby=checklist-title]");

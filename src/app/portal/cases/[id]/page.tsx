@@ -34,6 +34,7 @@ export default async function CustomerCasePage({ params, searchParams }: { param
         submitted={sp.submitted === "1"}
         payment={sp.payment}
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}
+        replyHours={settings.first_response_sla_hours}
         c={{
           id: b.case.id,
           number: b.case.number,
