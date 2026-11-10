@@ -159,6 +159,19 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect((await fetch(BASE + "/admin/cases?status=all", { headers: { Cookie: admin.cookie } })).status).toBe(200);
   });
 
+  describe("staff search (GET /api/admin/search)", () => {
+    it("needs a staff session and returns only what the role may see", async () => {
+      expect((await call("/api/admin/search?q=CASE")).status).toBe(401);
+      expect((await call("/api/admin/search?q=CASE", { cookie: (await session("client@example.com")).cookie })).status).toBe(403);
+      const admin = await call("/api/admin/search?q=CASE", { cookie: (await session("admin@example.com")).cookie });
+      expect(admin.status).toBe(200);
+      expect((admin.json!.data.hits as { kind: string }[]).length).toBeGreaterThan(0);
+      const finance = await call("/api/admin/search?q=example", { cookie: (await session("finance@example.com")).cookie });
+      expect((finance.json!.data.hits as { kind: string }[]).some((h) => h.kind === "customer")).toBe(false);
+      expect((await call("/api/admin/search?q=x", { cookie: (await session("admin@example.com")).cookie })).json!.data.hits).toEqual([]);
+    });
+  });
+
   describe("who may open each staff page (the same rule as the menu)", () => {
     // [page, path, who may open it]; everyone else on the team is sent to the dashboard (a new request: to Cases).
     const pages: [string, string[]][] = [

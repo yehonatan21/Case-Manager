@@ -4,6 +4,10 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- **Search with Ctrl+K** (⌘K on a Mac, or Search in the staff header): pages, incoming requests, cases, clients and quotes from one box, only what you may see. Keyboard: arrows, Enter, Esc.
+- **The case page puts the next step first**: a highlighted strip (red when late) with a button to the tasks. **The client details and the AI Copilot panels can be hidden** on wide screens to give the work area room; the choice is remembered.
+
 ### Changed
 - **Settings loads one tab at a time.** Opening Settings loads only the tab you're on; another tab loads when you choose it (with a loading state), and the address, Back and Forward follow. The Settings screen is now one component per tab instead of one large one.
 - **One access table for the staff pages** (`STAFF_PAGES`): every page, the menu and Quick Create use it, so they always agree.

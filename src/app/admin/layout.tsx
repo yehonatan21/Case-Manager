@@ -15,6 +15,7 @@ import { LogoutButton } from "@/components/app/logout-button";
 import { RealtimeRefresher } from "@/components/app/realtime";
 import { AdminFrame, AdminMobileMenu } from "@/components/admin/admin-nav";
 import { QuickCreate } from "@/components/admin/quick-create";
+import { CommandSearch } from "@/components/admin/command-search";
 import { Avatar } from "@/components/ui/misc";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span className="hidden text-sm font-medium text-slate-500 lg:inline">{d.nav.staffArea}</span>
           </div>
           <div className="flex items-center gap-1.5">
+            <CommandSearch role={user.role} devMailbox={env.devMailbox} />
             <QuickCreate role={user.role} />
             <LanguageSwitcher compact />
             <NotificationBell initialUnread={unread} allHref="/admin/notifications" />
