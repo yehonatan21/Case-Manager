@@ -70,3 +70,8 @@ export type WorkspaceData = {
 
 export type StaffOption = { id: string; name: string; role: UserRole };
 export type TemplateOption = { id: string; name: string; category: string; documents?: { title: string; note?: string; required?: boolean }[] };
+
+/** The case workspace's side panels that can be hidden on wide screens, and the cookie that remembers which. */
+export type WorkspacePanel = "details" | "copilot";
+export const WORKSPACE_PANELS_COOKIE = "cm_ws_hidden";
+export const parseHiddenPanels = (v: string | undefined): WorkspacePanel[] => (v ?? "").split(",").filter((x): x is WorkspacePanel => x === "details" || x === "copilot");
