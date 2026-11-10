@@ -288,7 +288,7 @@ export async function deleteDraftQuote(db: Database, actor: User, quoteId: strin
 }
 
 export const QUOTE_STATUSES = quoteStatusEnum.enumValues;
-export type QuoteListFilter = { q?: string; status?: string; from?: string; to?: string; page?: number };
+export type QuoteListFilter = { q?: string; status?: string; from?: string; to?: string; page?: number; pageSize?: number };
 
 /**
  * Quotes on the cases the user may see, the latest changed first, a page at a time. Searched by case number or
@@ -306,6 +306,7 @@ export async function listQuotesForStaff(db: DbOrTx, actor: User, f: QuoteListFi
   conds.push(...dayRange(quotes.updatedAt, f.from, f.to));
   const where = and(...conds.filter(Boolean));
   const page = pageNumber(f.page);
+  const size = Math.min(Math.max(f.pageSize ?? LIST_PAGE_SIZE, 1), LIST_PAGE_SIZE);
   const [rows, [count]] = await Promise.all([
     db
       .select({ quote: quotes, caseNumber: cases.number, caseTitle: cases.title, caseId: cases.id, customerName: users.name })
@@ -315,8 +316,8 @@ export async function listQuotesForStaff(db: DbOrTx, actor: User, f: QuoteListFi
       .innerJoin(users, eq(users.id, customers.userId))
       .where(where)
       .orderBy(desc(quotes.updatedAt), desc(quotes.id))
-      .limit(LIST_PAGE_SIZE)
-      .offset((page - 1) * LIST_PAGE_SIZE),
+      .limit(size)
+      .offset((page - 1) * size),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(quotes)
@@ -325,7 +326,7 @@ export async function listQuotesForStaff(db: DbOrTx, actor: User, f: QuoteListFi
       .innerJoin(users, eq(users.id, customers.userId))
       .where(where),
   ]);
-  return paged(rows, count?.n ?? 0, page);
+  return paged(rows, count?.n ?? 0, page, size);
 }
 
 /** Job: mark quotes past their validity date as expired. */

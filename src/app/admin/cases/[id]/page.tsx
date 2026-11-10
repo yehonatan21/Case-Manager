@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { parseHiddenPanels, WORKSPACE_PANELS_COOKIE } from "@/components/admin/workspace/types";
 import { getDict } from "@/lib/i18n/server";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -41,6 +43,7 @@ export default async function CaseWorkspacePage({ params, searchParams }: { para
         aiMock={aiIsMock()}
         initialTab={tab}
         startNew={startNew === "task" || startNew === "meeting" ? startNew : undefined}
+        initialHidden={parseHiddenPanels((await cookies()).get(WORKSPACE_PANELS_COOKIE)?.value)}
         maxMb={Math.round(env.maxUploadBytes / 1024 / 1024)}
         staff={staff}
         templates={templates.map((t) => ({ id: t.id, name: t.name, category: t.category, documents: t.documents }))}

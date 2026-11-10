@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, FilePlus2, Megaphone } from "lucide-react";
+import { ArrowLeft, ExternalLink, FilePlus2, Megaphone, PanelRight, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime, formatMoney } from "@/lib/i18n/format";
@@ -23,7 +23,7 @@ import { DocumentsPanel } from "@/components/case/documents-panel";
 import { DetailsPane } from "./details-pane";
 import { TasksPanel } from "./tasks-panel";
 import { CopilotPane } from "./copilot-pane";
-import type { StaffOption, TemplateOption, WorkspaceData } from "./types";
+import { WORKSPACE_PANELS_COOKIE, type StaffOption, type TemplateOption, type WorkspaceData, type WorkspacePanel } from "./types";
 import { cn } from "@/lib/utils";
 import { SummaryBar } from "./summary-bar";
 import { TimePanel } from "./time-panel";
@@ -40,6 +40,7 @@ export function CaseWorkspace({
   aiMock,
   initialTab,
   startNew,
+  initialHidden = [],
   maxMb,
   meetings = [],
   meetingDurations = [30, 60],
@@ -54,6 +55,8 @@ export function CaseWorkspace({
   initialTab?: string;
   /** Opened from Quick Create: have the new-task field or the booking form ready. */
   startNew?: "task" | "meeting";
+  /** Side panels the person hid on wide screens (remembered in a cookie). */
+  initialHidden?: WorkspacePanel[];
   maxMb: number;
   meetings?: MeetingItem[];
   meetingDurations?: number[];
@@ -72,6 +75,19 @@ export function CaseWorkspace({
     ...(a.edit || currentRole === "finance" ? (["time"] as WorkTab[]) : []),
     "timeline",
   ];
+  // On wide screens the details and AI panels can be hidden to give the work area room; remembered per browser.
+  const [hidden, setHidden] = useState<WorkspacePanel[]>(initialHidden);
+  const togglePanel = (p: WorkspacePanel) => {
+    const next = hidden.includes(p) ? hidden.filter((x) => x !== p) : [...hidden, p];
+    setHidden(next);
+    try {
+      document.cookie = `${WORKSPACE_PANELS_COOKIE}=${next.join(",")}; path=/; max-age=31536000; samesite=lax`;
+    } catch {}
+  };
+  const showDetails = !hidden.includes("details");
+  const showCopilot = !hidden.includes("copilot");
+  const gridCols = showDetails && showCopilot ? "xl:grid-cols-[16rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[18rem_minmax(0,1fr)_22rem]" : showDetails ? "xl:grid-cols-[16rem_minmax(0,1fr)] 2xl:grid-cols-[18rem_minmax(0,1fr)]" : showCopilot ? "xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]" : "xl:grid-cols-1";
+
   // "?new=" is a one-time instruction from Quick Create; drop it so a reload doesn't open the form again.
   useEffect(() => {
     if (!startNew) return;
@@ -178,7 +194,7 @@ export function CaseWorkspace({
       </div>
 
       {!a.internal && <Notice tone="info" className="mb-4">{d.workspace.financeView}</Notice>}
-      {a.internal && <SummaryBar c={c} staff={staff} />}
+      {a.internal && <SummaryBar c={c} staff={staff} onOpenTasks={available.includes("tasks") ? () => go("tasks") : undefined} />}
 
       {/* On small screens the three areas become switchable panes. */}
       <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 xl:hidden" role="tablist" aria-label={d.workspace.work}>
@@ -195,8 +211,29 @@ export function CaseWorkspace({
         ))}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[16rem_minmax(0,1fr)_19rem] 2xl:grid-cols-[18rem_minmax(0,1fr)_22rem]">
-        <div className={cn(pane !== "details" && "hidden", "xl:block")}>
+      <div className="mb-3 hidden items-center justify-end gap-2 xl:flex" role="group" aria-label={d.workspace.layoutLabel}>
+        {(["details", "copilot"] as WorkspacePanel[]).map((p) => {
+          const shown = !hidden.includes(p);
+          const name = p === "details" ? d.workspace.detailsPanel : d.workspace.copilotPanel;
+          const Icon = p === "details" ? PanelRight : Sparkles;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => togglePanel(p)}
+              aria-expanded={shown}
+              aria-controls={`ws-panel-${p}`}
+              className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium ring-1", shown ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50" : "bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200")}
+            >
+              <Icon className="size-3.5" aria-hidden />
+              {fmt(shown ? d.workspace.hidePanel : d.workspace.showPanel, { name })}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={cn("grid gap-5", gridCols)}>
+        <div id="ws-panel-details" className={cn(pane !== "details" && "hidden", showDetails ? "xl:block" : "xl:hidden")}>
           <DetailsPane c={c} staff={staff} currentUserId={currentUserId} currentRole={currentRole} />
         </div>
 
@@ -328,7 +365,7 @@ export function CaseWorkspace({
           )}
         </div>
 
-        <div className={cn(pane !== "copilot" && "hidden", "xl:block")}>
+        <div id="ws-panel-copilot" className={cn(pane !== "copilot" && "hidden", showCopilot ? "xl:block" : "xl:hidden")}>
           <div className="xl:sticky xl:top-20">
             <CopilotPane c={c} aiMock={aiMock} onDraft={onDraft} onOpenTab={go} />
           </div>
