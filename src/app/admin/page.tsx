@@ -5,7 +5,7 @@ import { fmt } from "@/lib/i18n/config";
 import { formatRelative } from "@/lib/i18n/format";
 import { requirePageStaff } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { attentionItems, dashboardMetrics } from "@/lib/services/dashboard";
+import { attentionItems, dashboardMetrics, type AttentionScope } from "@/lib/services/dashboard";
 import { getSettings } from "@/lib/services/settings";
 import { getSystemHealth } from "@/lib/services/health";
 import { PageHeader } from "@/components/ui/misc";
@@ -17,12 +17,14 @@ export async function generateMetadata() {
   return { title: d.admin.dashboardTitle };
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ attention?: string }> }) {
   const user = await requirePageStaff("/admin");
+  // The attention center shows the person's own items unless they ask for everyone's.
+  const scope: AttentionScope = (await searchParams).attention === "all" ? "all" : "mine";
   const { d, locale } = await getDict();
   const db = await getDb();
   const settings = await getSettings(db);
-  const [m, items] = await Promise.all([dashboardMetrics(db, user), attentionItems(db, user, settings.first_response_sla_hours)]);
+  const [m, items] = await Promise.all([dashboardMetrics(db, user), attentionItems(db, user, settings.first_response_sla_hours, { scope })]);
   // Admins see when an integration or the scheduled jobs stop working, without opening the health page.
   const broken = user.role === "admin" ? (await getSystemHealth(db, user).catch(() => null))?.level === "error" : false;
   const tiles = [
@@ -61,15 +63,30 @@ export default async function Dashboard() {
       </div>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold">{d.admin.attentionTitle}</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">{d.admin.attentionTitle}</h2>
+          <nav aria-label={`${d.admin.attentionTitle}: ${d.admin.attentionScope}`} className="flex rounded-lg border border-slate-300 bg-white p-0.5 text-sm">
+            {(["mine", "all"] as const).map((v) => (
+              <Link
+                key={v}
+                href={v === "mine" ? "/admin" : "/admin?attention=all"}
+                scroll={false}
+                aria-current={scope === v ? "page" : undefined}
+                className={cn("rounded-md px-3 py-1", scope === v ? "bg-brand-700 font-medium text-white" : "text-slate-700 hover:bg-slate-100")}
+              >
+                {v === "mine" ? d.admin.attentionMine : d.admin.attentionAll}
+              </Link>
+            ))}
+          </nav>
+        </div>
         {items.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">{d.admin.attentionEmpty}</p>
+          <p className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">{scope === "mine" ? d.admin.attentionMineEmpty : d.admin.attentionEmpty}</p>
         ) : (
           <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
             {items.map((it) => (
               <li key={it.key}>
-                <Link href={`/admin/cases/${it.caseId}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-slate-50">
-                  <span className={cn("size-2 shrink-0 rounded-full", it.reason === "sla_breach" || it.reason === "overdue_task" ? "bg-red-500" : it.urgency === "urgent" || it.urgency === "high" ? "bg-amber-500" : "bg-brand-500")} aria-hidden />
+                <Link href={it.href} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-slate-50">
+                  <span className={cn("size-2 shrink-0 rounded-full", it.reason === "sla_breach" || it.reason === "overdue_task" || it.reason === "payment_failed" || it.reason === "invoice_failed" ? "bg-red-500" : it.urgency === "urgent" || it.urgency === "high" ? "bg-amber-500" : "bg-brand-500")} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-slate-900">{fmt(d.admin.reasons[it.reason], it.vars)}</span>
                     <span className="bidi-auto block truncate text-sm text-slate-600">

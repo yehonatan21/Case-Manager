@@ -1,13 +1,15 @@
-// Accessibility regression check (WCAG 2.1 AA / IS 5568): axe-core on the main pages and states
-// (Hebrew & English, desktop & mobile, public, customer and staff, open drawer / dialog / notifications),
-// plus keyboard checks axe can't do: drawer focus and Esc, sign-in errors, focus after errors, 320px reflow.
+// Accessibility regression check (WCAG 2.2 AA / IS 5568): axe-core on the main pages and states
+// (Hebrew & English, desktop & mobile, public, customer and staff, open drawer / dialog / notifications, the
+// collapsed menu, Quick Create, the search, every Settings tab, the lists as phone cards), plus checks axe can't
+// do: drawer focus and Esc, sign-in errors, focus after errors, focus never hidden under the sticky header
+// (2.4.11), 320px reflow.
 // Fails on any axe violation. Requires a running app in demo mode: BASE=http://localhost:3000 node e2e/a11y.cjs
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const BASE = process.env.BASE || "http://localhost:3000";
 const AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
-const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
 const log = (...a) => console.log("•", ...a);
 const settle = (p) => p.waitForTimeout(900);
 const problems = [];
@@ -47,6 +49,7 @@ async function signIn(browser, email) {
   const browser = await chromium.launch();
   const client = await signIn(browser, "biz@example.com"); // a customer with cases and a quote
   const manager = await signIn(browser, "manager@example.com");
+  const admin = await signIn(browser, "admin@example.com");
   try {
     for (const [name, viewport, locale] of [
       ["he", { width: 1280, height: 900 }, "he"],
@@ -74,7 +77,30 @@ async function signIn(browser, email) {
       await s.addCookies([cookie]);
       const cases = await visit(s, "/admin/cases?status=all", name);
       const adminCase = (await cases.locator("a[href^='/admin/cases/']").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).find((h) => /[0-9a-f-]{36}/.test(h));
-      for (const u of ["/admin", "/admin/inbox", "/admin/cases/new", "/admin/tasks", "/admin/customers", "/admin/notifications", adminCase, `${adminCase}?tab=quotes`]) await (await visit(s, u, name)).close();
+      for (const u of ["/admin", "/admin?attention=all", "/admin/inbox", "/admin/queue", "/admin/cases/new", "/admin/quotes", "/admin/tasks?scope=all", "/admin/conversations", "/admin/meetings", "/admin/customers", "/admin/reports", "/admin/notifications", "/admin/account", adminCase, `${adminCase}?tab=quotes`, `${adminCase}?tab=tasks`, `${adminCase}?tab=documents`]) await (await visit(s, u, name)).close();
+      // Quick Create open, and the search with results
+      await (await visit(s, "/admin", `${name} (quick create open)`, async (p) => {
+        await p.locator("header [aria-controls]").filter({ hasText: /חדש|New/ }).first().click();
+        await p.locator("header [data-qc-item]").first().waitFor();
+      })).close();
+      await (await visit(s, "/admin", `${name} (search open)`, async (p) => {
+        await p.locator("header button[aria-keyshortcuts]").click();
+        await p.getByRole("combobox").fill("CASE");
+        await p.getByRole("option").first().waitFor();
+      })).close();
+      // Admin-only pages: payments, the activity log and every Settings tab
+      const a = await browser.newContext({ viewport, locale, storageState: admin });
+      await a.addCookies([cookie]);
+      for (const u of ["/admin/payments", "/admin/activity", ...["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations", "health"].map((t) => `/admin/settings?tab=${t}`)]) await (await visit(a, u, name)).close();
+      if (name !== "he-mobile") {
+        // The collapsed menu (icons only, names on hover)
+        await a.addCookies([{ name: "cm_nav_collapsed", value: "1", url: BASE }]);
+        await (await visit(a, "/admin/cases", `${name} (menu collapsed)`, async (p) => {
+          await p.locator("aside nav a").first().hover();
+        })).close();
+        await a.addCookies([{ name: "cm_nav_collapsed", value: "0", url: BASE }]);
+      }
+      await a.close();
       if (name === "he-mobile") {
         // Drawer open
         await (await visit(s, "/admin", `${name} (drawer open)`, async (p) => {
@@ -105,6 +131,36 @@ async function signIn(browser, email) {
     assert.equal(await mp.locator("#admin-mobile-menu[open]").count(), 0, "Esc closes the drawer");
     assert.equal(await menu.evaluate((b) => b === document.activeElement), true, "focus returns to the menu button");
     log("drawer: focus in, Tab kept inside, Esc closes, focus returns");
+
+    // ---- 2.4.11 Focus not obscured: tabbing through a long page, no focused control hides under the header ----
+    for (const [vp, url] of [[{ width: 1280, height: 700 }, "/admin/settings?tab=general"], [{ width: 390, height: 700 }, "/admin/cases?status=all"]]) {
+      const fx = await browser.newContext({ viewport: vp, locale: "he", storageState: admin });
+      const fp = await fx.newPage();
+      await fp.goto(BASE + url);
+      await settle(fp);
+      let checked = 0;
+      for (let i = 0; i < 60; i++) {
+        await fp.keyboard.press("Tab");
+        const r = await fp.evaluate(() => {
+          const el = document.activeElement;
+          if (!el || el === document.body || el.closest("dialog")) return null;
+          const rc = el.getBoundingClientRect();
+          if (!rc.width || !rc.height) return null;
+          // What is drawn at the control's centre: the control itself (or its own content) unless something covers it.
+          const x = Math.min(Math.max(rc.left + rc.width / 2, 0), innerWidth - 1);
+          const y = Math.min(Math.max(rc.top + rc.height / 2, 0), innerHeight - 1);
+          const top = document.elementFromPoint(x, y);
+          const visible = rc.bottom > 0 && rc.top < innerHeight && !!top && (top === el || el.contains(top) || top.contains(el));
+          return { visible, what: el.outerHTML.slice(0, 90), cover: top?.outerHTML.slice(0, 60) ?? "" };
+        });
+        if (!r) continue;
+        checked++;
+        assert.ok(r.visible, `focused control hidden: ${r.what} — covered by ${r.cover}`);
+      }
+      assert.ok(checked > 10, `tabbed through ${url}`);
+      await fx.close();
+    }
+    log("focus never ends up hidden under the sticky header (2.4.11), on desktop and phone");
 
     const pub = await browser.newContext({ locale: "he" });
     const lp = await pub.newPage();
