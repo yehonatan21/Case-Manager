@@ -1,12 +1,10 @@
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
 import { formatDate } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { getCustomer } from "@/lib/services/customers";
 import { listStaffCases } from "@/lib/services/cases";
-import { canSeeCustomers } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Card, CardContent } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
@@ -21,8 +19,7 @@ export default async function CustomerDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await requirePageStaff(`/admin/customers/${id}`);
-  if (!canSeeCustomers(user.role)) redirect("/admin");
+  const user = await requireStaffPage(`/admin/customers/${id}`, "customers");
   const { d, locale } = await getDict();
   const db = await getDb();
   const row = await getCustomer(db, id);

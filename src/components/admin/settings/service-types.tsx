@@ -56,7 +56,12 @@ export function ServiceTypes({ categories }: { categories: CategoryInfo[] }) {
                       className="grid w-full gap-3 sm:grid-cols-[1fr_1fr_auto]"
                       onSubmit={(e) => {
                         e.preventDefault();
-                        void call("save" + c.key, () => api(`/api/admin/categories/${c.key}`, { method: "PATCH", body: { nameHe: edit.nameHe, nameEn: edit.nameEn } }), d.common.saved, () => setEdit(null));
+                        void call(
+                          "save" + c.key,
+                          () => api(`/api/admin/categories/${c.key}`, { method: "PATCH", body: { nameHe: edit.nameHe, nameEn: edit.nameEn } }),
+                          d.common.saved,
+                          () => setEdit(null),
+                        );
                       }}
                     >
                       <Field label={t.nameHe}>{(p) => <Input {...p} lang="he" dir="rtl" value={edit.nameHe} onChange={(e) => setEdit({ ...edit, nameHe: e.target.value })} />}</Field>
@@ -108,7 +113,12 @@ export function ServiceTypes({ categories }: { categories: CategoryInfo[] }) {
             className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto]"
             onSubmit={(e) => {
               e.preventDefault();
-              void call("add", () => api("/api/admin/categories", { body: form }), t.added, () => setForm({ nameHe: "", nameEn: "" }));
+              void call(
+                "add",
+                () => api("/api/admin/categories", { body: form }),
+                t.added,
+                () => setForm({ nameHe: "", nameEn: "" }),
+              );
             }}
           >
             <Field label={t.nameHe}>{(p) => <Input {...p} lang="he" dir="rtl" value={form.nameHe} onChange={(e) => setForm({ ...form, nameHe: e.target.value })} />}</Field>

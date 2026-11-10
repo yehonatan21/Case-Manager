@@ -4,6 +4,11 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Changed
+- **Settings loads one tab at a time.** Opening Settings loads only the tab you're on; another tab loads when you choose it (with a loading state), and the address, Back and Forward follow. The Settings screen is now one component per tab instead of one large one.
+- **One access table for the staff pages** (`STAFF_PAGES`): every page, the menu and Quick Create use it, so they always agree.
+  - **Finance no longer opens Meetings** or adds calendar events. Before, the menu hid Meetings from finance but the page and the event API still let them in.
+
 ### Added
 - **Quick Create** (**+ New** in the staff header): a new client request, a new task, a client meeting or a calendar event from any page, opening the existing forms. A task or meeting asks which case first, then opens that case on the right tab with the form ready. Only the actions the role may do; works by keyboard and on a phone.
 - **Staff lists as cards on phones**: cases, incoming requests, My Work, quotes, payments, tasks, clients and the activity log show cards instead of wide tables below tablet width — no sideways scrolling, and tapping a card opens the record.

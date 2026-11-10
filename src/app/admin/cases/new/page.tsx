@@ -1,9 +1,7 @@
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { getCustomer, listCustomers } from "@/lib/services/customers";
-import { canCreateCasesForClients } from "@/lib/auth/permissions";
 import { PageHeader } from "@/components/ui/misc";
 import { NewCaseForm } from "@/components/admin/new-case-form";
 
@@ -17,8 +15,7 @@ export default async function NewCasePage({
 }: {
   searchParams: Promise<{ customer?: string }>;
 }) {
-  const user = await requirePageStaff("/admin/cases/new");
-  if (!canCreateCasesForClients(user.role)) redirect("/admin/cases");
+  const user = await requireStaffPage("/admin/cases/new", "newCase");
   const { d } = await getDict();
   const { customer } = await searchParams;
   const db = await getDb();
