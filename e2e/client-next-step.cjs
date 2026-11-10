@@ -49,15 +49,18 @@ async function axe(page, label) {
   const errors = [];
   const watch = (p) => p.on("pageerror", (e) => errors.push(e.message));
   try {
-    const client = await signIn(browser, "client@example.com");
-    watch(client);
-    const mine = (await (await client.request.get(BASE + "/api/cases")).json()).data;
-    const c = mine.find((x) => !["completed", "closed", "cancelled", "declined"].includes(x.status)) ?? mine[0];
-    assert.ok(c, "the demo client has a case");
-
-    // ---- The team asks for two documents, with notes ----
+    // A fresh client and case of their own, so nothing else is waiting on it.
     const admin = await signIn(browser, "admin@example.com");
     const stamp = Date.now().toString(36);
+    const email = `next-step-${stamp}@example.com`;
+    const created = await admin.request.post(`${BASE}/api/admin/cases`, {
+      data: { customer: { email, name: "רונית בדיקה", customerType: "private", locale: "he" }, title: "בקשת בדיקה", description: "פרטים", serviceCategory: "other", urgency: "normal" },
+      headers: { Origin: BASE },
+    });
+    assert.equal(created.status(), 200, await created.text());
+    const c = { id: (await created.json()).data.id };
+
+    // ---- The team asks for two documents, with notes ----
     const docs = [
       { title: `אישור כתובת ${stamp}`, note: "חשבון חשמל או ארנונה מ-3 החודשים האחרונים" },
       { title: `תעודת לידה ${stamp}`, note: null },
@@ -66,6 +69,8 @@ async function axe(page, label) {
       const r = await admin.request.post(`${BASE}/api/cases/${c.id}/documents`, { data: doc, headers: { Origin: BASE } });
       assert.equal(r.status(), 200, await r.text());
     }
+    const client = await signIn(browser, email);
+    watch(client);
 
     // ---- The client sees one step: the first document, what counts, and what's left ----
     await client.goto(`${BASE}/portal/cases/${c.id}`);
@@ -96,7 +101,7 @@ async function axe(page, label) {
     log("both documents were uploaded from the card, one after the other");
 
     // ---- Phone: the button fills the width ----
-    const phone = await signIn(browser, "client@example.com", { width: 390, height: 844 });
+    const phone = await signIn(browser, email, { width: 390, height: 844 });
     watch(phone);
     await phone.goto(`${BASE}/portal/cases/${c.id}`);
     await settle(phone);

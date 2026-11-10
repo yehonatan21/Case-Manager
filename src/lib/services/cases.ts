@@ -560,7 +560,10 @@ export async function getCaseBundle(db: DbOrTx, user: User, caseId: string) {
   const actions = computeClientActions({
     status: c.status,
     openQuote,
-    requestedDocs: docs.filter((d) => (d.status === "requested" || d.status === "needs_new_version") && d.visibility === "client"),
+    // The first one asked for comes first (the documents tab lists the newest first).
+    requestedDocs: docs
+      .filter((d) => (d.status === "requested" || d.status === "needs_new_version") && d.visibility === "client")
+      .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)),
     clientTasks: taskRows.filter((t) => t.requiresClientAction && !t.relatedDocumentId && ["todo", "in_progress", "waiting"].includes(t.status)),
     pendingSignatures: signatureList
       .filter((x) => x.status === "requested" && x.documentId)
