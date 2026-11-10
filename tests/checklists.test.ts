@@ -189,7 +189,8 @@ describe("requesting a checklist", () => {
       ],
       clientTasks: [],
     });
-    expect(actions).toEqual([{ type: "upload_many", count: 2, titles: ["Passport copy", "Passport photo"] }]);
+    // The first required one is named too: the client uploads it straight from the next-step card.
+    expect(actions).toEqual([{ type: "upload_many", count: 2, titles: ["Passport copy", "Passport photo"], documentId: "1", title: "Passport copy", note: null }]);
     const one = computeClientActions({ status: "awaiting_information", openQuote: null, requestedDocs: [{ id: "1", title: "Passport", requestNote: "x", required: true }, { id: "3", title: "CV", requestNote: null, required: false }], clientTasks: [] });
     expect(one).toEqual([{ type: "upload", documentId: "1", title: "Passport", note: "x" }]);
     const onlyOptional = computeClientActions({ status: "awaiting_information", openQuote: null, requestedDocs: [{ id: "3", title: "CV", requestNote: null, required: false }], clientTasks: [] });

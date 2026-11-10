@@ -349,7 +349,7 @@ export type ClientAction =
   | { type: "quote_expired"; quoteId: string }
   | { type: "pay"; quoteId: string }
   | { type: "upload"; documentId: string; title: string; note: string | null }
-  | { type: "upload_many"; count: number; titles: string[] }
+  | { type: "upload_many"; count: number; titles: string[]; /** The first one, uploaded straight from the next-step card. */ documentId: string; title: string; note: string | null }
   | { type: "sign"; count: number; documentId: string; title: string }
   | { type: "reply" }
   | { type: "task"; title: string };
@@ -376,7 +376,7 @@ export function computeClientActions(input: {
   // Required documents only (optional ones are listed in the documents tab); several become one action.
   const required = input.requestedDocs.filter((d) => d.required !== false);
   if (required.length === 1) actions.push({ type: "upload", documentId: required[0]!.id, title: required[0]!.title, note: required[0]!.requestNote });
-  else if (required.length > 1) actions.push({ type: "upload_many", count: required.length, titles: required.map((d) => d.title) });
+  else if (required.length > 1) actions.push({ type: "upload_many", count: required.length, titles: required.map((d) => d.title), documentId: required[0]!.id, title: required[0]!.title, note: required[0]!.requestNote });
   const sign = input.pendingSignatures ?? [];
   if (sign.length) actions.push({ type: "sign", count: sign.length, documentId: sign[0]!.documentId, title: sign[0]!.title });
   if ((input.status === "awaiting_information" || input.status === "awaiting_client") && input.requestedDocs.length === 0 && sign.length === 0) actions.push({ type: "reply" });
@@ -395,7 +395,9 @@ async function clientActionsForCases(db: DbOrTx, rows: Pick<Case, "id" | "status
   const docs = await db
     .select({ id: documents.id, caseId: documents.caseId, title: documents.title, requestNote: documents.requestNote, required: documents.required })
     .from(documents)
-    .where(and(inArray(documents.caseId, ids), inArray(documents.status, ["requested", "needs_new_version"]), eq(documents.visibility, "client")));
+    .where(and(inArray(documents.caseId, ids), inArray(documents.status, ["requested", "needs_new_version"]), eq(documents.visibility, "client")))
+    // The first one asked for comes first (it's the client's next step).
+    .orderBy(asc(documents.createdAt), asc(documents.id));
   const ts = await db
     .select({ caseId: tasks.caseId, title: tasks.title })
     .from(tasks)
