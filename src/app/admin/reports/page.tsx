@@ -245,7 +245,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 </div>
                 {profit.money.unratedMembers.length > 0 && <p className="text-sm text-amber-800">{fmt(d.time.unratedMembers, { names: profit.money.unratedMembers.join(", ") })}</p>}
                 {profit.money.byService.length > 0 && (
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                  <div tabIndex={0} role="region" aria-label={d.time.byService} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
                     <table className="w-full min-w-[46rem] text-sm">
                       <caption className="px-4 pt-3 text-start text-sm font-semibold">{d.time.byService}</caption>
                       <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
@@ -305,7 +305,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             {profit.byMember.length === 0 ? (
               <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">{d.time.noTime}</p>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <div tabIndex={0} role="region" aria-label={d.time.hoursByMember} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
                 <table className="w-full min-w-[36rem] text-sm">
                   <caption className="px-4 pt-3 text-start text-sm font-semibold">{d.time.hoursByMember}</caption>
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
@@ -343,7 +343,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {t.teamHint}
               {r.unassigned ? ` ${fmt(t.unassigned, { n: r.unassigned })}` : ""}
             </p>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <div tabIndex={0} role="region" aria-label={t.team} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
               <table className="w-full min-w-[50rem] text-sm">
                 <caption className="sr-only">{t.team}</caption>
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">

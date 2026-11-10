@@ -167,7 +167,7 @@ export function CommandSearch({ role, devMailbox }: { role: UserRole; devMailbox
             className={cn(fieldBase, "h-11 ps-9 text-base")}
           />
         </div>
-        <div className="mt-3 max-h-[55vh] min-h-24 overflow-y-auto">
+        <div tabIndex={0} role="region" aria-label={t.label} className="mt-3 max-h-[55vh] min-h-24 overflow-y-auto rounded-lg outline-offset-2">
           <p className="sr-only" role="status">
             {state === "loading" ? t.loading : state === "error" ? t.failed : term.length >= 2 ? fmt(t.results, { n: items.length }) : ""}
           </p>

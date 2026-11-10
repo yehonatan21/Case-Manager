@@ -5,8 +5,15 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 ## [Unreleased]
 
 ### Added
+- **Attention center** on the dashboard: "Needs attention now" shows **your** items by default (your cases, tasks and meetings, and what only your role handles), or **everyone's**. It now also brings in today's meetings and, for admins and finance, failed payments and payment documents that couldn't be issued. Each item opens where it's handled.
+- **Performance budgets in CI** (`npm run perf`, `e2e/perf-budget.json`): JavaScript size, server time and load time per page; the build fails when a page goes over, and the numbers are in the run's summary.
+- **WCAG 2.2 AA checks**: the accessibility test now uses the WCAG 2.2 rules (including target size) and covers every staff page and Settings tab, Quick Create, the search, the collapsed menu and the phone cards, plus a keyboard check that a focused control is never hidden under the sticky header.
 - **Search with Ctrl+K** (⌘K on a Mac, or Search in the staff header): pages, incoming requests, cases, clients and quotes from one box, only what you may see. Keyboard: arrows, Enter, Esc.
 - **The case page puts the next step first**: a highlighted strip (red when late) with a button to the tasks. **The client details and the AI Copilot panels can be hidden** on wide screens to give the work area room; the choice is remembered.
+
+### Fixed
+- The Reports tables that scroll sideways on a phone can now be reached and scrolled with the keyboard.
+- A dialog closed with Esc and reopened at once (Esc, then Ctrl+K) now opens reliably.
 
 ### Changed
 - **Settings loads one tab at a time.** Opening Settings loads only the tab you're on; another tab loads when you choose it (with a loading state), and the address, Back and Forward follow. The Settings screen is now one component per tab instead of one large one.
