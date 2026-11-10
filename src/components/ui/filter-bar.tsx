@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 export type FilterField =
   | { type: "search"; name: string; label: string; placeholder?: string }
   | { type: "select"; name: string; label: string; options: { value: string; label: string }[]; any?: string | false }
-  | { type: "date"; name: string; label: string }
+  | { type: "date"; name: string; label: string; /** One end of a From/To pair (the calendar shades the days between). */ range?: "from" | "to" }
   | { type: "amount"; name: string; label: string };
 
 type Values = Record<string, string | undefined>;
@@ -44,7 +44,7 @@ export function FilterBar({ d, basePath, fields, values, keep = {}, total }: { d
                 ))}
               </select>
             )}
-            {f.type === "date" && <DateInput id={id(f.name)} name={f.name} defaultValue={values[f.name] ?? ""} />}
+            {f.type === "date" && <DateInput id={id(f.name)} name={f.name} defaultValue={values[f.name] ?? ""} range={f.range ? { group: basePath, part: f.range } : undefined} />}
             {f.type === "amount" && <input id={id(f.name)} name={f.name} type="text" inputMode="decimal" dir="ltr" defaultValue={values[f.name] ?? ""} className={cn(fieldBase, "h-10 text-start")} />}
           </div>
         ))}
