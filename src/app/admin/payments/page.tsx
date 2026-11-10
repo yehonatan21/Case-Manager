@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { formatDateTime, formatMoney } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listPayments, PAYMENT_SORTS, PAYMENT_STATUSES, paymentProviders } from "@/lib/services/payments";
-import { canSeePayments } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { GrowConnect } from "@/components/admin/grow-connect";
@@ -26,8 +24,7 @@ export async function generateMetadata() {
 type Search = { q?: string; status?: string; provider?: string; from?: string; to?: string; min?: string; max?: string; sort?: string; page?: string };
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const user = await requirePageStaff("/admin/payments");
-  if (!canSeePayments(user.role)) redirect("/admin");
+  const user = await requireStaffPage("/admin/payments", "payments");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.filterBar;

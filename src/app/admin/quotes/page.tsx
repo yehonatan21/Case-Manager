@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
 import { formatDate, formatMoney } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listQuotesForStaff, QUOTE_STATUSES } from "@/lib/services/quotes";
 import { isQuoteExpired } from "@/lib/services/cases";
-import { canSeeAllQuotes } from "@/lib/auth/permissions";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { QuoteStatusBadge } from "@/components/app/status";
 import { FilterBar } from "@/components/ui/filter-bar";
@@ -22,8 +20,7 @@ export async function generateMetadata() {
 type Search = { q?: string; status?: string; from?: string; to?: string; page?: string };
 
 export default async function QuotesPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const user = await requirePageStaff("/admin/quotes");
-  if (!canSeeAllQuotes(user.role)) redirect("/admin");
+  const user = await requireStaffPage("/admin/quotes", "quotes");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.filterBar;

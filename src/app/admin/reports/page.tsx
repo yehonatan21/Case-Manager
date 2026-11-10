@@ -1,13 +1,12 @@
-import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/i18n/format";
 import { DateInput } from "@/components/ui/date-input";
 import { Download } from "lucide-react";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
 import { formatMoney } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { buildReport, reportAccess, resolvePeriod } from "@/lib/services/reports";
+import { buildReport, resolvePeriod } from "@/lib/services/reports";
 import { listServiceCategories } from "@/lib/services/categories";
 import { duration, hhmm, monthLabel, num, pct } from "@/lib/reports-format";
 import { buildProfitReport } from "@/lib/services/time";
@@ -24,8 +23,7 @@ export async function generateMetadata() {
 const PRESETS = ["7d", "30d", "90d", "month", "last_month", "year"] as const;
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ preset?: string; from?: string; to?: string }> }) {
-  const user = await requirePageStaff("/admin/reports");
-  if (!reportAccess(user.role)) redirect("/admin");
+  const user = await requireStaffPage("/admin/reports", "reports");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.reports;

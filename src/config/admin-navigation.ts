@@ -1,10 +1,11 @@
 /**
  * The staff area's menu, in one place for the desktop sidebar and the mobile drawer: groups, order, who sees each
- * item, and which items carry a counter. Each page still checks access on the server; `roles` here only decides
- * what the menu shows, and matches those checks.
+ * item, and which items carry a counter. Who sees an item comes from STAFF_PAGES, the same table each page checks
+ * on the server, so the menu never offers a page that would turn the person away (or hides one they may open).
  */
 import { BarChart3, CalendarClock, CreditCard, FileText, FolderKanban, History, Inbox, LayoutDashboard, ListChecks, ListTodo, Mail, MessagesSquare, Settings, Users } from "lucide-react";
 import type { UserRole } from "@/lib/db/schema";
+import { STAFF_PAGES } from "@/lib/auth/permissions";
 
 export type NavGroup = "workspace" | "operations" | "business" | "system";
 export const NAV_GROUPS: NavGroup[] = ["workspace", "operations", "business", "system"];
@@ -17,7 +18,7 @@ export type NavItem = {
   href: string;
   group: NavGroup;
   icon: React.ComponentType<{ className?: string }>;
-  roles: UserRole[];
+  roles: readonly UserRole[];
   /** Active only on this exact path (not on pages below it). */
   exact?: boolean;
   badge?: NavBadge;
@@ -25,23 +26,21 @@ export type NavItem = {
   devOnly?: boolean;
 };
 
-const ALL_STAFF: UserRole[] = ["admin", "case_manager", "staff", "finance"];
-
 export const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard", href: "/admin", group: "workspace", icon: LayoutDashboard, roles: ALL_STAFF, exact: true },
-  { key: "queue", href: "/admin/queue", group: "workspace", icon: ListTodo, roles: ["admin", "case_manager", "staff"], badge: "queue" },
-  { key: "inbox", href: "/admin/inbox", group: "operations", icon: Inbox, roles: ["admin", "case_manager"], badge: "inbox" },
-  { key: "quotes", href: "/admin/quotes", group: "operations", icon: FileText, roles: ["admin", "case_manager", "finance"] },
-  { key: "cases", href: "/admin/cases", group: "operations", icon: FolderKanban, roles: ALL_STAFF },
-  { key: "tasks", href: "/admin/tasks", group: "operations", icon: ListChecks, roles: ["admin", "case_manager", "staff"], badge: "tasks" },
-  { key: "conversations", href: "/admin/conversations", group: "operations", icon: MessagesSquare, roles: ["admin", "case_manager", "staff"], badge: "conversations" },
-  { key: "meetings", href: "/admin/meetings", group: "operations", icon: CalendarClock, roles: ["admin", "case_manager", "staff"] },
-  { key: "customers", href: "/admin/customers", group: "business", icon: Users, roles: ["admin", "case_manager"] },
-  { key: "payments", href: "/admin/payments", group: "business", icon: CreditCard, roles: ["admin", "finance"] },
-  { key: "reports", href: "/admin/reports", group: "business", icon: BarChart3, roles: ["admin", "case_manager", "finance"] },
-  { key: "settings", href: "/admin/settings", group: "system", icon: Settings, roles: ["admin"] },
-  { key: "activity", href: "/admin/activity", group: "system", icon: History, roles: ["admin"] },
-  { key: "mailbox", href: "/admin/mailbox", group: "system", icon: Mail, roles: ["admin"], devOnly: true },
+  { key: "dashboard", href: "/admin", group: "workspace", icon: LayoutDashboard, roles: STAFF_PAGES.dashboard, exact: true },
+  { key: "queue", href: "/admin/queue", group: "workspace", icon: ListTodo, roles: STAFF_PAGES.queue, badge: "queue" },
+  { key: "inbox", href: "/admin/inbox", group: "operations", icon: Inbox, roles: STAFF_PAGES.inbox, badge: "inbox" },
+  { key: "quotes", href: "/admin/quotes", group: "operations", icon: FileText, roles: STAFF_PAGES.quotes },
+  { key: "cases", href: "/admin/cases", group: "operations", icon: FolderKanban, roles: STAFF_PAGES.cases },
+  { key: "tasks", href: "/admin/tasks", group: "operations", icon: ListChecks, roles: STAFF_PAGES.tasks, badge: "tasks" },
+  { key: "conversations", href: "/admin/conversations", group: "operations", icon: MessagesSquare, roles: STAFF_PAGES.conversations, badge: "conversations" },
+  { key: "meetings", href: "/admin/meetings", group: "operations", icon: CalendarClock, roles: STAFF_PAGES.meetings },
+  { key: "customers", href: "/admin/customers", group: "business", icon: Users, roles: STAFF_PAGES.customers },
+  { key: "payments", href: "/admin/payments", group: "business", icon: CreditCard, roles: STAFF_PAGES.payments },
+  { key: "reports", href: "/admin/reports", group: "business", icon: BarChart3, roles: STAFF_PAGES.reports },
+  { key: "settings", href: "/admin/settings", group: "system", icon: Settings, roles: STAFF_PAGES.settings },
+  { key: "activity", href: "/admin/activity", group: "system", icon: History, roles: STAFF_PAGES.activity },
+  { key: "mailbox", href: "/admin/mailbox", group: "system", icon: Mail, roles: STAFF_PAGES.mailbox, devOnly: true },
 ];
 
 /** The menu for a role, by group in order; groups with nothing in them are left out. */
@@ -66,13 +65,14 @@ export const SIDEBAR_COOKIE = "cm_nav_collapsed";
  * then opens that case on the right tab with the form ready.
  */
 export type QuickCreateKey = "request" | "task" | "meeting" | "event";
-export type QuickCreateItem = { key: QuickCreateKey; roles: UserRole[] } & ({ href: string } | { pickCase: { tab: "tasks" | "meetings"; intent: "task" | "meeting" } });
+export type QuickCreateItem = { key: QuickCreateKey; roles: readonly UserRole[] } & ({ href: string } | { pickCase: { tab: "tasks" | "meetings"; intent: "task" | "meeting" } });
 
 export const QUICK_CREATE: QuickCreateItem[] = [
-  { key: "request", roles: ["admin", "case_manager"], href: "/admin/cases/new" },
-  { key: "task", roles: ["admin", "case_manager", "staff"], pickCase: { tab: "tasks", intent: "task" } },
-  { key: "meeting", roles: ["admin", "case_manager", "staff"], pickCase: { tab: "meetings", intent: "meeting" } },
-  { key: "event", roles: ["admin", "case_manager", "staff"], href: "/admin/meetings?new=event" },
+  // Each needs the page it opens: the new-request form, a case's Tasks tab (as the Tasks page), the Meetings page.
+  { key: "request", roles: STAFF_PAGES.newCase, href: "/admin/cases/new" },
+  { key: "task", roles: STAFF_PAGES.tasks, pickCase: { tab: "tasks", intent: "task" } },
+  { key: "meeting", roles: STAFF_PAGES.meetings, pickCase: { tab: "meetings", intent: "meeting" } },
+  { key: "event", roles: STAFF_PAGES.meetings, href: "/admin/meetings?new=event" },
 ];
 
 export const quickCreateFor = (role: UserRole) => QUICK_CREATE.filter((i) => i.roles.includes(role));

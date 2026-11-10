@@ -82,27 +82,54 @@ export function caseAccess({ user, caseAssigneeId, caseCustomerUserId, isTaskAss
   }
 }
 
+/**
+ * Who may open each page of the staff area: the one table the pages (on the server), the menu and Quick Create
+ * all read, so what the menu offers and what a page allows can't drift apart.
+ */
+export const STAFF_PAGES = {
+  dashboard: ["admin", "case_manager", "staff", "finance"],
+  queue: ["admin", "case_manager", "staff"],
+  inbox: ["admin", "case_manager"],
+  quotes: ["admin", "case_manager", "finance"],
+  cases: ["admin", "case_manager", "staff", "finance"],
+  newCase: ["admin", "case_manager"],
+  tasks: ["admin", "case_manager", "staff"],
+  conversations: ["admin", "case_manager", "staff"],
+  meetings: ["admin", "case_manager", "staff"],
+  customers: ["admin", "case_manager"],
+  payments: ["admin", "finance"],
+  reports: ["admin", "case_manager", "finance"],
+  settings: ["admin"],
+  activity: ["admin"],
+  mailbox: ["admin"],
+} as const satisfies Record<string, readonly UserRole[]>;
+export type StaffPage = keyof typeof STAFF_PAGES;
+
+export function canOpenPage(role: UserRole, page: StaffPage): boolean {
+  return (STAFF_PAGES[page] as readonly UserRole[]).includes(role);
+}
+
 export function canManageSettings(role: UserRole) {
-  return role === "admin";
+  return canOpenPage(role, "settings");
 }
 
 export function canSeeInbox(role: UserRole) {
-  return role === "admin" || role === "case_manager";
+  return canOpenPage(role, "inbox");
 }
 
 export function canSeeAllQuotes(role: UserRole) {
-  return role === "admin" || role === "finance" || role === "case_manager";
+  return canOpenPage(role, "quotes");
 }
 
 export function canSeePayments(role: UserRole) {
-  return role === "admin" || role === "finance";
+  return canOpenPage(role, "payments");
 }
 
 export function canSeeCustomers(role: UserRole) {
-  return role === "admin" || role === "case_manager";
+  return canOpenPage(role, "customers");
 }
 
 /** Opening a case on a client's behalf (e.g. after a phone call). */
 export function canCreateCasesForClients(role: UserRole) {
-  return role === "admin" || role === "case_manager";
+  return canOpenPage(role, "newCase");
 }

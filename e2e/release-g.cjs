@@ -157,6 +157,8 @@ const apply = async (p) => {
     await admin.waitForURL(/tab=integrations/);
     await admin.goBack();
     await admin.waitForURL(/tab=users/);
+    // The tab's content comes from the server; wait for it.
+    await admin.locator("#panel-users:not([aria-busy])").waitFor();
     assert.equal(await admin.locator("#tab-users").getAttribute("aria-selected"), "true");
     await admin.reload();
     await settle(admin);

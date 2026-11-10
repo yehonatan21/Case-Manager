@@ -1,9 +1,7 @@
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listStaffCases } from "@/lib/services/cases";
-import { canSeeInbox } from "@/lib/auth/permissions";
 import { PageHeader } from "@/components/ui/misc";
 import { CasesTable } from "@/components/admin/cases-table";
 import { toCaseRows } from "../_rows";
@@ -14,8 +12,7 @@ export async function generateMetadata() {
 }
 
 export default async function InboxPage() {
-  const user = await requirePageStaff("/admin/inbox");
-  if (!canSeeInbox(user.role)) redirect("/admin");
+  const user = await requireStaffPage("/admin/inbox", "inbox");
   const { d } = await getDict();
   const rows = (await listStaffCases(await getDb(), user, { status: "open" })).filter((r) => r.status === "submitted" || !r.assigneeId);
   return (

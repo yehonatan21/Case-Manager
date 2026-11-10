@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Download, History } from "lucide-react";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime } from "@/lib/i18n/format";
 import { getDb } from "@/lib/db";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { activityFilters, listActivity, type ActivityFilter } from "@/lib/services/activity";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Pager } from "@/components/ui/pager";
@@ -31,8 +30,7 @@ function summary(details: Record<string, unknown>): string {
 }
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<SP> }) {
-  const user = await requirePageStaff("/admin/activity");
-  if (user.role !== "admin") redirect("/admin");
+  const user = await requireStaffPage("/admin/activity", "activity");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.activity;
