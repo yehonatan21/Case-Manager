@@ -8,7 +8,7 @@ import { and, asc, eq, gt, lt } from "drizzle-orm";
 import type { DbOrTx } from "../db";
 import { staffEvents, type StaffEvent, type User } from "../db/schema";
 import { AppError } from "../errors";
-import { isStaffRole } from "../domain";
+import { canOpenPage } from "../auth/permissions";
 import { DEFAULT_TZ, zonedToUtc } from "../meetings";
 import { addDays } from "../calendar-view";
 import { createOwnCalendarEvent, deleteCalendarEvent, getCalendarStatus, updateOwnCalendarEvent, type OwnEventInput } from "./calendar";
@@ -78,7 +78,8 @@ async function own(db: DbOrTx, actor: User, id: string): Promise<StaffEvent> {
 }
 
 export async function createStaffEvent(db: DbOrTx, actor: User, input: StaffEventInput, tz = DEFAULT_TZ): Promise<StaffEvent> {
-  if (!isStaffRole(actor.role)) throw new AppError("forbidden");
+  // Events live on the Meetings page: whoever may open it may add them (the same rule as the page and the menu).
+  if (!canOpenPage(actor.role, "meetings")) throw new AppError("forbidden");
   const v = clean(input, tz);
   const [e] = await db
     .insert(staffEvents)

@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listStaff } from "@/lib/services/users";
 import { listServiceCategories } from "@/lib/services/categories";
@@ -23,8 +22,7 @@ export async function generateMetadata() {
 type SP = { view?: string; q?: string; category?: string; assignee?: string; urgency?: string; page?: string };
 
 export default async function QueuePage({ searchParams }: { searchParams: Promise<SP> }) {
-  const user = await requirePageStaff("/admin/queue");
-  if (user.role === "finance") redirect("/admin");
+  const user = await requireStaffPage("/admin/queue", "queue");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.queue;
@@ -124,7 +122,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
   );
 }
 
-async function QueueList({ user, sp, manager, staff }: { user: Awaited<ReturnType<typeof requirePageStaff>>; sp: SP; manager: boolean; staff: { id: string; name: string }[] }) {
+async function QueueList({ user, sp, manager, staff }: { user: Awaited<ReturnType<typeof requireStaffPage>>; sp: SP; manager: boolean; staff: { id: string; name: string }[] }) {
   const { d } = await getDict();
   const list = await listQueue(await getDb(), user, { ...sp, page: Number(sp.page) || 1 });
   return (

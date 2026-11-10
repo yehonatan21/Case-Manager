@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { CONVERSATION_FILTERS, conversationCounts, listConversations, listReplyTemplates } from "@/lib/services/conversations";
 import { PageHeader } from "@/components/ui/misc";
@@ -18,8 +17,7 @@ export async function generateMetadata() {
 }
 
 export default async function ConversationsPage({ searchParams }: { searchParams: Promise<{ filter?: string; q?: string; page?: string }> }) {
-  const user = await requirePageStaff("/admin/conversations");
-  if (user.role === "finance") redirect("/admin");
+  const user = await requireStaffPage("/admin/conversations", "conversations");
   const sp = await searchParams;
   const { d } = await getDict();
   const t = d.conversations;

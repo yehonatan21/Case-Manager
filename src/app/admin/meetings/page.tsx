@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDict } from "@/lib/i18n/server";
 import { formatDateTime } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { calendarItems, getAvailability, listUpcomingMeetings } from "@/lib/services/meetings";
 import { calendarRange, parseDay, parseMode } from "@/lib/calendar-view";
@@ -30,7 +30,7 @@ export default async function MeetingsPage({
     new?: string;
   }>;
 }) {
-  const user = await requirePageStaff("/admin/meetings");
+  const user = await requireStaffPage("/admin/meetings", "meetings");
   const { all, calendar, view, date, new: startNew } = await searchParams;
   const { d, locale } = await getDict();
   const t = d.meetings;

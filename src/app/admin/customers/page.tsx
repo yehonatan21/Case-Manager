@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/config";
 import { formatDate } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listCustomers } from "@/lib/services/customers";
-import { canSeeCustomers } from "@/lib/auth/permissions";
 import { customerTypeEnum } from "@/lib/db/schema";
 import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Input, Select } from "@/components/ui/form";
@@ -20,8 +18,7 @@ export async function generateMetadata() {
 }
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; page?: string }> }) {
-  const user = await requirePageStaff("/admin/customers");
-  if (!canSeeCustomers(user.role)) redirect("/admin");
+  const user = await requireStaffPage("/admin/customers", "customers");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const list = await listCustomers(await getDb(), { q: sp.q, type: sp.type, page: Number(sp.page) || 1 });

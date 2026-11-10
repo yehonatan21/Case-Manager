@@ -8,6 +8,7 @@ import { sessions, users, type User } from "../db/schema";
 import { randomToken, sha256 } from "../crypto";
 import { env } from "../env";
 import { AppError } from "../errors";
+import { canOpenPage, type StaffPage } from "./permissions";
 import { isStaffRole } from "../domain";
 
 export const SESSION_COOKIE = "cm_session";
@@ -97,6 +98,13 @@ export async function requirePageStaff(nextPath: string, opts: { allowWithoutSec
   const user = await requirePageUser(nextPath);
   if (!isStaffRole(user.role)) redirect("/portal");
   if (!opts.allowWithoutSecondStep && !nextPath.startsWith(ACCOUNT_PATH) && (await mustSetUpSecondStep(user))) redirect(`${ACCOUNT_PATH}?setup=1`);
+  return user;
+}
+
+/** A staff page with its own access rule (see STAFF_PAGES): anyone else on the team is sent to the dashboard. */
+export async function requireStaffPage(nextPath: string, page: StaffPage, opts: { allowWithoutSecondStep?: boolean } = {}): Promise<User> {
+  const user = await requirePageStaff(nextPath, opts);
+  if (!canOpenPage(user.role, page)) redirect(page === "newCase" ? "/admin/cases" : "/admin");
   return user;
 }
 

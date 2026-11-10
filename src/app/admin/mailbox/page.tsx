@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { getDict } from "@/lib/i18n/server";
 import { formatDateTime } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { notifications } from "@/lib/db/schema";
 import { env } from "@/lib/env";
@@ -12,8 +12,7 @@ import { Badge } from "@/components/ui/badge";
 /** Development-only view of the email outbox (EMAIL_PROVIDER=console). */
 export default async function MailboxPage() {
   if (!env.devMailbox) notFound();
-  const user = await requirePageStaff("/admin/mailbox");
-  if (user.role !== "admin") redirect("/admin");
+  const user = await requireStaffPage("/admin/mailbox", "mailbox");
   const { d, locale } = await getDict();
   const rows = await (await getDb()).select().from(notifications).where(eq(notifications.channel, "email")).orderBy(desc(notifications.createdAt)).limit(100);
   return (

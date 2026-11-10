@@ -159,6 +159,39 @@ describe.skipIf(!BASE)("HTTP API", () => {
     expect((await fetch(BASE + "/admin/cases?status=all", { headers: { Cookie: admin.cookie } })).status).toBe(200);
   });
 
+  describe("who may open each staff page (the same rule as the menu)", () => {
+    // [page, path, who may open it]; everyone else on the team is sent to the dashboard (a new request: to Cases).
+    const pages: [string, string[]][] = [
+      ["/admin", ["admin", "manager", "staff", "finance"]],
+      ["/admin/queue", ["admin", "manager", "staff"]],
+      ["/admin/inbox", ["admin", "manager"]],
+      ["/admin/quotes", ["admin", "manager", "finance"]],
+      ["/admin/cases", ["admin", "manager", "staff", "finance"]],
+      ["/admin/cases/new", ["admin", "manager"]],
+      ["/admin/tasks", ["admin", "manager", "staff"]],
+      ["/admin/conversations", ["admin", "manager", "staff"]],
+      ["/admin/meetings", ["admin", "manager", "staff"]],
+      ["/admin/customers", ["admin", "manager"]],
+      ["/admin/payments", ["admin", "finance"]],
+      ["/admin/reports", ["admin", "manager", "finance"]],
+      ["/admin/settings", ["admin"]],
+      ["/admin/activity", ["admin"]],
+    ];
+    it("lets in exactly the roles the menu shows the page to", async () => {
+      const cookies = Object.fromEntries(await Promise.all(["admin", "manager", "staff", "finance"].map(async (who) => [who, (await session(`${who}@example.com`)).cookie])));
+      for (const [path, allowed] of pages) {
+        for (const who of ["admin", "manager", "staff", "finance"]) {
+          const res = await fetch(BASE + path, { redirect: "manual", headers: { Cookie: cookies[who]! } });
+          if (allowed.includes(who)) expect(res.status, `${who} ${path}`).toBe(200);
+          else {
+            expect([303, 307, 308], `${who} ${path}`).toContain(res.status);
+            expect(new URL(res.headers.get("location")!, BASE).pathname, `${who} ${path}`).toBe(path === "/admin/cases/new" ? "/admin/cases" : "/admin");
+          }
+        }
+      }
+    });
+  });
+
   describe("Quick Create's case picker (GET /api/admin/cases)", () => {
     it("needs a staff session; finds open cases the user may work on; finance gets none", async () => {
       expect((await call("/api/admin/cases?q=CASE")).status).toBe(401);

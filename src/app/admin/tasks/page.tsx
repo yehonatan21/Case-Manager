@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getDict } from "@/lib/i18n/server";
 import { formatDate } from "@/lib/i18n/format";
-import { requirePageStaff } from "@/lib/auth/session";
+import { requireStaffPage } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { listTasksForStaff, TASK_PRIORITIES } from "@/lib/services/tasks";
 import { listAssignableStaff } from "@/lib/services/users";
@@ -23,8 +22,7 @@ export async function generateMetadata() {
 type Search = { scope?: string; overdue?: string; q?: string; assignee?: string; priority?: string; status?: string; from?: string; to?: string; page?: string };
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const user = await requirePageStaff("/admin/tasks");
-  if (user.role === "finance") redirect("/admin");
+  const user = await requireStaffPage("/admin/tasks", "tasks");
   const sp = await searchParams;
   const { d, locale } = await getDict();
   const t = d.filterBar;
