@@ -1,0 +1,18 @@
+{
+  "//": "Limits per page, checked in CI by e2e/perf-budget.cjs against the production build. jsKb: JavaScript sent to the browser (compressed); serverMs: the server's median answer time; loadMs: until the page's load event. Raise a limit only on purpose, in the same change that needs it.",
+  "default": { "jsKb": 300, "serverMs": 1500, "loadMs": 5000 },
+  "pages": {
+    "/": {},
+    "/login": {},
+    "/admin": {},
+    "/admin/cases": {},
+    "/admin/queue": {},
+    "/admin/quotes": {},
+    "/admin/payments": {},
+    "/admin/tasks": {},
+    "/admin/meetings": {},
+    "/admin/reports": {},
+    "/admin/settings": {},
+    "/admin/settings?tab=health": {}
+  }
+}
