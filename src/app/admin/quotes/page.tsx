@@ -39,8 +39,8 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
         fields={[
           { type: "search", name: "q", label: t.search, placeholder: t.quotesSearch },
           { type: "select", name: "status", label: t.status, options: QUOTE_STATUSES.map((s) => ({ value: s, label: d.quoteStatus[s] })) },
-          { type: "date", name: "from", label: t.from },
-          { type: "date", name: "to", label: t.to },
+          { type: "date", name: "from", label: t.from, range: "from" },
+          { type: "date", name: "to", label: t.to, range: "to" },
         ]}
       />
       {rows.length === 0 ? (

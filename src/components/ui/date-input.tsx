@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CalendarDays } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 import { fieldBase } from "./form";
+import { DatePickerPopover } from "./date-picker";
 
 /**
  * A date field that always reads and writes DD/MM/YYYY, whatever the browser's language (the browser's own date
  * field follows the browser's settings, which shows MM/DD/YYYY in a US-English browser). The value it reports is
- * YYYY-MM-DD, or "" while the date is empty or incomplete. The calendar button opens the browser's date picker.
- * With `name`, the YYYY-MM-DD value is also sent with a plain form.
+ * YYYY-MM-DD, or "" while the date is empty or incomplete. The calendar button opens the app's calendar (the
+ * same one everywhere, Sunday first, with quick picks). With `name`, the YYYY-MM-DD value is also sent with a plain
+ * form. Two fields with the same `range.group` (one `part: "from"`, one `"to"`) work as a range: the calendar shades
+ * the days between them and its quick picks ("last 7 days", "this month"…) fill both.
  */
 type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "defaultValue" | "onChange" | "type" | "min" | "max"> & {
   value?: string;
@@ -18,7 +21,18 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "defaul
   onChange?: (iso: string) => void;
   min?: string;
   max?: string;
+  range?: { group: string; part: "from" | "to" };
 };
+
+// ---- Range groups: the From and To fields of one filter, kept in step (they may be server-rendered apart) ----
+type Group = { from: string; to: string; listeners: Set<() => void>; set: Set<(from: string, to: string) => void> };
+const groups = new Map<string, Group>();
+const groupOf = (id: string) => {
+  let g = groups.get(id);
+  if (!g) groups.set(id, (g = { from: "", to: "", listeners: new Set(), set: new Set() }));
+  return g;
+};
+const notify = (g: Group) => g.listeners.forEach((l) => l());
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -51,12 +65,48 @@ export function autoSlash(raw: string): string {
   return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join("/");
 }
 
-export function DateInput({ value, defaultValue, onChange, name, min, max, className, disabled, ...rest }: Props) {
+export function DateInput({ value, defaultValue, onChange, name, min, max, className, disabled, range, ...rest }: Props) {
   const { d } = useI18n();
   const controlled = value !== undefined;
   const [text, setText] = useState(() => isoToDisplay(controlled ? value : defaultValue));
   const [iso, setIso] = useState(() => (controlled ? (value ?? "") : (defaultValue ?? "")));
-  const picker = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  // In a range, this field publishes its day and takes the day a quick pick sets for its part.
+  const group = range ? groupOf(range.group) : null;
+  useEffect(() => {
+    if (!group || !range) return;
+    group[range.part] = iso;
+    notify(group);
+  }, [group, range, iso]);
+  const applyRange = useCallback(
+    (from: string, to: string) => {
+      if (!range) return;
+      const mine = range.part === "from" ? from : to;
+      setText(isoToDisplay(mine));
+      setIso(mine);
+      onChange?.(mine);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [range?.part, onChange],
+  );
+  useEffect(() => {
+    if (!group) return;
+    group.set.add(applyRange);
+    return () => void group.set.delete(applyRange);
+  }, [group, applyRange]);
+  const snapshot = useSyncExternalStore(
+    (cb) => {
+      if (!group) return () => {};
+      group.listeners.add(cb);
+      return () => void group.listeners.delete(cb);
+    },
+    () => (group ? `${group.from}|${group.to}` : ""),
+    () => "",
+  );
+  const [rangeFrom, rangeTo] = snapshot.split("|");
 
   // A new value from outside (a reset, or the picker) replaces what's shown, unless it's the same date.
   useEffect(() => {
@@ -72,7 +122,7 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
   };
 
   return (
-    <span className={cn("relative inline-flex w-full min-w-36 items-center", className)}>
+    <span ref={wrap} className={cn("relative inline-flex w-full min-w-36 items-center", className)}>
       {/* The date always reads left to right, so the button sits on the right on Hebrew pages too. */}
       <input
         {...rest}
@@ -98,38 +148,49 @@ export function DateInput({ value, defaultValue, onChange, name, min, max, class
       />
       {name && <input type="hidden" name={name} value={iso} />}
       <button
+        ref={button}
         type="button"
         disabled={disabled}
         aria-label={d.common.pickDate}
-        onClick={() => {
-          const p = picker.current;
-          if (!p) return;
-          p.value = iso;
-          try {
-            p.showPicker();
-          } catch {
-            p.focus();
-          }
-        }}
-        className="absolute right-1 grid size-8 place-items-center rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={cn("absolute right-1 grid size-8 place-items-center rounded-md hover:bg-slate-100 disabled:opacity-50", open ? "bg-brand-50 text-brand-700" : "text-slate-600")}
       >
         <CalendarDays className="size-4" aria-hidden />
       </button>
-      {/* The browser's picker, opened by the button; it isn't a field of its own. */}
-      <input
-        ref={picker}
-        type="date"
-        tabIndex={-1}
-        aria-hidden
-        min={min}
-        max={max}
-        className="pointer-events-none absolute bottom-0 right-0 h-0 w-0 opacity-0"
-        onChange={(e) => {
-          const next = validIso(e.target.value);
-          setText(isoToDisplay(next));
-          if (next !== iso) commit(next);
-        }}
-      />
+      {open && (
+        <DatePickerPopover
+          anchor={wrap.current}
+          value={iso}
+          min={min}
+          max={max}
+          range={
+            range && group
+              ? {
+                  part: range.part,
+                  from: rangeFrom ?? "",
+                  to: rangeTo ?? "",
+                  onRange: (from, to) => {
+                    group.set.forEach((apply) => apply(from, to));
+                    setOpen(false);
+                    button.current?.focus();
+                  },
+                }
+              : undefined
+          }
+          onPick={(next) => {
+            setText(isoToDisplay(next));
+            if (next !== iso) commit(next);
+            setOpen(false);
+            button.current?.focus();
+          }}
+          onClose={(o) => {
+            setOpen(false);
+            if (o?.restoreFocus) button.current?.focus();
+          }}
+        />
+      )}
     </span>
   );
 }

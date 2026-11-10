@@ -81,11 +81,11 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.from}</span>
-          <DateInput name="from" defaultValue={sp.from ?? ""} />
+          <DateInput name="from" range={{ group: "activity", part: "from" }} defaultValue={sp.from ?? ""} />
         </label>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.to}</span>
-          <DateInput name="to" defaultValue={sp.to ?? ""} />
+          <DateInput name="to" range={{ group: "activity", part: "to" }} defaultValue={sp.to ?? ""} />
         </label>
         <div className="flex items-end gap-2">
           <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
