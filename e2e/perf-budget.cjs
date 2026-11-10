@@ -35,20 +35,18 @@ const budget = JSON.parse(fs.readFileSync(path.join(__dirname, "perf-budget.json
       }
       times.sort((a, b) => a - b);
       const serverMs = times[Math.floor(times.length / 2)];
-      // The browser: a fresh load, counting the JavaScript that came over the network.
-      let jsBytes = 0;
-      const onResponse = async (res) => {
-        if (res.request().resourceType() !== "script") return;
-        const len = Number(res.headers()["content-length"]);
-        jsBytes += Number.isFinite(len) && len > 0 ? len : (await res.body().catch(() => Buffer.alloc(0))).length;
-      };
-      // A new browser profile each time (same sign-in), so nothing comes from the cache of an earlier page.
+      // The browser: a fresh load in a new profile (same sign-in, empty cache); the JavaScript it downloaded, as the
+      // browser measured it (compressed size of every script), once the network is quiet.
       const freshCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "he", storageState: await ctx.storageState() });
       const fresh = await freshCtx.newPage();
-      fresh.on("response", onResponse);
-      await fresh.goto(BASE + page, { waitUntil: "load" });
-      await fresh.waitForTimeout(300);
-      const loadMs = await fresh.evaluate(() => Math.round(performance.getEntriesByType("navigation")[0].loadEventEnd));
+      await fresh.goto(BASE + page, { waitUntil: "networkidle" });
+      const { jsBytes, loadMs } = await fresh.evaluate(() => ({
+        jsBytes: performance
+          .getEntriesByType("resource")
+          .filter((r) => r.initiatorType === "script" || /\.js(\?|$)/.test(r.name))
+          .reduce((sum, r) => sum + (r.encodedBodySize || r.transferSize || 0), 0),
+        loadMs: Math.round(performance.getEntriesByType("navigation")[0].loadEventEnd),
+      }));
       await freshCtx.close();
       const jsKb = Math.round(jsBytes / 1024);
       const over = [jsKb > limit.jsKb && "JS", serverMs > limit.serverMs && "server", loadMs > limit.loadMs && "load"].filter(Boolean);
