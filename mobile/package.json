@@ -19,6 +19,7 @@
     "@capacitor/splash-screen": "8.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.6.0"
+    "@capacitor/cli": "8.6.0",
+    "typescript": "^5.9.3"
   }
 }
