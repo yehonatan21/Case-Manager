@@ -949,6 +949,47 @@ export const pushSubscriptions = pgTable(
 );
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
+/** The iPhone/Android app's push token for a device (APNs device token or FCM registration token). */
+export const nativePushTokens = pgTable(
+  "native_push_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform").$type<"ios" | "android">().notNull(),
+    token: text("token").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("native_push_tokens_token_idx").on(t.token), index("native_push_tokens_user_idx").on(t.userId)],
+);
+
+export type NativePushTokenRow = typeof nativePushTokens.$inferSelect;
+
+/**
+ * Google sign-in from the app runs in the system browser (Google blocks embedded web views). The browser
+ * returns to the app with a one-time code; the app redeems it, with the secret only it holds, for a session.
+ */
+export const appSignIns = pgTable(
+  "app_sign_ins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    codeHash: text("code_hash").notNull(),
+    /** SHA-256 (base64url) of the secret the app kept; redeeming needs the secret itself. */
+    challenge: text("challenge").notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    mfaPending: boolean("mfa_pending").notNull().default(false),
+    /** A new Google account: the signed sign-up token that finishes registration. */
+    signupToken: text("signup_token"),
+    next: text("next"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("app_sign_ins_code_idx").on(t.codeHash)],
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {

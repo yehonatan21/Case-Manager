@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The site's brand colour (indigo), for the notification accent and the status bar. -->
+    <color name="colorPrimary">#4338CA</color>
+    <color name="colorPrimaryDark">#3730A3</color>
+    <color name="colorAccent">#4338CA</color>
+    <color name="notification_accent">#4338CA</color>
+</resources>

@@ -1,0 +1,24 @@
+{
+  "name": "case-manager-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "iPhone and Android app for Case Manager: a native shell that opens the live site, with native push, sign-in and camera.",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap sync android && cap open android",
+    "ios": "cap sync ios && cap open ios",
+    "check": "node scripts/check-config.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/push-notifications": "8.1.3",
+    "@capacitor/splash-screen": "8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

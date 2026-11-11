@@ -60,7 +60,7 @@ async function signIn(browser, email) {
       // Public
       const pub = await browser.newContext({ viewport, locale });
       await pub.addCookies([cookie]);
-      for (const u of ["/", "/login", "/register", "/intake/manual", "/accessibility", "/privacy", "/terms", "/no-such-page"]) await (await visit(pub, u, name)).close();
+      for (const u of ["/", "/login", "/register", "/intake/manual", "/accessibility", "/privacy", "/terms", "/app-return?error=google_cancelled", "/no-such-page"]) await (await visit(pub, u, name)).close();
       // Customer
       const c = await browser.newContext({ viewport, locale, storageState: client });
       await c.addCookies([cookie]);

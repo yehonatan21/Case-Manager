@@ -434,6 +434,40 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("iPhone/Android app", () => {
+    const iosToken = () => Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+
+    it("registers a phone for push, reports it, and turns it off", async () => {
+      expect((await call("/api/push/native", { body: { platform: "ios", token: iosToken() } })).status).toBe(401);
+      const client = await session("biz@example.com");
+      for (const bad of [{}, { platform: "ios", token: "not-a-token-but-long-enough" }, { platform: "windows", token: iosToken() }]) {
+        expect((await call("/api/push/native", { body: bad, cookie: client.cookie })).status, JSON.stringify(bad)).toBe(400);
+      }
+      const token = iosToken();
+      expect((await call(`/api/push/native?token=${token}`, { cookie: client.cookie })).json!.data.on).toBe(false);
+      const on = await call("/api/push/native", { body: { platform: "ios", token }, cookie: client.cookie });
+      expect(on.status).toBe(200);
+      expect(on.json!.data.configured).toBe(false); // no APNs key on the test server
+      expect((await call(`/api/push/native?token=${token}`, { cookie: client.cookie })).json!.data.on).toBe(true);
+      const off = await call("/api/push/native", { method: "DELETE", body: { token }, cookie: client.cookie });
+      expect(off.json!.data.devices).toBe(on.json!.data.devices - 1);
+      expect((await call(`/api/push/native?token=${token}`, { cookie: client.cookie })).json!.data.on).toBe(false);
+    });
+
+    it("a sign-in code from the system browser is useless without the app's secret", async () => {
+      expect((await call("/api/auth/app-sign-in", { body: { code: "x".repeat(43), verifier: "y".repeat(43) } })).status).toBe(403);
+      expect((await call("/api/auth/app-sign-in", { body: { code: "short" } })).status).toBe(400);
+    });
+
+    it("the return page hands the code to the app's URL scheme, and only well-formed codes", async () => {
+      const ok = await (await fetch(`${BASE}/app-return?code=${"a".repeat(43)}`)).text();
+      expect(ok).toContain(`app.casemanager.mobile://auth?code=${"a".repeat(43)}`);
+      const bad = await (await fetch(`${BASE}/app-return?code=${encodeURIComponent("<script>")}`)).text();
+      expect(bad).toContain("app.casemanager.mobile://auth?error=google_failed");
+      expect(bad).not.toContain("<script>&");
+    });
+  });
+
   describe("document checklists", () => {
     it("staff request a template's checklist; customers can't; bad bodies are rejected", async () => {
       const admin = await session("admin@example.com");

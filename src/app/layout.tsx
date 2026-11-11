@@ -11,6 +11,7 @@ import { CategoriesProvider } from "@/components/app/categories";
 import { getDb } from "@/lib/db";
 import { listServiceCategories } from "@/lib/services/categories";
 import { aiMayKeepData } from "@/lib/ai/providers";
+import { NativeBridge } from "@/components/native/native-bridge";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { d } = await getDict();
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <I18nProvider locale={locale} aiMayKeepData={aiMayKeepData()}>
           <CategoriesProvider categories={categories}>
             <ToastProvider>{children}</ToastProvider>
+            <NativeBridge />
           </CategoriesProvider>
         </I18nProvider>
         <ErrorReporter />

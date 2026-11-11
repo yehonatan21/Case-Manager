@@ -30,6 +30,7 @@ Staff can also open requests on a client's behalf.
 - [AI providers](#ai-providers)
 - [Payments: Grow, Stripe, test checkout](#payments)
 - [Push notifications](#push-notifications)
+- [iPhone and Android app](#iphone-and-android-app)
 - [WhatsApp](#whatsapp)
 - [Electronic signatures](#electronic-signatures)
 - [Meetings](#meetings)
@@ -175,6 +176,7 @@ All settings are environment variables; see [`.env.example`](.env.example) for t
 | `AI_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, … | See [AI providers](#ai-providers). |
 | `PAYMENT_PROVIDER`, `STRIPE_*`, `GROW_*` | See [Payments](#payments). |
 | `VAPID_*` | Optional; see [Push notifications](#push-notifications). |
+| `FCM_SERVICE_ACCOUNT`, `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC`, `APNS_ENVIRONMENT`, `APP_URL_SCHEME` | Optional; the iPhone/Android app's push and sign-in. See [iPhone and Android app](#iphone-and-android-app). |
 | `WHATSAPP_*` | Optional; see [WhatsApp](#whatsapp). |
 | `SMTP_URL`, `EMAIL_FROM`, `EMAIL_FROM_NAME` | See [Email](#email). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | See [Google sign-in](#google-sign-in). |
@@ -253,6 +255,18 @@ Web Push reaches browsers and phones even when the site is closed.
   - [`public/sw.js`](public/sw.js): the service worker.
   - [`src/app/manifest.ts`](src/app/manifest.ts): the web app manifest.
   - [`src/lib/services/push.ts`](src/lib/services/push.ts): sending.
+
+## iPhone and Android app
+
+[`mobile/`](mobile/) is a native app for iPhone and Android (Capacitor) that opens the live site. Every screen, the Hebrew/RTL layout and every feature come from the server, so **a website release reaches the app without a store update**. What the app adds natively:
+
+- **Push notifications:** browser push doesn't reach an app, so the app registers the phone with Apple (APNs) or Google (Firebase) and the same push outbox sends to it ([`native-push.ts`](src/lib/services/native-push.ts)). Turning it on is the same **Notifications on this device** switch. Needs `APNS_*` and `FCM_SERVICE_ACCOUNT` (see `.env.example`).
+- **Google sign-in:** Google blocks sign-in inside apps, so it opens in the system browser and hands the app a one-time code, which only the app can redeem ([`app-sign-in.ts`](src/lib/services/app-sign-in.ts)). Email-code sign-in works as it is.
+- **Camera:** document uploads offer the camera; the app declares camera and photo permission texts.
+- **Payments:** the Grow payment page stays inside the app. These are real-world services, so Apple's in-app purchase doesn't apply.
+- **Offline screen** when the site can't be reached, the app icon and a launch screen.
+
+Building, signing, the Apple/Google keys and store submission: [**mobile/README.md**](mobile/README.md). CI builds both apps on every change to `mobile/` (the Android build is downloadable from the run).
 
 ## Electronic signatures
 

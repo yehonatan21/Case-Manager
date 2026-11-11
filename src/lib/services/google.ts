@@ -23,6 +23,17 @@ export function googleStateCookieName(state: string | null | undefined) {
 }
 export const GOOGLE_SIGNUP_COOKIE = "cm_google_signup";
 
+/** The app's challenge when this attempt was started from the iPhone/Android app (see app-sign-in.ts), else null. */
+export function googleAttemptApp(cookie: string | undefined): string | null {
+  const raw = cookie ? verifyToken(cookie) : null;
+  if (!raw) return null;
+  try {
+    return (JSON.parse(raw) as { app?: string }).app ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function googleEnabled() {
   return !!(env.googleClientId && env.googleClientSecret);
 }
@@ -41,7 +52,7 @@ export const CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar.events
  * With `calendarFor`, it's a team member connecting their Google Calendar instead of signing in: calendar scopes,
  * offline access (a refresh token), and the same redirect URI, so no extra setup in Google Cloud.
  */
-export function startGoogleSignIn(next: string | null, opts: { calendarFor?: string } = {}) {
+export function startGoogleSignIn(next: string | null, opts: { calendarFor?: string; app?: string } = {}) {
   if (!googleEnabled()) throw new AppError("not_found");
   const state = b64url(crypto.randomBytes(24));
   const verifier = b64url(crypto.randomBytes(32));
@@ -58,7 +69,10 @@ export function startGoogleSignIn(next: string | null, opts: { calendarFor?: str
     code_challenge_method: "S256",
     ...(opts.calendarFor ? { access_type: "offline", prompt: "consent", include_granted_scopes: "true" } : { prompt: "select_account" }),
   }).toString();
-  const cookie = signToken(JSON.stringify({ state, verifier, next: safeNext, ...(opts.calendarFor ? { calendarFor: opts.calendarFor } : {}) }), 600);
+  const cookie = signToken(
+    JSON.stringify({ state, verifier, next: safeNext, ...(opts.calendarFor ? { calendarFor: opts.calendarFor } : {}), ...(opts.app && !opts.calendarFor ? { app: opts.app } : {}) }),
+    600,
+  );
   return { url: url.toString(), cookie, cookieName: googleStateCookieName(state) };
 }
 
@@ -67,7 +81,7 @@ export type GoogleProfile = { email: string; emailVerified: boolean; name: strin
 /** Exchanges the authorization code (validating state) and fetches the verified profile. */
 export async function finishGoogleSignIn(params: { code: string | null; state: string | null; cookie: string | undefined }) {
   const raw = params.cookie ? verifyToken(params.cookie) : null;
-  const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null; calendarFor?: string }) : null;
+  const saved = raw ? (JSON.parse(raw) as { state: string; verifier: string; next: string | null; calendarFor?: string; app?: string }) : null;
   if (!saved || !params.state || saved.state !== params.state || !params.code) {
     // Which check failed, for the server log (no secrets): no cookie, expired/forged cookie, or another attempt's cookie.
     const why = !params.cookie ? "no state cookie" : !raw ? "state cookie expired or invalid" : !params.code ? "no code" : "state does not match";
@@ -100,7 +114,7 @@ export async function finishGoogleSignIn(params: { code: string | null; state: s
   const calendar = saved.calendarFor
     ? { userId: saved.calendarFor, refreshToken: token.refresh_token ?? null, scopesGranted: CALENDAR_SCOPES.every((sc) => (token.scope ?? "").split(" ").includes(sc)) }
     : null;
-  return { profile, next: saved.next, calendar };
+  return { profile, next: saved.next, calendar, app: saved.app ?? null };
 }
 
 /**

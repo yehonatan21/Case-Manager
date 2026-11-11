@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>אין חיבור · No connection</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#0f172a; --muted:#475569; --brand:#4338ca; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f172a; --fg:#f1f5f9; --muted:#cbd5e1; --brand:#a5b4fc; } }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+  main { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:24px; text-align:center; box-sizing:border-box; }
+  h1 { font-size:22px; margin:0; }
+  p { margin:0; color:var(--muted); max-width:28rem; line-height:1.5; }
+  p[lang="en"] { direction:ltr; }
+  button { margin-top:12px; font:inherit; font-weight:600; color:#fff; background:#4338ca; border:0; border-radius:12px; padding:12px 28px; min-height:44px; }
+  button:focus-visible { outline:3px solid var(--brand); outline-offset:3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>אין חיבור לאינטרנט</h1>
+  <p>לא הצלחנו להתחבר. בדקו את החיבור ונסו שוב.</p>
+  <p lang="en">No internet connection. Check your connection and try again.</p>
+  <button type="button" id="retry">נסו שוב · Try again</button>
+</main>
+<script>
+  // Back to the site the app opens (the address in the native config), as soon as the connection is back.
+  var go = function () { var u = (window.Capacitor && window.Capacitor.getServerUrl && window.Capacitor.getServerUrl()) || "/"; location.replace(u); };
+  document.getElementById("retry").addEventListener("click", go);
+  window.addEventListener("online", go);
+</script>
+</body>
+</html>
