@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { api, errorText } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { NATIVE_TOKEN_KEY, nativePlatform, nativePushPermission, nativeStore, registerNativePush } from "@/lib/native";
 
 type State = "loading" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
@@ -22,16 +23,29 @@ async function registration() {
   return navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
 }
 
-/** "Notifications on this device": subscribes this browser to Web Push (per device, not per account). */
+/**
+ * "Notifications on this device": subscribes this browser to Web Push (per device, not per account).
+ * Inside the iPhone/Android app it registers the phone for native push instead (browser push doesn't reach an
+ * app's web view).
+ */
 export function PushToggle({ className }: { className?: string }) {
   const { d } = useI18n();
   const t = d.push;
   const toast = useToast();
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState<"on" | "off" | "test" | null>(null);
+  const [app, setApp] = useState<"ios" | "android" | null>(null);
 
   useEffect(() => {
     (async () => {
+      const platform = nativePlatform();
+      if (platform) {
+        setApp(platform);
+        if ((await nativePushPermission()) === "denied") return setState("denied");
+        const token = nativeStore.get(NATIVE_TOKEN_KEY);
+        const { on } = token ? await api<{ on: boolean }>(`/api/push/native?token=${encodeURIComponent(token)}`) : { on: false };
+        return setState(on ? "on" : "off");
+      }
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         // iPhone/iPad only allow push for apps added to the home screen.
         setState(isIos() && !isStandalone() ? "ios-install" : "unsupported");
@@ -44,7 +58,39 @@ export function PushToggle({ className }: { className?: string }) {
     })().catch(() => setState("unsupported"));
   }, []);
 
+  async function enableApp(platform: "ios" | "android") {
+    setBusy("on");
+    try {
+      const token = await registerNativePush();
+      await api("/api/push/native", { body: { platform, token } });
+      nativeStore.set(NATIVE_TOKEN_KEY, token);
+      setState("on");
+      toast("success", t.enabled);
+    } catch (e) {
+      if ((e as { denied?: boolean }).denied) setState("denied");
+      else toast("error", e instanceof Error && !("code" in e) ? t.appFailed : errorText(e, d));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function disableApp() {
+    setBusy("off");
+    try {
+      const token = nativeStore.get(NATIVE_TOKEN_KEY);
+      if (token) await api("/api/push/native", { method: "DELETE", body: { token } });
+      nativeStore.set(NATIVE_TOKEN_KEY, null);
+      setState("off");
+      toast("success", t.disabled);
+    } catch (e) {
+      toast("error", errorText(e, d));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function enable() {
+    if (app) return enableApp(app);
     setBusy("on");
     try {
       const permission = await Notification.requestPermission();
@@ -67,6 +113,7 @@ export function PushToggle({ className }: { className?: string }) {
   }
 
   async function disable() {
+    if (app) return disableApp();
     setBusy("off");
     try {
       const reg = await navigator.serviceWorker.getRegistration("/");
@@ -96,10 +143,10 @@ export function PushToggle({ className }: { className?: string }) {
     }
   }
 
-  const note = { "ios-install": t.iosInstall, unsupported: t.unsupported, denied: t.denied, loading: "", off: t.offHint, on: t.onHint }[state];
+  const note = { "ios-install": t.iosInstall, unsupported: t.unsupported, denied: app ? t.appDenied : t.denied, loading: "", off: t.offHint, on: app ? t.appOnHint : t.onHint }[state];
 
   return (
-    <div className={className} data-push-state={state}>
+    <div className={className} data-push-state={state} data-push-kind={app ? "app" : "web"}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">

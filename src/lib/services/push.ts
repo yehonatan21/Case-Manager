@@ -1,5 +1,6 @@
 /**
- * Web Push notifications (browsers and phones, including iPhone home-screen apps).
+ * Web Push notifications (browsers and phones, including iPhone home-screen apps), plus the iPhone/Android
+ * app's native push (native-push.ts) — one outbox for both.
  *
  * Every in-app notification for a user who has enabled push on at least one device also gets a "push" row in
  * the notifications outbox; `dispatchPendingPushes` sends it to all of that user's devices, retries transient
@@ -12,14 +13,16 @@ import { after } from "next/server";
 import webpush from "web-push";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb, type Database, type DbOrTx } from "../db";
-import { notifications, pushSubscriptions, settings, type User } from "../db/schema";
+import { nativePushTokens, notifications, pushSubscriptions, settings, type User } from "../db/schema";
 import { env } from "../env";
 import { AppError } from "../errors";
 import { decryptBuffer, encryptBuffer } from "../crypto";
+import { MAX_DEVICES_PER_USER, type PushPayload } from "./push-shared";
+import { NativePushError, deliverNative, nativePushConfigured } from "./native-push";
+
+export { MAX_DEVICES_PER_USER, type PushPayload };
 
 const VAPID_KEY = "push.vapid";
-/** Devices kept per user; the oldest are dropped beyond this. */
-export const MAX_DEVICES_PER_USER = 10;
 
 export type VapidKeys = { publicKey: string; privateKey: string };
 
@@ -88,20 +91,20 @@ export async function removePushSubscription(db: DbOrTx, user: Pick<User, "id">,
   await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.userId, user.id), eq(pushSubscriptions.endpoint, endpoint)));
 }
 
+/** Browsers plus app installs with push turned on. */
 export async function countPushDevices(db: DbOrTx, userId: string): Promise<number> {
   const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
-  return r?.n ?? 0;
+  const [a] = await db.select({ n: sql<number>`count(*)::int` }).from(nativePushTokens).where(eq(nativePushTokens.userId, userId));
+  return (r?.n ?? 0) + (a?.n ?? 0);
 }
 
-/** Users (of `ids`) who have push enabled on at least one device. */
+/** Users (of `ids`) who have push enabled on at least one device (a browser or the app). */
 export async function usersWithPush(db: DbOrTx, ids: string[]): Promise<Set<string>> {
   if (ids.length === 0) return new Set();
   const rows = await db.selectDistinct({ userId: pushSubscriptions.userId }).from(pushSubscriptions).where(inArray(pushSubscriptions.userId, ids));
-  return new Set(rows.map((r) => r.userId));
+  const apps = await db.selectDistinct({ userId: nativePushTokens.userId }).from(nativePushTokens).where(inArray(nativePushTokens.userId, ids));
+  return new Set([...rows, ...apps].map((r) => r.userId));
 }
-
-/** What the service worker (public/sw.js) receives. */
-export type PushPayload = { title: string; body: string; url: string; tag: string };
 
 const absolute = (link: string | null) => (link ? new URL(link, env.appUrl).toString() : `${env.appUrl}/`);
 
@@ -141,23 +144,43 @@ export async function dispatchPendingPushes(db: Database, limit = 50): Promise<n
     returning id, user_id, title, body, link, attempts`);
   const list = (claimed as unknown as { rows: Record<string, unknown>[] }).rows ?? (claimed as unknown as Record<string, unknown>[]);
   if (list.length === 0) return 0;
-  const keys = await getVapidKeys(db);
-  const vapidDetails = { subject: vapidSubject(), publicKey: keys.publicKey, privateKey: keys.privateKey };
+  let vapidDetails: { subject: string; publicKey: string; privateKey: string } | null = null;
   let delivered = 0;
 
   for (const n of list) {
     const id = String(n.id);
     const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, String(n.user_id)));
-    if (subs.length === 0) {
+    const apps = await db.select().from(nativePushTokens).where(eq(nativePushTokens.userId, String(n.user_id)));
+    if (subs.length === 0 && apps.length === 0) {
       await db.update(notifications).set({ status: "failed", error: "no_devices" }).where(eq(notifications.id, id));
       continue;
     }
     const payload: PushPayload = { title: String(n.title), body: String(n.body ?? ""), url: absolute((n.link as string) ?? null), tag: id };
     let ok = 0;
     let transient: string | null = null;
+    let unconfigured = false;
+    for (const a of apps) {
+      // The app on a platform the server has no push credentials for (see .env.example): nothing to send with.
+      if (!nativePushConfigured(a.platform)) {
+        unconfigured = true;
+        continue;
+      }
+      try {
+        await deliverNative(a, payload);
+        ok++;
+        await db.update(nativePushTokens).set({ lastSuccessAt: new Date() }).where(eq(nativePushTokens.id, a.id));
+      } catch (err) {
+        if (err instanceof NativePushError && err.gone) await db.delete(nativePushTokens).where(eq(nativePushTokens.id, a.id));
+        else transient = `${(err as Error).message ?? String(err)}`.trim().slice(0, 300);
+      }
+    }
+    if (subs.length > 0 && !vapidDetails) {
+      const keys = await getVapidKeys(db);
+      vapidDetails = { subject: vapidSubject(), publicKey: keys.publicKey, privateKey: keys.privateKey };
+    }
     for (const s of subs) {
       try {
-        await deliver(s, payload, vapidDetails);
+        await deliver(s, payload, vapidDetails!);
         ok++;
         await db.update(pushSubscriptions).set({ lastSuccessAt: new Date() }).where(eq(pushSubscriptions.id, s.id));
       } catch (err) {
@@ -174,7 +197,7 @@ export async function dispatchPendingPushes(db: Database, limit = 50): Promise<n
       const attempts = Number(n.attempts ?? 1);
       await db.update(notifications).set({ status: attempts >= 5 ? "failed" : "pending", error: transient }).where(eq(notifications.id, id));
     } else {
-      await db.update(notifications).set({ status: "failed", error: "devices_gone" }).where(eq(notifications.id, id));
+      await db.update(notifications).set({ status: "failed", error: unconfigured ? "app_push_not_configured" : "devices_gone" }).where(eq(notifications.id, id));
     }
   }
   return delivered;

@@ -150,6 +150,25 @@ export const env = {
     .split(",")
     .map((h) => h.trim())
     .filter(Boolean),
+  /**
+   * Native push for the iPhone/Android app (mobile/). Android goes through Firebase Cloud Messaging with a
+   * service account (the JSON file's contents, raw or base64); iPhone goes straight to Apple (APNs) with a .p8
+   * key. Each is optional: without it, devices on that platform simply aren't sent to.
+   */
+  fcmServiceAccount: str("FCM_SERVICE_ACCOUNT"),
+  apnsKey: str("APNS_KEY").replace(/\\n/g, "\n"),
+  apnsKeyId: str("APNS_KEY_ID"),
+  apnsTeamId: str("APNS_TEAM_ID"),
+  /** The iPhone app's bundle id (mobile/capacitor.config.ts). */
+  apnsTopic: str("APNS_TOPIC", "app.casemanager.mobile"),
+  /** "sandbox" for builds run from Xcode; "production" (default) for TestFlight and the App Store. */
+  apnsEnvironment: str("APNS_ENVIRONMENT", "production") === "sandbox" ? ("sandbox" as const) : ("production" as const),
+  /** Test-only overrides for the push services' addresses. */
+  fcmApiUrl: str("FCM_API_URL", "https://fcm.googleapis.com"),
+  fcmTokenUrl: str("FCM_TOKEN_URL", "https://oauth2.googleapis.com/token"),
+  apnsUrl: str("APNS_URL"),
+  /** The app's URL scheme for returning from sign-in in the system browser (mobile/: appId). */
+  appUrlScheme: str("APP_URL_SCHEME", "app.casemanager.mobile"),
   /** Run maintenance jobs (quote expiry, email outbox) inside the server every N minutes; 0 = off. */
   jobsIntervalMinutes: Number(str("JOBS_INTERVAL_MINUTES", "0")),
 };

@@ -1,13 +1,22 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n/client";
+import { isNativeApp, startAppGoogleSignIn } from "@/lib/native";
 
-/** Starts Google sign-in; `next` is where to return afterwards. */
+/**
+ * Starts Google sign-in; `next` is where to return afterwards. In the iPhone/Android app it opens in the system
+ * browser instead (Google blocks sign-in inside apps' web views), which hands the app a one-time code back.
+ */
 export function GoogleButton({ next }: { next?: string }) {
   const { d } = useI18n();
   return (
     <a
       href={`/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+      onClick={(e) => {
+        if (!isNativeApp()) return;
+        e.preventDefault();
+        void startAppGoogleSignIn(next).catch(() => window.location.assign("/login?error=google_failed"));
+      }}
       className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-800 shadow-xs transition hover:bg-slate-50"
     >
       <svg viewBox="0 0 48 48" className="size-5" aria-hidden>
