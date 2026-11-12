@@ -64,7 +64,7 @@ function NavLink({ item, label, count, countLabel, active, collapsed, onNavigate
         className={cn(
           "relative flex h-10 items-center rounded-xl text-sm font-medium outline-offset-2 transition-colors",
           collapsed ? "justify-center px-0" : "gap-3 px-3",
-          active ? "bg-brand-100/70 text-brand-800 dark:bg-brand-100" : "text-slate-700 hover:bg-slate-900/5 hover:text-slate-900",
+          active ? "bg-card text-slate-950 [&>svg]:text-brand-700" : "text-slate-700 hover:bg-card/70 hover:text-slate-950",
         )}
       >
         <Icon className="size-5 shrink-0" aria-hidden />
@@ -105,7 +105,7 @@ export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header
   return (
     <div style={{ "--nav-w": `${width}px` } as React.CSSProperties}>
       <aside
-        className="glass fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col border-e border-slate-900/10 motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
+        className="theme-ink fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col bg-surface motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
         data-collapsed={collapsed ? "true" : "false"}
       >
         <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>{collapsed ? props.compactHeader : props.header}</div>
@@ -181,7 +181,7 @@ export function AdminMobileMenu(props: NavProps & { header: React.ReactNode; foo
         onClick={(e) => {
           if (e.target === ref.current) setOpen(false); // click on the backdrop
         }}
-        className="fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-card p-0 shadow-xl backdrop:bg-black/40"
+        className="theme-ink fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-surface p-0 shadow-xl backdrop:bg-black/40"
       >
         {open && (
           <div className="flex h-full flex-col">
