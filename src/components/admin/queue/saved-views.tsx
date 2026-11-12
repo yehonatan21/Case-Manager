@@ -54,7 +54,7 @@ export function SavedViews({ views, currentQuery }: { views: { id: string; name:
                 <Bookmark className="size-3" aria-hidden />
                 <span className="bidi-auto">{v.name}</span>
               </Link>
-              <button type="button" onClick={() => remove(v.id)} className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label={fmt(t.deleteView, { name: v.name })}>
+              <button type="button" onClick={() => remove(v.id)} className="grid size-6 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label={fmt(t.deleteView, { name: v.name })}>
                 <X className="size-3" aria-hidden />
               </button>
             </li>

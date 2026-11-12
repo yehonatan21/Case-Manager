@@ -66,8 +66,8 @@ export function NextStep({ caseId, actions, done, maxMb, onGo }: { caseId: strin
   };
 
   return (
-    <section aria-labelledby="next-step-title" className="rounded-2xl border border-brand-200 bg-brand-50 p-5 shadow-xs">
-      <p className="text-sm font-semibold text-brand-800">{t.nextStepLabel}</p>
+    <section aria-labelledby="next-step-title" className="rounded-2xl border border-signal/30 bg-signal-soft p-5">
+      <p className="text-sm font-semibold text-amber-800">{t.nextStepLabel}</p>
       <h2 id="next-step-title" className="bidi-auto mt-1 text-xl font-bold leading-snug text-slate-900">
         {uploadDoc ? uploadDoc.title : a.title}
       </h2>
@@ -82,22 +82,22 @@ export function NextStep({ caseId, actions, done, maxMb, onGo }: { caseId: strin
       {uploadDoc ? (
         <>
           <input ref={file} type="file" className="hidden" accept={ACCEPT_ATTRIBUTE} aria-hidden tabIndex={-1} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-          <Button size="lg" className="mt-4 w-full sm:w-auto" loading={busy} onClick={() => file.current?.click()}>
+          <Button variant="signal" size="lg" className="mt-4 w-full sm:w-auto" loading={busy} onClick={() => file.current?.click()}>
             <Camera className="size-5" aria-hidden />
             {busy ? d.documents.uploading : t.uploadNow}
           </Button>
           <p className="mt-2 text-xs text-slate-600">{fmt(t.uploadNowHint, { mb: maxMb })}</p>
         </>
       ) : (
-        <Button size="lg" className="mt-4 w-full sm:w-auto" onClick={() => onGo(a.tab)}>
+        <Button variant="signal" size="lg" className="mt-4 w-full sm:w-auto" onClick={() => onGo(a.tab)}>
           {a.cta}
           <ArrowRight className="size-5 flip-rtl" aria-hidden />
         </Button>
       )}
 
       {(moreDocs > 0 || rest.length > 0) && (
-        <details className="group mt-4 border-t border-brand-200 pt-3">
-          <summary className="cursor-pointer text-sm font-medium text-slate-700 marker:text-brand-700">
+        <details className="group mt-4 border-t border-signal/20 pt-3">
+          <summary className="cursor-pointer text-sm font-medium text-slate-700 marker:text-amber-800">
             {[moreDocs > 0 && (moreDocs === 1 ? t.docsAfterOne : fmt(t.docsAfter, { n: moreDocs })), rest.length > 0 && (rest.length === 1 ? t.moreAfterOne : fmt(t.moreAfter, { n: rest.length }))]
               .filter(Boolean)
               .join(" · ")}
