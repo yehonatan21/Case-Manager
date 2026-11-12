@@ -20,16 +20,16 @@ export function ProgressTrack({ status }: { status: CaseStatus }) {
         return (
           <li key={s} className="flex flex-col items-center text-center" aria-current={current ? "step" : undefined}>
             <div className="flex w-full items-center">
-              <span className={cn("h-0.5 flex-1", i === 0 ? "bg-transparent" : i <= idx ? "bg-brand-600" : "bg-slate-200")} />
+              <span className={cn("h-0.5 flex-1", i === 0 ? "bg-transparent" : i <= idx ? "bg-accent" : "bg-slate-200")} />
               <span
                 className={cn(
                   "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                  done ? "bg-brand-700 text-white" : current ? "bg-white text-brand-800 ring-2 ring-brand-600" : "bg-slate-100 text-slate-500",
+                  done ? "bg-accent text-white" : current ? "bg-card text-brand-800 ring-2 ring-brand-600" : "bg-slate-100 text-slate-500",
                 )}
               >
                 {done ? <Check className="size-4" aria-label={d.caseView.stepDone} /> : i + 1}
               </span>
-              <span className={cn("h-0.5 flex-1", i === CLIENT_TRACK.length - 1 ? "bg-transparent" : i < idx ? "bg-brand-600" : "bg-slate-200")} />
+              <span className={cn("h-0.5 flex-1", i === CLIENT_TRACK.length - 1 ? "bg-transparent" : i < idx ? "bg-accent" : "bg-slate-200")} />
             </div>
             <span className={cn("mt-1.5 text-[11px] leading-tight sm:text-xs", current ? "font-semibold text-brand-800" : done ? "text-slate-700" : "text-slate-500")}>
               {d.status.client[s]}

@@ -80,7 +80,7 @@ export function WhatsAppConnect({ status, canTest }: { status: WhatsAppStatus; c
     <div>
       <dt className="text-xs text-slate-500">{label}</dt>
       <dd className="mt-0.5 flex items-center gap-2">
-        <code dir="ltr" className="min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-start font-mono text-xs ring-1 ring-slate-200">
+        <code dir="ltr" className="min-w-0 flex-1 truncate rounded bg-card px-2 py-1 text-start font-mono text-xs ring-1 ring-slate-200">
           {value}
         </code>
         <Button type="button" size="sm" variant="outline" onClick={() => copy(id, value)} aria-label={`${t.copy}: ${label}`}>

@@ -33,8 +33,8 @@ export default async function ProfilePage() {
         customerType={cust?.customer.type ?? null}
         organization={cust?.organization?.name ?? null}
       />
-      <PushToggle className="mt-6 rounded-xl border border-slate-200 bg-white p-4" />
-      {preview && <DeleteAccountCard email={user.email} preview={preview} className="mt-6 rounded-xl border border-red-200 bg-white p-5" />}
+      <PushToggle className="mt-6 rounded-card bg-card shadow-card p-4" />
+      {preview && <DeleteAccountCard email={user.email} preview={preview} className="mt-6 rounded-xl border border-red-200 bg-card p-5" />}
     </div>
   );
 }

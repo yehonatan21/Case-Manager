@@ -191,7 +191,7 @@ const fakeGrow = http.createServer(async (req, res) => {
 
     // ---- Disconnect from Settings → Integrations: checkout goes back to the previous provider ----
     await admin.goto(BASE + "/admin/settings?tab=integrations");
-    const growCard = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "תשלומים מקוונים" }) }).first();
+    const growCard = admin.locator("div.rounded-card", { has: admin.getByRole("heading", { name: "תשלומים מקוונים" }) }).first();
     await growCard.getByText("Grow מחובר (מצב בדיקה)").waitFor();
     await growCard.getByText("••••4243").waitFor();
     admin.once("dialog", (dlg) => dlg.accept());

@@ -17,7 +17,7 @@ export function CaseCard({ c }: { c: CaseCardData }) {
   const actionText = useActionText();
   const first = c.actions[0] ? actionText(c.actions[0]) : null;
   return (
-    <article className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-xs transition hover:border-brand-200 hover:shadow-sm">
+    <article className="flex flex-col rounded-card bg-card shadow-card p-5 transition hover:shadow-float">
       <div className="flex items-start justify-between gap-3">
         <h3 className="bidi-auto font-semibold leading-snug text-slate-900">{c.title}</h3>
         <CaseStatusBadge status={c.status} audience="client" />

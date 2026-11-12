@@ -45,7 +45,7 @@ export default async function AccessibilityPage() {
 
         <h2 className="mt-8 text-xl font-semibold text-slate-900">{t.contactTitle}</h2>
         <p className="mt-2">{t.contactIntro}</p>
-        <ul className="mt-3 space-y-1 rounded-xl border border-slate-200 bg-white p-4">
+        <ul className="mt-3 space-y-1 rounded-card bg-card shadow-card p-4">
           {c.name && <li>{fmt(t.contactName, { name: c.name })}</li>}
           {phone && (
             <li>

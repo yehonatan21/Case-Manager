@@ -41,7 +41,7 @@ export function Dialog({
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        "m-auto w-[min(100%-2rem,32rem)] rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-900/40",
+        "m-auto w-[min(100%-2rem,32rem)] rounded-card bg-card shadow-card p-0 text-slate-900 shadow-2xl backdrop:bg-black/40",
         className,
       )}
     >

@@ -58,7 +58,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
             aria-current={active === v ? "page" : undefined}
             className={cn(
               "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-              active === v ? "bg-brand-700 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+              active === v ? "bg-accent text-white" : "bg-card text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
               v === "overdue" && active !== v && counts.overdue > 0 && "text-red-700 ring-red-200",
             )}
           >
@@ -147,7 +147,7 @@ function TeamWorkload({ d, data }: { d: Awaited<ReturnType<typeof getDict>>["d"]
         {t.title}
       </h2>
       <p className="mb-3 text-sm text-slate-500">{t.subtitle}</p>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-card bg-card shadow-card">
         <table className="w-full min-w-[48rem] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
             <tr>

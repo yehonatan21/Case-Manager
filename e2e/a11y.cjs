@@ -8,6 +8,8 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const BASE = process.env.BASE || "http://localhost:3000";
+// COLOR_SCHEME=dark checks the dark appearance (the site follows the system setting).
+const SCHEME = process.env.COLOR_SCHEME === "dark" ? "dark" : "light";
 const AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"];
 const log = (...a) => console.log("•", ...a);
@@ -32,7 +34,7 @@ async function visit(ctx, url, label, after) {
   return p;
 }
 async function signIn(browser, email) {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ colorScheme: SCHEME });
   const p = await ctx.newPage();
   await p.goto(`${BASE}/login?as=${encodeURIComponent(email)}`);
   await settle(p);
@@ -58,11 +60,11 @@ async function signIn(browser, email) {
     ]) {
       const cookie = { name: "cm_locale", value: locale, url: BASE };
       // Public
-      const pub = await browser.newContext({ viewport, locale });
+      const pub = await browser.newContext({ colorScheme: SCHEME, viewport, locale });
       await pub.addCookies([cookie]);
       for (const u of ["/", "/login", "/register", "/intake/manual", "/accessibility", "/privacy", "/terms", "/app-return?error=google_cancelled", "/delete-account", "/no-such-page"]) await (await visit(pub, u, name)).close();
       // Customer
-      const c = await browser.newContext({ viewport, locale, storageState: client });
+      const c = await browser.newContext({ colorScheme: SCHEME, viewport, locale, storageState: client });
       await c.addCookies([cookie]);
       const list = await visit(c, "/portal/cases", name);
       const caseUrl = await list.locator("a[href^='/portal/cases/']").first().getAttribute("href");
@@ -73,7 +75,7 @@ async function signIn(browser, email) {
         await p.locator("#notifications-panel").waitFor();
       })).close();
       // Staff (case manager)
-      const s = await browser.newContext({ viewport, locale, storageState: manager });
+      const s = await browser.newContext({ colorScheme: SCHEME, viewport, locale, storageState: manager });
       await s.addCookies([cookie]);
       const cases = await visit(s, "/admin/cases?status=all", name);
       const adminCase = (await cases.locator("a[href^='/admin/cases/']").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).find((h) => /[0-9a-f-]{36}/.test(h));
@@ -89,7 +91,7 @@ async function signIn(browser, email) {
         await p.getByRole("option").first().waitFor();
       })).close();
       // Admin-only pages: payments, the activity log and every Settings tab
-      const a = await browser.newContext({ viewport, locale, storageState: admin });
+      const a = await browser.newContext({ colorScheme: SCHEME, viewport, locale, storageState: admin });
       await a.addCookies([cookie]);
       for (const u of ["/admin/payments", "/admin/activity", ...["general", "users", "templates", "serviceTypes", "automation", "priceList", "integrations", "health"].map((t) => `/admin/settings?tab=${t}`)]) await (await visit(a, u, name)).close();
       if (name !== "he-mobile") {

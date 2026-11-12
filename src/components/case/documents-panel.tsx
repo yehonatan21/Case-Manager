@@ -101,7 +101,7 @@ function ChecklistSummary({ docs, mode }: { docs: Doc[]; mode: "client" | "staff
   if (list.items.length === 0) return null;
   const pct = list.required ? Math.round((list.requiredProvided / list.required) * 100) : 100;
   return (
-    <section aria-labelledby="checklist-title" className="rounded-xl border border-slate-200 bg-white p-4">
+    <section aria-labelledby="checklist-title" className="rounded-card bg-card shadow-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id="checklist-title" className="flex items-center gap-2 text-sm font-semibold text-slate-800">
           <ClipboardList className="size-4 text-brand-700" aria-hidden />
@@ -125,7 +125,7 @@ function ChecklistSummary({ docs, mode }: { docs: Doc[]; mode: "client" | "staff
           aria-valuenow={list.requiredProvided}
           aria-valuetext={fmt(d.checklist.progress, { done: list.requiredProvided, total: list.required })}
         >
-          <div className={`h-full rounded-full ${list.complete ? "bg-emerald-600" : "bg-brand-600"}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full ${list.complete ? "bg-success" : "bg-accent"}`} style={{ width: `${pct}%` }} />
         </div>
       )}
       {list.missing.length > 0 && (
@@ -296,7 +296,7 @@ export function DocumentsPanel({
     const canRequestSignature = mode === "staff" && canEdit && !!latest && latest.mimeType === "application/pdf" && doc.visibility === "client" && !awaitingSignature && !showsSignedCopy;
     const analysis = doc.aiAnalysis as null | { readable?: boolean; summary?: string; fields?: { label: string; value: string; confidence: string }[]; notes?: string };
     return (
-      <li key={doc.id} className="rounded-lg border border-slate-200 bg-white p-4">
+      <li key={doc.id} className="rounded-lg border border-slate-200 bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <FileText className="mt-0.5 size-5 shrink-0 text-slate-400" aria-hidden />
@@ -360,7 +360,7 @@ export function DocumentsPanel({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {latest && (
-              <a href={`/api/files/${latest.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <a href={`/api/files/${latest.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-card px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 <Download className="size-4" aria-hidden />
                 {d.common.download}
               </a>

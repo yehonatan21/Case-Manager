@@ -128,7 +128,7 @@ export function SecurityCard({ status, mustSetUp }: { status: Status; mustSetUp:
             <div>
               <p className="text-sm font-medium">{t.step1}</p>
               {/* The QR code is generated on the server from the secret below. */}
-              <div role="img" aria-label={t.step1} className="mt-2 size-44 rounded-lg border border-slate-200 bg-white p-1 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: setup.qrSvg }} />
+              <div role="img" aria-label={t.step1} className="mt-2 size-44 rounded-lg border border-slate-200 bg-card p-1 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: setup.qrSvg }} />
               <p className="mt-2 text-xs text-slate-600">{t.step1Manual}</p>
               <p className="mt-1 select-all break-all font-mono text-sm" dir="ltr">
                 {setup.secret.replace(/(.{4})/g, "$1 ").trim()}

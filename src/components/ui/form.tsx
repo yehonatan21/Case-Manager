@@ -2,10 +2,10 @@ import { forwardRef, useId } from "react";
 import { cn } from "@/lib/utils";
 
 export const fieldBase =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 shadow-xs transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:bg-slate-50 aria-[invalid=true]:border-red-500";
+  "w-full rounded-xl border border-slate-300 bg-card px-3.5 text-sm text-slate-900 placeholder:text-slate-500 transition focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-200/70 disabled:bg-slate-50 aria-[invalid=true]:border-red-500";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) {
-  return <input ref={ref} className={cn(fieldBase, "h-10", className)} {...props} />;
+  return <input ref={ref} className={cn(fieldBase, "h-11 sm:h-10", className)} {...props} />;
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...props }, ref) {
@@ -14,7 +14,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
 
 export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, children, ...props }, ref) {
   return (
-    <select ref={ref} className={cn(fieldBase, "h-10 pe-8", className)} {...props}>
+    <select ref={ref} className={cn(fieldBase, "h-11 pe-8 sm:h-10", className)} {...props}>
       {children}
     </select>
   );

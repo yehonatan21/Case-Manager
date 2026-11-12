@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 /** Switches between Hebrew (RTL) and English (LTR); persisted in a cookie and on the user profile. */
-export function LanguageSwitcher({ className, compact }: { className?: string; compact?: boolean }) {
+export function LanguageSwitcher({ className, compact, shortOnPhones }: { className?: string; compact?: boolean; /** The short label below tablet width (headers with little room). */ shortOnPhones?: boolean }) {
   const { locale, d } = useI18n();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -24,7 +24,7 @@ export function LanguageSwitcher({ className, compact }: { className?: string; c
         })
       }
       className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60",
+        "inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-card px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60",
         className,
       )}
       disabled={pending}
@@ -36,10 +36,10 @@ export function LanguageSwitcher({ className, compact }: { className?: string; c
       ) : (
         <>
           {/* Very narrow screens (under 360px) get the short label so the header doesn't overflow (WCAG 1.4.10). */}
-          <span lang={next} className="max-[359px]:hidden">
+          <span lang={next} className={shortOnPhones ? "max-sm:hidden" : "max-[359px]:hidden"}>
             {d.lang.switchTo}
           </span>
-          <span lang={next} className="hidden max-[359px]:inline">
+          <span lang={next} className={shortOnPhones ? "hidden max-sm:inline" : "hidden max-[359px]:inline"}>
             {d.lang.switchToShort}
           </span>
         </>

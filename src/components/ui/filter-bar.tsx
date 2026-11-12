@@ -26,7 +26,7 @@ export function FilterBar({ d, basePath, fields, values, keep = {}, total }: { d
   const id = (name: string) => `filter-${name}`;
   return (
     <div className="mb-4">
-      <form method="get" action={basePath} role="search" aria-label={t.label} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+      <form method="get" action={basePath} role="search" aria-label={t.label} className="flex flex-wrap items-end gap-3 rounded-card bg-card shadow-card p-3 sm:p-4">
         {Object.entries(keep).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
         {fields.map((f) => (
           <div key={f.name} className={cn("grid min-w-0 gap-1 text-sm", f.type === "search" ? "grow-[3] basis-64" : "grow basis-36 sm:max-w-60")}>
@@ -49,7 +49,7 @@ export function FilterBar({ d, basePath, fields, values, keep = {}, total }: { d
           </div>
         ))}
         <div className="flex items-center gap-2">
-          <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+          <button type="submit" className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong">
             {t.apply}
           </button>
           {active && (

@@ -184,7 +184,7 @@ export function DatePickerPopover({
       aria-labelledby={titleId}
       onKeyDown={onPanelKey}
       className={cn(
-        "z-[70] bg-white p-4 text-slate-900 shadow-2xl ring-1 ring-slate-200",
+        "z-[70] bg-card p-4 text-slate-900 shadow-2xl ring-1 ring-slate-200",
         phone ? "fixed inset-x-0 bottom-0 rounded-t-2xl pb-6" : "fixed w-[20rem] rounded-2xl",
         !phone && !pos && "invisible",
       )}
@@ -247,7 +247,7 @@ export function DatePickerPopover({
                         allowed && outside && !isChosen && "text-slate-400",
                         allowed && !outside && !isChosen && weekdayOf(iso) === 6 && "text-slate-500",
                         shaded(iso) && "bg-brand-100 text-brand-900",
-                        isChosen && "bg-brand-700 font-semibold text-white",
+                        isChosen && "bg-accent font-semibold text-white",
                         isToday && !isChosen && "font-semibold text-brand-800 ring-1 ring-inset ring-brand-500",
                       )}
                     >
@@ -281,7 +281,7 @@ export function DatePickerPopover({
 
   return phone ? (
     <>
-      <div aria-hidden className="fixed inset-0 z-[69] bg-slate-900/30" onMouseDown={() => onClose()} />
+      <div aria-hidden className="fixed inset-0 z-[69] bg-black/30" onMouseDown={() => onClose()} />
       {body}
     </>
   ) : (

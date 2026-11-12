@@ -36,7 +36,7 @@ export function StartRequest() {
           e.preventDefault();
           void start(text);
         }}
-        className="rounded-2xl border border-slate-200 bg-white p-2 shadow-lg shadow-brand-900/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500"
+        className="rounded-card bg-card shadow-card p-2 shadow-lg shadow-brand-900/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500"
       >
         <label htmlFor="start-text" className="sr-only">
           {d.home.title}
@@ -80,7 +80,7 @@ export function StartRequest() {
                   ref.current?.focus();
                 } else void start(ex);
               }}
-              className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm text-slate-700 shadow-xs transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 disabled:opacity-60"
+              className="rounded-full border border-slate-200 bg-card px-3.5 py-1.5 text-sm text-slate-700 shadow-xs transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 disabled:opacity-60"
             >
               {ex}
             </button>

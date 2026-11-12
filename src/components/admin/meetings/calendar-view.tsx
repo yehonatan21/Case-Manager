@@ -57,13 +57,13 @@ export function CalendarView(props: { range: CalendarRange; items: CalendarItem[
         </p>
         <div className="ms-auto flex flex-wrap items-center gap-2">
           <NewEventButton date={range.mode === "day" || !range.days.includes(today) ? range.anchor : today} google={connected} initialOpen={openNew} />
-          <nav aria-label={t.viewLabel} className="flex rounded-lg border border-slate-300 p-0.5 text-sm">
+          <nav aria-label={t.viewLabel} className="flex rounded-full bg-slate-200/60 p-1 text-sm">
             {CALENDAR_MODES.map((m) => (
               <Link
                 key={m}
                 href={href(m, range.anchor)}
                 aria-current={m === range.mode ? "page" : undefined}
-                className={cn("rounded-md px-3 py-1", m === range.mode ? "bg-brand-700 font-medium text-white" : "text-slate-700 hover:bg-slate-100")}
+                className={cn(m === range.mode ? "rounded-full bg-card px-3.5 py-1.5 font-medium text-slate-900 shadow-card dark:bg-slate-300" : "rounded-full px-3.5 py-1.5 font-medium text-slate-600 hover:text-slate-900")}
               >
                 {t[m]}
               </Link>
@@ -198,7 +198,7 @@ function DayHeader({ day, locale, today, href, long }: { day: string; locale: Lo
   return (
     <Link href={href} aria-current={isToday ? "date" : undefined} className="flex flex-col items-center py-1 text-slate-600 hover:text-slate-900">
       <span className="text-xs">{f({ weekday: long ? "long" : "short" })}</span>
-      <span className={cn("grid size-8 place-items-center rounded-full text-base font-semibold", isToday ? "bg-brand-700 text-white" : "text-slate-900")}>{f({ day: "numeric" })}</span>
+      <span className={cn("grid size-8 place-items-center rounded-full text-base font-semibold", isToday ? "bg-accent text-white" : "text-slate-900")}>{f({ day: "numeric" })}</span>
       <span className="sr-only">{f({ month: "long" })}</span>
     </Link>
   );
@@ -241,7 +241,7 @@ function TimeGrid({
   const hourLabel = (h: number) => `${String(h).padStart(2, "0")}:00`;
 
   return (
-    <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div className="relative overflow-x-auto rounded-card bg-card shadow-card">
       <div className={cn(range.days.length > 1 && "min-w-[42rem]")}>
         <div className="grid border-b border-slate-200" style={cols}>
           <div />
@@ -344,7 +344,7 @@ function MonthGrid({
       timeZone: "UTC",
     }).format(atNoon(day));
   return (
-    <div className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <div className="relative overflow-x-auto rounded-card bg-card shadow-card">
       <table className="w-full min-w-[42rem] table-fixed border-collapse">
         <thead>
           <tr>
@@ -372,7 +372,7 @@ function MonthGrid({
                       aria-current={d === today ? "date" : undefined}
                       className={cn(
                         "mb-0.5 grid size-6 place-items-center rounded-full text-xs font-semibold",
-                        d === today ? "bg-brand-700 text-white" : inMonth ? "text-slate-900 hover:bg-slate-100" : "text-slate-500 hover:bg-slate-100",
+                        d === today ? "bg-accent text-white" : inMonth ? "text-slate-900 hover:bg-slate-100" : "text-slate-500 hover:bg-slate-100",
                       )}
                     >
                       {Number(d.slice(8))}
