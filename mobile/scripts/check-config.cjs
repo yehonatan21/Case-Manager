@@ -39,8 +39,17 @@ need(fs.existsSync(path.join(root, "android/app/src/main/res/drawable/ic_stat_no
 // The offline screen the app shows when the site can't be reached.
 need(fs.existsSync(path.join(root, "www/offline.html")), "www/offline.html");
 
+// Google Play listing texts within Play's limits.
+const { pathToFileURL } = require("node:url");
+module.exports.done = import(pathToFileURL(path.join(__dirname, "play.mjs")).href).then(({ checkListing }) => {
+  for (const p of checkListing()) problems.push(`Play listing: ${p}`);
+  finish();
+});
+
+function finish() {
 if (problems.length) {
   console.error("Missing or inconsistent:\n - " + problems.join("\n - "));
   process.exit(1);
 }
-console.log(`Native settings OK (app id ${appId}).`);
+console.log(`Native settings OK (app id ${appId}); Play listing texts within limits.`);
+}
