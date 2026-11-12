@@ -49,6 +49,7 @@ export async function listCustomers(db: DbOrTx, opts: { q?: string; type?: strin
         name: users.name,
         email: users.email,
         phone: users.phone,
+        deletedAt: users.deletedAt,
         organization: organizations.name,
         caseCount: sql<number>`(select count(*)::int from ${cases} where ${cases.customerId} = ${customers.id})`,
       })

@@ -24,7 +24,7 @@ export async function globalSearch(db: DbOrTx, actor: User, query: string): Prom
   if (!q || q.length < SEARCH_MIN_LENGTH || !canOpenPage(actor.role, "cases")) return [];
   const [cases, customers, quotes] = await Promise.all([
     listStaffCases(db, actor, { q, limit: SEARCH_PER_KIND * 2 }),
-    canOpenPage(actor.role, "customers") ? listCustomers(db, { q, pageSize: SEARCH_PER_KIND }).then((r) => r.rows) : Promise.resolve([]),
+    canOpenPage(actor.role, "customers") ? listCustomers(db, { q, pageSize: SEARCH_PER_KIND }).then((r) => r.rows.filter((c) => !c.deletedAt)) : Promise.resolve([]),
     canOpenPage(actor.role, "quotes") ? listQuotesForStaff(db, actor, { q, pageSize: SEARCH_PER_KIND }).then((r) => r.rows) : Promise.resolve([]),
   ]);
   // A new request waiting to be taken shows as such for those who handle the Incoming list; otherwise it's a case.
