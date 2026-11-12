@@ -14,11 +14,11 @@ export async function PublicHeader() {
         <nav aria-label={d.nav.accountMenu} className="flex min-w-0 items-center gap-1.5">
           <LanguageSwitcher shortOnPhones />
           {user ? (
-            <ButtonLink href={isStaffRole(user.role) ? "/admin" : "/portal"} variant="outline" size="md">
+            <ButtonLink href={isStaffRole(user.role) ? "/admin" : "/portal"} variant="outline" size="md" className="max-sm:px-3.5">
               {isStaffRole(user.role) ? d.nav.staffArea : d.nav.clientArea}
             </ButtonLink>
           ) : (
-            <ButtonLink href="/login" variant="outline" size="md">
+            <ButtonLink href="/login" variant="outline" size="md" className="max-sm:px-3.5">
               {d.nav.myAccount}
             </ButtonLink>
           )}

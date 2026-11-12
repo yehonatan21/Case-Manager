@@ -2,7 +2,7 @@ import Link from "next/link";
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "link";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "link" | "signal";
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
@@ -12,6 +12,8 @@ const variants: Record<Variant, string> = {
   ghost: "text-slate-700 hover:bg-slate-100",
   danger: "bg-danger text-white hover:bg-danger-strong disabled:bg-red-300 aria-disabled:bg-red-300",
   link: "text-brand-700 underline-offset-4 hover:underline px-0",
+  // What the client has to do now (the next step): terracotta, white text 5.6:1.
+  signal: "bg-signal text-white hover:bg-signal/90",
 };
 const sizes: Record<Size, string> = {
   // 44 px on phones (accessibility.md: 44x44 pt default on iOS), a little tighter with a pointer.
@@ -23,7 +25,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex items-center justify-center rounded-full font-semibold transition-colors active:opacity-80 disabled:cursor-not-allowed disabled:opacity-70 aria-disabled:cursor-wait aria-disabled:opacity-70 whitespace-nowrap",
+    "inline-flex items-center justify-center rounded-xl font-semibold transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 aria-disabled:cursor-wait aria-disabled:opacity-70 whitespace-nowrap",
     variants[variant],
     sizes[size],
     className,

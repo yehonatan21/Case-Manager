@@ -64,7 +64,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
           >
             {t.views[v]}
             {v !== "team" && (
-              <span className={cn("rounded-full px-1.5 text-[11px] font-bold tabular-nums", active === v ? "bg-white/20" : "bg-slate-100 text-slate-700")}>{counts[v]}</span>
+              <span className={cn("rounded-full px-1.5 text-[11px] font-bold tabular-nums", active === v ? "bg-card text-brand-800" : "bg-slate-100 text-slate-700")}>{counts[v]}</span>
             )}
           </Link>
         ))}
