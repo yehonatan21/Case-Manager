@@ -10,7 +10,7 @@ export function Logo({ href = "/", className, name, compact = false }: { href?: 
           <circle cx="18" cy="16" r="3" />
         </svg>
       </span>
-      <span className={compact ? "sr-only" : "whitespace-nowrap font-display text-[1.1875rem] font-bold leading-none tracking-tight max-[359px]:sr-only"}>{name}</span>
+      <span className={compact ? "sr-only" : "whitespace-nowrap font-display text-[1.0625rem] font-bold leading-none tracking-tight sm:text-[1.1875rem] max-[379px]:sr-only"}>{name}</span>
     </Link>
   );
 }
