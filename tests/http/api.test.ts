@@ -434,6 +434,46 @@ describe.skipIf(!BASE)("HTTP API", () => {
     });
   });
 
+  describe("account deletion", () => {
+    const fresh = async () => {
+      const e = `delete-me-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
+      const code = (await call("/api/auth/request-code", { body: { email: e, purpose: "signup" } })).json!.data.devCode;
+      const reg = await call("/api/auth/verify", { body: { email: e, code, signup: { name: "Dana", customerType: "private", acceptTerms: true, aiConsent: false } } });
+      expect(reg.status).toBe(200);
+      return { email: e, cookie: reg.headers.get("set-cookie")!.match(/cm_session=[^;]+/)![0] };
+    };
+
+    it("the public page explains it and links to sign-in", async () => {
+      const html = await (await fetch(`${BASE}/delete-account`, { headers: { Cookie: "cm_locale=en" } })).text();
+      expect(html).toContain("Delete your account");
+      expect(html).toContain("What&#x27;s kept");
+      expect(html).toContain("/login?next=%2Fdelete-account");
+    });
+
+    it("a client deletes their own account with their email typed; the session ends", async () => {
+      expect((await call("/api/account/delete", { body: { confirm: "x@example.com" } })).status).toBe(401);
+      const me = await fresh();
+      expect((await call("/api/account/delete", { body: { confirm: "someone@example.com" }, cookie: me.cookie })).status).toBe(400);
+      expect((await call("/api/account/delete", { body: { confirm: me.email }, cookie: me.cookie, origin: "https://evil.example" })).status).toBe(403);
+      const r = await call("/api/account/delete", { body: { confirm: me.email }, cookie: me.cookie });
+      expect(r.status).toBe(200);
+      expect(r.json!.data.next).toBe("/delete-account?done=1");
+      expect(r.headers.get("set-cookie")).toMatch(/cm_session=;/);
+      expect((await call("/api/push/native?token=x", { cookie: me.cookie })).status).toBe(401);
+      // The address is free again.
+      await fresh().catch(() => null);
+    });
+
+    it("team members can't delete themselves; only admins delete a client's account", async () => {
+      const finance = await session("finance@example.com");
+      expect((await call("/api/account/delete", { body: { confirm: "finance@example.com" }, cookie: finance.cookie })).status).toBe(403);
+      const manager = await session("manager@example.com");
+      expect((await call(`/api/admin/customers/${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}/delete`, { body: { confirm: "x@example.com" }, cookie: manager.cookie })).status).toBe(403);
+      const admin = await session("admin@example.com");
+      expect((await call(`/api/admin/customers/${"0".repeat(8)}-0000-0000-0000-${"0".repeat(12)}/delete`, { body: { confirm: "x@example.com" }, cookie: admin.cookie })).status).toBe(404);
+    });
+  });
+
   describe("iPhone/Android app", () => {
     const iosToken = () => Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
 

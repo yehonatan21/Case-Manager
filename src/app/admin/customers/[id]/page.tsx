@@ -12,6 +12,7 @@ import { CasesTable } from "@/components/admin/cases-table";
 import { toCaseRows } from "../../_rows";
 import { getCompany } from "@/lib/services/companies";
 import { CompanyCard } from "@/components/admin/customers/company-card";
+import { AdminDeleteClient } from "@/components/account/delete-account";
 
 export default async function CustomerDetail({
   params,
@@ -42,12 +43,12 @@ export default async function CustomerDetail({
   return (
     <>
       <PageHeader
-        title={row.user.name}
+        title={row.user.deletedAt ? d.accountDeletion.deletedClient : row.user.name}
         subtitle={fmt(d.customersPage.since, {
           date: formatDate(row.customer.createdAt, locale),
         })}
         actions={
-          <ButtonLink href={`/admin/cases/new?customer=${row.customer.id}`}>
+          !row.user.deletedAt && <ButtonLink href={`/admin/cases/new?customer=${row.customer.id}`}>
             {d.newCase.forThisClient}
           </ButtonLink>
         }
@@ -57,7 +58,7 @@ export default async function CustomerDetail({
           <div>
             <p className="text-xs text-slate-500">{d.common.email}</p>
             <p dir="ltr" className="text-start">
-              {row.user.email}
+              {row.user.deletedAt ? "—" : row.user.email}
             </p>
           </div>
           <div>
@@ -94,6 +95,7 @@ export default async function CustomerDetail({
         variant="cases"
         empty={d.customersPage.noCases}
       />
+      {user.role === "admin" && !row.user.deletedAt && <AdminDeleteClient customerId={row.customer.id} email={row.user.email} />}
     </>
   );
 }

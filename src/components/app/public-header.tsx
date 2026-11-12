@@ -46,6 +46,9 @@ export async function PublicFooter() {
           <a href="/terms" className="hover:text-slate-800">
             {d.home.terms}
           </a>
+          <a href="/delete-account" className="hover:text-slate-800">
+            {d.accountDeletion.pageTitle}
+          </a>
           <a href="/login?next=/admin" className="hover:text-slate-800">
             {d.home.staffLogin}
           </a>

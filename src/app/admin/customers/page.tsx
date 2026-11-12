@@ -65,12 +65,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 <tr key={r.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <Link href={`/admin/customers/${r.id}`} className="bidi-auto font-medium text-slate-900 hover:text-brand-700 hover:underline">
-                      {r.name}
+                      {r.deletedAt ? d.accountDeletion.deletedClient : r.name}
                     </Link>
                     {r.organization && <span className="bidi-auto block text-xs text-slate-500">{r.organization}</span>}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
-                    <span dir="ltr">{r.email}</span>
+                    <span dir="ltr">{r.deletedAt ? "—" : r.email}</span>
                     {r.phone && (
                       <span className="block text-xs text-slate-500" dir="ltr">
                         {r.phone}
@@ -90,10 +90,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             <RecordCard
               key={r.id}
               href={`/admin/customers/${r.id}`}
-              title={r.name}
+              title={r.deletedAt ? d.accountDeletion.deletedClient : r.name}
               eyebrow={r.organization ? <span className="bidi-auto">{r.organization}</span> : undefined}
               details={[
-                { label: d.common.email, value: <span dir="ltr">{r.email}</span>, wide: true },
+                { label: d.common.email, value: <span dir="ltr">{r.deletedAt ? "—" : r.email}</span>, wide: true },
                 r.phone && { label: d.common.phone, value: <span dir="ltr">{r.phone}</span> },
                 { label: d.admin.col.type, value: d.customerType[r.type] },
                 { label: d.admin.col.cases, value: <span className="tabular-nums">{r.caseCount}</span> },
