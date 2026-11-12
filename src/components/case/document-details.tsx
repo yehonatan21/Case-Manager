@@ -102,7 +102,7 @@ export function DocumentDetailsForm({ documentId, details, confirmedBy, findings
             {note}
           </p>
         )}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
           {field("docType", t.docType)}
           {field("fullName", t.fullName)}
           {field("idNumber", t.idNumber)}
