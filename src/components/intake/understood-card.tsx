@@ -11,7 +11,7 @@ export function UnderstoodCard({ summary }: { summary: IntakeSummary | null }) {
   const categories = useCategories();
   const has = summary && (summary.request_title || summary.known_facts.length);
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+    <div className="rounded-card bg-card shadow-card p-5">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
         <ClipboardList className="size-4 text-brand-700" aria-hidden />
         {d.intake.understoodTitle}

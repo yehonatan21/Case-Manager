@@ -72,7 +72,7 @@ export function CalendarConnect({
           </div>
         ) : (
           <div>
-            <a href={`/api/integrations/google-calendar/connect?next=${encodeURIComponent(returnTo)}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+            <a href={`/api/integrations/google-calendar/connect?next=${encodeURIComponent(returnTo)}`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong">
               <CalendarCheck2 className="size-4" aria-hidden /> {t.calendarConnect}
             </a>
           </div>

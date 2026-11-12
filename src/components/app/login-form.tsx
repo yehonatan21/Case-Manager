@@ -83,7 +83,7 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
   }, [initialEmail]);
 
   return (
-    <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+    <div className="mt-6 rounded-card bg-card shadow-card p-5">
       {!sent ? (
         <form onSubmit={request} noValidate className="space-y-4">
           <Field label={d.account.email} required error={emailError}>
@@ -150,7 +150,7 @@ export function LoginForm({ next, initialEmail }: { next: string | null; initial
             {noAccount}
           </p>
           <p className="mt-1 text-sm text-slate-600">{d.register.noAccountText}</p>
-          <a href={registerHref(noAccount)} className="mt-3 inline-flex h-10 items-center rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+          <a href={registerHref(noAccount)} className="mt-3 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong">
             {d.register.registerWithEmail}
           </a>
         </div>

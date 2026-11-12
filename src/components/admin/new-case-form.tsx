@@ -94,8 +94,8 @@ export function NewCaseForm({
 
   const tabClass = (active: boolean) =>
     active
-      ? "rounded-md bg-white px-3 py-1.5 font-medium text-brand-800 shadow-sm"
-      : "rounded-md px-3 py-1.5 text-slate-600 hover:text-slate-900";
+      ? "rounded-full bg-card px-3.5 py-1.5 font-medium text-slate-900 shadow-card dark:bg-slate-300"
+      : "rounded-full px-3.5 py-1.5 font-medium text-slate-600 hover:text-slate-900";
 
   return (
     <form onSubmit={submit} className="grid max-w-3xl gap-6">
@@ -104,7 +104,7 @@ export function NewCaseForm({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold">{t.clientSection}</h2>
             <div
-              className="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm"
+              className="flex gap-0.5 rounded-full bg-slate-200/60 p-1 text-sm"
               role="group"
               aria-label={t.clientSection}
             >

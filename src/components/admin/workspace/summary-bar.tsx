@@ -27,7 +27,7 @@ export function SummaryBar({ c, staff, onOpenTasks }: { c: WorkspaceData; staff:
       ? d.queue.views.waiting_client
       : t.nothingNext;
   const late = !!next?.dueDate && next.dueDate < c.today;
-  const item = "min-w-0 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200";
+  const item = "min-w-0 rounded-lg bg-card px-3 py-2 ring-1 ring-slate-200";
   return (
     <dl className="mb-4 grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
       <div className={cn("col-span-2 rounded-lg px-4 py-3 ring-1 md:col-span-3", late ? "bg-red-50 ring-red-200" : "bg-brand-50 ring-brand-200")}>
@@ -42,7 +42,7 @@ export function SummaryBar({ c, staff, onOpenTasks }: { c: WorkspaceData; staff:
             <button
               type="button"
               onClick={onOpenTasks}
-              className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-brand-800 ring-1 ring-brand-200 hover:bg-brand-100"
+              className="inline-flex items-center gap-1 rounded-lg bg-card px-3 py-1.5 text-sm font-medium text-brand-800 ring-1 ring-brand-200 hover:bg-brand-100"
             >
               {t.openTasks} <ArrowRight className="size-4 flip-rtl" aria-hidden />
             </button>

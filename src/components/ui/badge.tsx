@@ -9,7 +9,7 @@ const tones: Record<Tone, string> = {
   success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   warning: "bg-amber-50 text-amber-900 ring-amber-200",
   danger: "bg-red-50 text-red-800 ring-red-200",
-  muted: "bg-white text-slate-500 ring-slate-200",
+  muted: "bg-card text-slate-500 ring-slate-200",
 };
 
 export function Badge({ tone = "neutral", className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {

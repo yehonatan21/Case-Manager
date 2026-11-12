@@ -23,7 +23,7 @@ export default async function SecondStepPage({ searchParams }: { searchParams: P
     <>
       <PublicHeader />
       <main id="main" className="mx-auto max-w-md px-4 py-12">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-card bg-card shadow-card p-6">
           <h1 className="text-xl font-semibold">{d.twoFactor.signInTitle}</h1>
           <p className="mt-1 text-sm text-slate-600">{fmt(d.twoFactor.signInHint, { app: env.appName })}</p>
           <p className="mt-1 text-sm text-slate-600" dir="ltr">

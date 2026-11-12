@@ -34,7 +34,7 @@ export function QuoteView({ q }: { q: QuoteViewData }) {
   const { d, locale } = useI18n();
   const money = (c: number) => formatMoney(c, q.currency, locale);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
+    <div className="rounded-card bg-card shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">

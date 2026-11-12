@@ -114,7 +114,7 @@ export function CopilotPane({
   return (
     <div className="space-y-4">
       <Card className="border-brand-200">
-        <CardHeader className="bg-gradient-to-b from-brand-50/80 to-white">
+        <CardHeader className="bg-gradient-to-b from-brand-50/80 to-card">
           <div>
             <CardTitle as="h2" className="flex items-center gap-2">
               <Sparkles className="size-4 text-brand-700" aria-hidden /> {d.copilot.title}
@@ -237,7 +237,7 @@ export function CopilotPane({
 
           {/* Drafts — never sent automatically */}
           {text && (
-            <section className="rounded-lg border border-brand-200 bg-white p-3">
+            <section className="rounded-lg border border-brand-200 bg-card p-3">
               <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-brand-800">
                 <Info className="size-3.5" aria-hidden /> {d.copilot.draftTitle}
               </p>
@@ -262,7 +262,7 @@ export function CopilotPane({
           )}
 
           {taskDraft && (
-            <section className="rounded-lg border border-brand-200 bg-white p-3">
+            <section className="rounded-lg border border-brand-200 bg-card p-3">
               <p className="mb-2 text-xs font-semibold text-brand-800">{d.copilot.tasksDraftTitle}</p>
               <ul className="space-y-1.5">
                 {taskDraft.tasks.map((t, i) => (

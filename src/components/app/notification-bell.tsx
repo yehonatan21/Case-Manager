@@ -73,7 +73,7 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
         <span className="sr-only">{d.nav.notifications}</span>
         {unread > 0 && (
           <>
-            <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+            <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
               {unread > 9 ? "9+" : unread}
             </span>
             <span className="sr-only"> {d.notificationsUi.unreadCount}</span>
@@ -87,7 +87,7 @@ export function NotificationBell({ initialUnread, allHref }: { initialUnread: nu
           role="dialog"
           aria-label={d.notificationsUi.title}
           tabIndex={-1}
-          className="absolute end-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl focus:outline-none"
+          className="absolute end-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-card bg-card shadow-card shadow-xl focus:outline-none"
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <p className="text-sm font-semibold">{d.notificationsUi.title}</p>

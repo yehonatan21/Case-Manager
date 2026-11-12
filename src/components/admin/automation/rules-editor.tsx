@@ -218,7 +218,7 @@ export function RulesEditor({ rules }: { rules: RuleItem[] }) {
           {rules.map((r) => {
             const x = describe(r);
             return (
-              <li key={r.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
+              <li key={r.id} className="flex flex-wrap items-start gap-3 rounded-card bg-card shadow-card p-4">
                 <Zap className={`mt-0.5 size-5 shrink-0 ${r.active ? "text-brand-700" : "text-slate-400"}`} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <p className="bidi-auto font-semibold text-slate-900">

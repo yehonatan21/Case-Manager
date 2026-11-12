@@ -42,7 +42,7 @@ export function ConversationList({ rows }: { rows: ConversationRow[] }) {
   };
 
   return (
-    <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <ul className="divide-y divide-slate-100 overflow-hidden rounded-card bg-card shadow-card">
       {rows.map((r) => (
         <li key={r.caseId} className={r.fromClient ? "bg-amber-50/40" : undefined}>
           <div className="flex flex-wrap items-start gap-3 px-4 py-3.5">

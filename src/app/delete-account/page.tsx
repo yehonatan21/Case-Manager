@@ -40,7 +40,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
           <>
             <h1 className="text-2xl font-bold text-slate-900">{t.pageTitle}</h1>
             {user?.role === "customer" ? (
-              <DeleteAccountCard email={user.email} preview={await deletionPreview(db, user.id)} className="mt-6 rounded-xl border border-red-200 bg-white p-5" />
+              <DeleteAccountCard email={user.email} preview={await deletionPreview(db, user.id)} className="mt-6 rounded-xl border border-red-200 bg-card p-5" />
             ) : (
               <div className="mt-4 space-y-4 text-slate-700">
                 <p>{t.intro}</p>

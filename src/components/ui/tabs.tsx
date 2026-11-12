@@ -25,7 +25,7 @@ export function TabList({ tabs, value, onChange, className, label }: { tabs: Tab
     }
   };
   return (
-    <div role="tablist" aria-label={label} className={cn("no-scrollbar flex gap-1 overflow-x-auto overflow-y-hidden border-b border-slate-200", className)}>
+    <div role="tablist" aria-label={label} className={cn("no-scrollbar flex max-w-full gap-0.5 overflow-x-auto overflow-y-hidden rounded-full bg-slate-200/60 p-1", className)}>
       {tabs.map((t, i) => {
         const selected = t.id === value;
         return (
@@ -46,8 +46,9 @@ export function TabList({ tabs, value, onChange, className, label }: { tabs: Tab
             }}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
-              "-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 py-2.5 text-sm font-medium transition-colors",
-              selected ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-800",
+              // A segmented control (segmented-controls.md): the selected segment is a raised capsule.
+              "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-sm font-medium transition-colors",
+              selected ? "bg-card text-slate-900 shadow-card dark:bg-slate-300" : "text-slate-600 hover:text-slate-900",
             )}
           >
             {t.label}

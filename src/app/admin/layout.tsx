@@ -66,7 +66,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         footer={footer}
         compactFooter={compactFooter}
       >
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+        <header className="glass hairline-b sticky top-0 z-20 flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <AdminMobileMenu {...nav} header={header} footer={footer} />
             <span className="text-sm font-semibold text-slate-500 lg:hidden">{d.nav.staffArea}</span>

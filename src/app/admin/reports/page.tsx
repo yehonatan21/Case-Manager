@@ -46,17 +46,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         title={t.title}
         subtitle={fmt(t.periodLine, { from: formatDate(period.from, locale), to: formatDate(period.to, locale) })}
         actions={
-          <a href={exportHref} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 hover:bg-slate-50">
+          <a href={exportHref} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-card px-4 text-sm font-medium text-slate-800 hover:bg-slate-50">
             <Download className="size-4" aria-hidden /> {t.export}
           </a>
         }
       />
 
       {/* Filters: one row above the charts. */}
-      <form method="get" className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4" aria-label={t.period}>
+      <form method="get" className="mb-6 flex flex-wrap items-end gap-3 rounded-card bg-card shadow-card p-4" aria-label={t.period}>
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.period}</span>
-          <select name="preset" defaultValue={period.preset === "custom" ? "" : period.preset} className="h-10 rounded-lg border border-slate-300 bg-white px-3">
+          <select name="preset" defaultValue={period.preset === "custom" ? "" : period.preset} className="h-10 rounded-lg border border-slate-300 bg-card px-3">
             {PRESETS.map((p) => (
               <option key={p} value={p}>
                 {t.presets[p]}
@@ -73,7 +73,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <span className="font-medium text-slate-700">{t.to}</span>
           <DateInput name="to" range={{ group: "reports", part: "to" }} defaultValue={period.preset === "custom" ? period.to : ""} className="w-40" />
         </label>
-        <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+        <button type="submit" className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong">
           {t.apply}
         </button>
         <p className="w-full text-xs text-slate-500">{t.customHint}</p>
@@ -245,7 +245,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 </div>
                 {profit.money.unratedMembers.length > 0 && <p className="text-sm text-amber-800">{fmt(d.time.unratedMembers, { names: profit.money.unratedMembers.join(", ") })}</p>}
                 {profit.money.byService.length > 0 && (
-                  <div tabIndex={0} role="region" aria-label={d.time.byService} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
+                  <div tabIndex={0} role="region" aria-label={d.time.byService} className="overflow-x-auto outline-offset-2 rounded-card bg-card shadow-card">
                     <table className="w-full min-w-[46rem] text-sm">
                       <caption className="px-4 pt-3 text-start text-sm font-semibold">{d.time.byService}</caption>
                       <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
@@ -303,9 +303,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               </>
             )}
             {profit.byMember.length === 0 ? (
-              <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">{d.time.noTime}</p>
+              <p className="rounded-card bg-card shadow-card px-5 py-4 text-sm text-slate-600">{d.time.noTime}</p>
             ) : (
-              <div tabIndex={0} role="region" aria-label={d.time.hoursByMember} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
+              <div tabIndex={0} role="region" aria-label={d.time.hoursByMember} className="overflow-x-auto outline-offset-2 rounded-card bg-card shadow-card">
                 <table className="w-full min-w-[36rem] text-sm">
                   <caption className="px-4 pt-3 text-start text-sm font-semibold">{d.time.hoursByMember}</caption>
                   <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
@@ -343,7 +343,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {t.teamHint}
               {r.unassigned ? ` ${fmt(t.unassigned, { n: r.unassigned })}` : ""}
             </p>
-            <div tabIndex={0} role="region" aria-label={t.team} className="overflow-x-auto outline-offset-2 rounded-xl border border-slate-200 bg-white">
+            <div tabIndex={0} role="region" aria-label={t.team} className="overflow-x-auto outline-offset-2 rounded-card bg-card shadow-card">
               <table className="w-full min-w-[50rem] text-sm">
                 <caption className="sr-only">{t.team}</caption>
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">

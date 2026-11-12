@@ -23,7 +23,7 @@ export default async function MessagesPage() {
       {cases.length === 0 ? (
         <EmptyState icon={<MessageSquare className="size-10" />} title={d.portal.messagesEmpty} />
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-card bg-card shadow-card">
           {cases.map((c) => (
             <li key={c.id}>
               <Link href={`/portal/cases/${c.id}?tab=messages`} className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50">
@@ -34,7 +34,7 @@ export default async function MessagesPage() {
                   </span>
                 </span>
                 {c.unread > 0 ? (
-                  <span className="shrink-0 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">{fmt(d.portal.unread, { n: c.unread })}</span>
+                  <span className="shrink-0 rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-white">{fmt(d.portal.unread, { n: c.unread })}</span>
                 ) : (
                   <MessageSquare className="size-4 shrink-0 text-slate-400" aria-hidden />
                 )}

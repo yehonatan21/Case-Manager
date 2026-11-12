@@ -70,7 +70,7 @@ export function DeleteAccountCard({ email, preview, className }: { email: string
   const t = d.accountDeletion;
   const [open, setOpen] = useState(false);
   return (
-    <section aria-labelledby="delete-account-title" className={className ?? "rounded-xl border border-red-200 bg-white p-5"} data-delete-account>
+    <section aria-labelledby="delete-account-title" className={className ?? "rounded-xl border border-red-200 bg-card p-5"} data-delete-account>
       <h2 id="delete-account-title" className="text-base font-semibold text-slate-900">
         {t.title}
       </h2>
@@ -113,7 +113,7 @@ export function AdminDeleteClient({ customerId, email }: { customerId: string; e
   const toast = useToast();
   const [open, setOpen] = useState(false);
   return (
-    <section aria-labelledby="admin-delete-title" className="mt-6 rounded-xl border border-red-200 bg-white p-5">
+    <section aria-labelledby="admin-delete-title" className="mt-6 rounded-xl border border-red-200 bg-card p-5">
       <h2 id="admin-delete-title" className="text-base font-semibold text-slate-900">
         {t.title}
       </h2>

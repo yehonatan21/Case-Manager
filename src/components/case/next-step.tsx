@@ -107,7 +107,7 @@ export function NextStep({ caseId, actions, done, maxMb, onGo }: { caseId: strin
             <ul className="space-y-2">
               {first!.type === "upload_many" &&
                 first!.titles.slice(1).map((title) => (
-                  <li key={title} className="bidi-auto flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm text-slate-800">
+                  <li key={title} className="bidi-auto flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm text-slate-800">
                     {title}
                     <button type="button" className="shrink-0 text-xs font-medium text-brand-700 hover:underline" onClick={() => onGo("documents")}>
                       {t.goToUpload}
@@ -117,7 +117,7 @@ export function NextStep({ caseId, actions, done, maxMb, onGo }: { caseId: strin
               {rest.map((x, i) => {
                 const r = actionText(x);
                 return (
-                  <li key={i} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm text-slate-800">
+                  <li key={i} className="flex items-center justify-between gap-3 rounded-lg bg-card px-3 py-2 text-sm text-slate-800">
                     <span className="bidi-auto">{r.title}</span>
                     <button type="button" className="shrink-0 text-xs font-medium text-brand-700 hover:underline" onClick={() => onGo(r.tab)}>
                       {r.cta}

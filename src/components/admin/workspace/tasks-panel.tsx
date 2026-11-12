@@ -143,7 +143,7 @@ export function TasksPanel({
               {g.items.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-xs text-slate-500">{d.workPlan.noTasks}</p>
               ) : (
-        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-card">
           {g.items.map((t) => {
             const overdue = t.dueDate && t.dueDate < todayIso() && !["done", "cancelled"].includes(t.status);
             return (

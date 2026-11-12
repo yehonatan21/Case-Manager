@@ -18,7 +18,7 @@ export async function generateMetadata() {
 
 type SP = { q?: string; actor?: string; group?: string; from?: string; to?: string; page?: string };
 
-const field = "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900";
+const field = "h-10 w-full rounded-lg border border-slate-300 bg-card px-3 text-sm text-slate-900";
 
 /** Short, readable details of an entry (no ids that mean nothing to a person). */
 function summary(details: Record<string, unknown>): string {
@@ -47,12 +47,12 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         title={t.title}
         subtitle={t.sub}
         actions={
-          <a href={exportHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <a href={exportHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 bg-card px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
             <Download className="size-4" aria-hidden /> {t.export}
           </a>
         }
       />
-      <form method="get" className="mb-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]">
+      <form method="get" className="mb-4 grid gap-3 rounded-card bg-card shadow-card p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]">
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.search}</span>
           <input name="q" defaultValue={sp.q ?? ""} placeholder={t.searchHint} className={field} />
@@ -88,7 +88,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
           <DateInput name="to" range={{ group: "activity", part: "to" }} defaultValue={sp.to ?? ""} />
         </label>
         <div className="flex items-end gap-2">
-          <button type="submit" className="h-10 rounded-lg bg-brand-700 px-4 text-sm font-medium text-white hover:bg-brand-800">
+          <button type="submit" className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong">
             {t.filter}
           </button>
           <Link href="/admin/activity" className="inline-flex h-10 items-center rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-100">

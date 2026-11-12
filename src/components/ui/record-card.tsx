@@ -16,7 +16,7 @@ export function CardList({ label, children, className }: { label?: string; child
 
 /** The wide table, shown from `md` up (the cards take its place on phones). */
 export function TableFrame({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block", className)}>{children}</div>;
+  return <div className={cn("hidden overflow-x-auto rounded-card bg-card shadow-card md:block", className)}>{children}</div>;
 }
 
 export type CardDetail = { label: string; value: React.ReactNode; wide?: boolean } | null | false | "" | 0 | undefined;
@@ -41,7 +41,7 @@ export function RecordCard({
 }) {
   const shown = details.filter(Boolean) as Exclude<CardDetail, null | false | "" | 0 | undefined>[];
   return (
-    <li className="relative rounded-xl border border-slate-200 bg-white p-4 shadow-xs has-[a[data-card-link]:hover]:border-brand-300">
+    <li className="relative rounded-card bg-card shadow-card p-4 has-[a[data-card-link]:hover]:border-brand-300">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {eyebrow && <div className="mb-0.5 text-xs text-slate-600">{eyebrow}</div>}

@@ -197,14 +197,14 @@ export function CaseWorkspace({
       {a.internal && <SummaryBar c={c} staff={staff} onOpenTasks={available.includes("tasks") ? () => go("tasks") : undefined} />}
 
       {/* On small screens the three areas become switchable panes. */}
-      <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 xl:hidden" role="tablist" aria-label={d.workspace.work}>
+      <div className="mb-4 grid grid-cols-3 gap-0.5 rounded-full bg-slate-200/60 p-1 xl:hidden" role="tablist" aria-label={d.workspace.work}>
         {(["details", "work", "copilot"] as Pane[]).map((p) => (
           <button
             key={p}
             role="tab"
             aria-selected={pane === p}
             onClick={() => setPane(p)}
-            className={cn("rounded-md py-1.5 text-sm font-medium", pane === p ? "bg-white text-brand-800 shadow-sm" : "text-slate-600")}
+            className={cn("rounded-full py-1.5 text-sm font-medium", pane === p ? "bg-card text-slate-900 shadow-card dark:bg-slate-300" : "text-slate-600")}
           >
             {p === "details" ? d.workspace.paneDetails : p === "work" ? d.workspace.paneWork : d.workspace.paneCopilot}
           </button>
@@ -223,7 +223,7 @@ export function CaseWorkspace({
               onClick={() => togglePanel(p)}
               aria-expanded={shown}
               aria-controls={`ws-panel-${p}`}
-              className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium ring-1", shown ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50" : "bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200")}
+              className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium ring-1", shown ? "bg-card text-slate-700 ring-slate-200 hover:bg-slate-50" : "bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200")}
             >
               <Icon className="size-3.5" aria-hidden />
               {fmt(shown ? d.workspace.hidePanel : d.workspace.showPanel, { name })}

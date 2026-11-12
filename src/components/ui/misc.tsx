@@ -54,7 +54,7 @@ export function Notice({
 
 export function EmptyState({ icon, title, text, action, className }: { icon?: React.ReactNode; title: React.ReactNode; text?: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-card px-6 py-12 text-center", className)}>
       {icon && <div className="mb-3 text-slate-500">{icon}</div>}
       <p className="font-semibold text-slate-800">{title}</p>
       {text && <p className="mt-1 max-w-md text-sm text-slate-500">{text}</p>}
@@ -67,8 +67,8 @@ export function PageHeader({ title, subtitle, actions, className }: { title: Rea
   return (
     <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-4", className)}>
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-slate-900 sm:text-[2rem]">{title}</h1>
+        {subtitle && <p className="mt-1 text-[0.9375rem] text-slate-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
