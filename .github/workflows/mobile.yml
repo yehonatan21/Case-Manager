@@ -53,6 +53,14 @@ jobs:
       - name: Build the debug APK
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Build a signed release bundle with a throwaway key (checks the Play signing setup)
+        working-directory: mobile/android
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/ci.jks" -storepass ci-only-pass -keypass ci-only-pass -alias ci \
+            -keyalg RSA -keysize 2048 -validity 1 -dname "CN=CI" -noprompt
+          ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/ci.jks" ANDROID_KEYSTORE_PASSWORD=ci-only-pass ANDROID_KEY_ALIAS=ci ANDROID_VERSION_CODE=7 \
+            ./gradlew bundleRelease --no-daemon
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab | grep -q "jar verified"
       - uses: actions/upload-artifact@v7
         with:
           name: case-manager-android-debug

@@ -266,7 +266,7 @@ Web Push reaches browsers and phones even when the site is closed.
 - **Payments:** the Grow payment page stays inside the app. These are real-world services, so Apple's in-app purchase doesn't apply.
 - **Offline screen** when the site can't be reached, the app icon and a launch screen.
 
-Building, signing, the Apple/Google keys and store submission: [**mobile/README.md**](mobile/README.md). CI builds both apps on every change to `mobile/` (the Android build is downloadable from the run).
+Building, signing, the Apple/Google keys and store submission: [**mobile/README.md**](mobile/README.md). CI builds both apps on every change to `mobile/` (the Android build is downloadable from the run), and the **Google Play release** workflow signs the Android app and uploads it to Play, with the store listing in [`mobile/store/google-play`](mobile/store/google-play).
 
 ## Electronic signatures
 
