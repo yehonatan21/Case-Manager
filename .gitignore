@@ -44,3 +44,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 /backups
+
+# Third-party Claude Code skill, downloaded at session start by .claude/hooks/session-start.sh (not ours to commit)
+.claude/skills/apple-design/
