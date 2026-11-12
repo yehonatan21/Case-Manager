@@ -22,8 +22,9 @@ export default async function NewCasePage({
   const list = (await listCustomers(db, { pageSize: 500 })).rows;
   // A client picked from their page may be older than the newest 500.
   const picked = customer && !list.some((c) => c.id === customer) ? await getCustomer(db, customer) : null;
-  if (picked) list.unshift({ id: picked.customer.id, type: picked.customer.type, createdAt: picked.customer.createdAt, name: picked.user.name, email: picked.user.email, phone: picked.user.phone, organization: picked.organization?.name ?? null, caseCount: 0 });
-  const clients = list.map((c) => ({
+  if (picked) list.unshift({ id: picked.customer.id, type: picked.customer.type, createdAt: picked.customer.createdAt, name: picked.user.name, email: picked.user.email, phone: picked.user.phone, deletedAt: picked.user.deletedAt, organization: picked.organization?.name ?? null, caseCount: 0 });
+  // A deleted account can't get new requests.
+  const clients = list.filter((c) => !c.deletedAt).map((c) => ({
     id: c.id,
     name: c.name,
     email: c.email,

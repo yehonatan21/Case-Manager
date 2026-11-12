@@ -50,17 +50,29 @@ licensed payment provider (Grow) on its own page, for real-world services (no in
 | Other info (customer type, organization name and number) | Yes | No | App functionality | Optional |
 | Messages (with the office) | Yes | No | App functionality | Optional |
 | Photos and videos, files and docs (uploaded documents) | Yes | No | App functionality | Optional |
-| Purchase history (payments for the office's services) | Yes | No | App functionality | Required for paid services |
+| Purchase history (payments for the office's services) | Yes | No | App functionality | Required for paid services (kept after an account is deleted: financial records) |
 | App interactions (page views, no personal identifiers; Vercel Analytics) | Yes | No | Analytics | Required |
 | Device or other IDs (the push notification token) | Yes | No | App functionality (notifications) | Optional |
 
 - Card details are entered on the payment provider's page and never reach the app: don't declare financial info.
 - Service providers that process data on the office's behalf (hosting, email, the payment provider, the AI
   provider when the client agreed to AI processing) are not "sharing" under Play's definitions.
-- **Encrypted in transit:** Yes. **Users can request deletion:** see below.
+- **Encrypted in transit:** Yes. **Users can delete their account and data:** Yes, see below.
 
-## Account deletion (required before publishing)
+## Account deletion
 
-Google Play requires apps that let people create an account to let them **delete it from the app and through a
-web page** (Play Console asks for that page's URL in Data safety). The site doesn't have this yet: build it
-before submitting for review.
+Google Play requires apps where people create an account to let them delete it **in the app and on the web**.
+
+- **In the app:** Profile → **Delete account**.
+- **On the web** (the URL Play Console asks for in Data safety → *Delete account URL*):
+  `https://case-manager-eta.vercel.app/delete-account` (your own domain once you have one). Signed out, it
+  explains what's deleted and kept and links to sign-in; signed in, it has the same Delete button. It also shows
+  the office's email (Settings → General → company email) for people who'd rather ask.
+- **By the office:** an admin opens the client (Clients → the client) → **Delete this client's account**.
+
+What's deleted and kept (for the Data safety form: *data is deleted*, except data kept for legal reasons):
+the client's name, email, phone and WhatsApp number, sign-in, devices, notifications, intake conversations, and
+every request without a payment are deleted at once. Payments, invoices and receipts (with the receipt PDFs), and
+for paid requests the quote and the case number, are kept as the law requires for financial records — no longer
+linked to the person's details in the app. Invoices issued by an invoicing service (Green Invoice) stay there as
+issued.

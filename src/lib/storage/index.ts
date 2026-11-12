@@ -8,6 +8,8 @@ export interface StorageDriver {
   get(key: string): Promise<Buffer>;
   /** Temporary direct-download URL when the backend supports it (S3); null means stream via the app. */
   signedUrl(key: string, filename: string, mimeType: string): Promise<string | null>;
+  /** Deletes the file; a file that's already gone is not an error. */
+  remove(key: string): Promise<void>;
 }
 
 /** Local disk, encrypted at rest with AES-256-GCM (key derived from APP_SECRET). */
@@ -28,6 +30,9 @@ export class LocalStorage implements StorageDriver {
   }
   async signedUrl() {
     return null;
+  }
+  async remove(key: string) {
+    await fs.rm(this.file(key), { force: true });
   }
 }
 
@@ -68,6 +73,11 @@ export class S3Storage implements StorageDriver {
       { expiresIn: 60 },
     );
   }
+  async remove(key: string) {
+    const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = await this.clientPromise;
+    await client.send(new DeleteObjectCommand({ Bucket: env.s3Bucket, Key: key }));
+  }
 }
 
 /** Vercel Blob (private store). Contents are additionally encrypted by the app and served through it. */
@@ -84,6 +94,10 @@ export class VercelBlobStorage implements StorageDriver {
   }
   async signedUrl() {
     return null;
+  }
+  async remove(key: string) {
+    const { del } = await import("@vercel/blob");
+    await del(key);
   }
 }
 
@@ -106,6 +120,11 @@ export class DatabaseStorage implements StorageDriver {
   }
   async signedUrl() {
     return null;
+  }
+  async remove(key: string) {
+    const { fileBlobs } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    await (await this.db()).delete(fileBlobs).where(eq(fileBlobs.key, key));
   }
 }
 

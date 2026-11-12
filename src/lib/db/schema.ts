@@ -241,6 +241,9 @@ export const users = pgTable(
     totpLastStep: integer("totp_last_step"),
     /** Staff only: what an hour of this person's time costs the business (for profit per case). Admins only. */
     hourlyCostCents: integer("hourly_cost_cents"),
+    /** The client deleted their account (or an admin did, at their request): personal details are erased and the
+     * row stays only so the kept payment records still point somewhere (see services/account-deletion.ts). */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("users_email_idx").on(t.email), index("users_whatsapp_idx").on(t.whatsappPhone)],

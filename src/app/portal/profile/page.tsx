@@ -7,6 +7,8 @@ import { ProfileForm } from "@/components/app/profile-form";
 import { LogoutButton } from "@/components/app/logout-button";
 import { PushToggle } from "@/components/app/push-toggle";
 import { isWhatsAppEnabled } from "@/lib/services/whatsapp";
+import { deletionPreview } from "@/lib/services/account-deletion";
+import { DeleteAccountCard } from "@/components/account/delete-account";
 
 export async function generateMetadata() {
   const { d } = await getDict();
@@ -17,7 +19,11 @@ export default async function ProfilePage() {
   const user = await requirePageUser("/portal/profile");
   const { d } = await getDict();
   const db = await getDb();
-  const [cust, whatsappAvailable] = await Promise.all([getCustomerForUser(db, user.id), isWhatsAppEnabled(db)]);
+  const [cust, whatsappAvailable, preview] = await Promise.all([
+    getCustomerForUser(db, user.id),
+    isWhatsAppEnabled(db),
+    user.role === "customer" ? deletionPreview(db, user.id) : Promise.resolve(null),
+  ]);
   return (
     <div className="max-w-2xl">
       <PageHeader title={d.portal.profileTitle} actions={<LogoutButton className="sm:hidden" />} />
@@ -28,6 +34,7 @@ export default async function ProfilePage() {
         organization={cust?.organization?.name ?? null}
       />
       <PushToggle className="mt-6 rounded-xl border border-slate-200 bg-white p-4" />
+      {preview && <DeleteAccountCard email={user.email} preview={preview} className="mt-6 rounded-xl border border-red-200 bg-white p-5" />}
     </div>
   );
 }
