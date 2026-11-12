@@ -1,4 +1,15 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
+
+// Version: versionName from mobile/package.json; versionCode from ANDROID_VERSION_CODE (CI sets it from the run
+// number, so every upload to Google Play is higher than the last), else 1 for local builds.
+def appVersion = new JsonSlurper().parse(file('../../package.json')).version
+def appVersionCode = (System.getenv('ANDROID_VERSION_CODE') ?: '1') as Integer
+
+// Release signing with the upload key, from the environment (CI: repository secrets; see mobile/README.md).
+// Without it the release build is unsigned, which Google Play doesn't accept.
+def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
 
 android {
     namespace = "app.casemanager.mobile"
@@ -7,8 +18,8 @@ android {
         applicationId "app.casemanager.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +27,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (keystorePath) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD') ?: System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keystorePath) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

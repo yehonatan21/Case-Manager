@@ -97,14 +97,88 @@ The app id `app.casemanager.mobile` is also the sign-in return scheme and the AP
    and a demo account (an email that can receive the sign-in code) for the reviewer.
 4. App Store Connect asks for a privacy policy URL: `https://<your site>/privacy`.
 
-**Google Play** ($25 once):
-1. Android Studio → Build → Generate Signed App Bundle → create an upload key (keep it safe) → `.aab`.
-2. Play Console → create the app → upload to Internal testing first, then Production.
-3. Data safety form: account details (name, email, phone), files you upload, used for providing the service.
+**Google Play**: see [Google Play](#google-play) below. CI builds, signs and uploads the Android app.
 
-Version numbers: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in Xcode, `versionName` / `versionCode` in
-`android/app/build.gradle`. A new store version is needed only for native changes (icons, permissions,
+Version numbers: `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in Xcode; on Android `versionName` is
+`version` in `mobile/package.json` and `versionCode` is the CI run number. A new store version is needed only for native changes (icons, permissions,
 plugins), not for site changes.
+
+## Google Play
+
+The **Google Play release** workflow (`.github/workflows/play-release.yml`) builds a signed Android App Bundle,
+keeps it as a download on the run, and, with a Play service account, uploads it to a testing track with the
+release notes and (on request) the whole store listing from [`store/google-play/`](store/google-play/).
+It runs when changes to `mobile/` reach `main` (to **internal testing**) and by hand: Actions →
+**Google Play release** → Run workflow (choose the track; tick *Also update the store listing*).
+
+### One-time setup
+
+**1. Play Console account.** [play.google.com/console](https://play.google.com/console), $25 once. Google
+verifies your identity (a few days). New personal accounts must run a **closed test with at least 12 testers for
+14 days** before they can publish to everyone. An organization account (with a D-U-N-S number) skips that.
+
+**2. The upload key.** Make it once on your computer and keep the file and passwords somewhere safe (a password
+manager). Google re-signs the app for users (Play App Signing), so a lost upload key can be reset, but it takes
+time.
+
+```bash
+keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+```bash
+base64 -w0 upload.jks > upload.jks.b64
+```
+
+(On a Mac: `base64 -i upload.jks -o upload.jks.b64`.)
+
+**3. Repository secrets.** GitHub → the repository → Settings → Secrets and variables → Actions →
+New repository secret. Paste each value there and nowhere else:
+
+| Secret | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | the contents of `upload.jks.b64` |
+| `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
+| `ANDROID_KEY_ALIAS` | `upload` (the alias you chose) |
+| `ANDROID_KEY_PASSWORD` | the key password, if you set a different one |
+| `GOOGLE_SERVICES_JSON` | Firebase's `google-services.json` (for push; see above) |
+| `PLAY_SERVICE_ACCOUNT` | the Play service account's JSON key (step 6) |
+
+**4. Create the app in Play Console.** Create app → name *Case Manager*, default language **Hebrew – iw-IL**,
+App, Free. Then fill in **App content**, using the answers in
+[`store/google-play/README.md`](store/google-play/README.md): privacy policy, app access (a demo account for
+the reviewer), ads (none), content rating, target audience, data safety, government app (no), financial features
+(none of the listed ones: payments go through a licensed provider).
+
+**5. The first upload is by hand** (Google requires it before the API can upload). Run the workflow once
+(Actions → Google Play release → Run workflow), download **case-manager-android-N** from the run, and in Play
+Console → Testing → Internal testing → Create new release, upload `app-release.aab`.
+
+**6. Automatic uploads from then on.**
+1. [Google Cloud console](https://console.cloud.google.com) → the same project as Firebase (or a new one) →
+   APIs & Services → enable **Google Play Android Developer API**.
+2. IAM & Admin → Service accounts → Create → no roles needed → Keys → Add key → JSON. That file is
+   `PLAY_SERVICE_ACCOUNT`.
+3. Play Console → Users and permissions → Invite new users → the service account's email → for this app:
+   *Release apps to testing tracks*, *Manage testing tracks*, and *Edit store listing*. Add *Release to
+   production* if you want the workflow to publish to production too.
+
+Now every change to `mobile/` on `main` reaches internal testers, and you promote a release to closed testing or
+production in Play Console (or run the workflow with that track). Until the app has been published once, Play
+only accepts **draft** releases; the workflow then saves the release as a draft for you to roll out in Play
+Console.
+
+### The store listing
+
+[`store/google-play/`](store/google-play/) holds the listing in Hebrew (`iw-IL`) and English (`en-US`): title,
+short and full description, release notes (`changelogs/default.txt`), the icon, the feature graphic and phone
+screenshots. `npm run check` keeps the texts within Play's limits. Run the workflow with *Also update the store
+listing* to send it all to Play, or copy it into Play Console by hand.
+
+To retake the screenshots and the feature graphic from the site (demo mode, with its demo data):
+
+```bash
+BASE=http://localhost:3000 node mobile/scripts/store-images.cjs
+```
 
 ## Icons and launch screens
 

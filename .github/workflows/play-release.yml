@@ -1,0 +1,123 @@
+# Google Play release of the Android app (mobile/).
+#   - Builds a signed Android App Bundle (.aab) with the upload key and keeps it as an artifact (30 days).
+#   - With a Play service account, uploads it to a testing track (internal by default) with the release notes
+#     from mobile/store/google-play, and on request updates the store listing (texts, icon, feature graphic,
+#     screenshots).
+# Runs on changes to mobile/ reaching main (→ internal testing) and by hand (Actions → Google Play release).
+#
+# Repository secrets (Settings → Secrets and variables → Actions) — see mobile/README.md, "Google Play":
+#   ANDROID_KEYSTORE_BASE64     the upload keystore (.jks), base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD   its password
+#   ANDROID_KEY_ALIAS           the key's alias in it
+#   ANDROID_KEY_PASSWORD        the key's password, if different from the keystore's
+#   PLAY_SERVICE_ACCOUNT        the Play service account's JSON key (optional: without it, only the .aab is built)
+#   GOOGLE_SERVICES_JSON        Firebase's google-services.json for push (optional)
+name: Google Play release
+
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/play-release.yml"]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Play track"
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+      listing:
+        description: "Also update the store listing (texts and images)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: play-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Signed bundle → Google Play
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      # Every build Play receives needs a higher version code than the last.
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      TRACK: ${{ inputs.track || 'internal' }}
+    steps:
+      - name: Check the secrets
+        id: secrets
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
+            echo "::warning::No upload key yet (ANDROID_KEYSTORE_*). See mobile/README.md → Google Play. Nothing to release."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          fi
+          [ -n "$PLAY_SERVICE_ACCOUNT" ] && echo "upload=true" >> "$GITHUB_OUTPUT" || echo "upload=false" >> "$GITHUB_OUTPUT"
+        working-directory: .
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.signed == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.secrets.outputs.signed == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v5
+        if: steps.secrets.outputs.signed == 'true'
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Prepare
+        if: steps.secrets.outputs.signed == 'true'
+        run: |
+          npm ci
+          npm run check
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            if echo "$GOOGLE_SERVICES_JSON" | grep -q '^{'; then printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            else echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json; fi
+          else
+            echo "::warning::No GOOGLE_SERVICES_JSON: the app builds, but Android push notifications won't work."
+          fi
+          npx cap sync android
+      - name: Build the signed bundle
+        if: steps.secrets.outputs.signed == 'true'
+        working-directory: mobile/android
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v7
+        if: steps.secrets.outputs.signed == 'true'
+        with:
+          name: case-manager-android-${{ github.run_number }}
+          path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+      - name: Upload to Google Play (${{ env.TRACK }})
+        if: steps.secrets.outputs.signed == 'true' && steps.secrets.outputs.upload == 'true'
+        run: node scripts/play.mjs bundle android/app/build/outputs/bundle/release/app-release.aab --track "$TRACK"
+      - name: Update the store listing
+        if: steps.secrets.outputs.signed == 'true' && steps.secrets.outputs.upload == 'true' && inputs.listing
+        run: node scripts/play.mjs listing
+      - name: Summary
+        if: always() && steps.secrets.outputs.signed == 'true'
+        run: |
+          {
+            echo "### Android release ${ANDROID_VERSION_CODE}"
+            if [ "${{ steps.secrets.outputs.upload }}" = "true" ]; then echo "Uploaded to the **${TRACK}** track."; else echo "Built only: add PLAY_SERVICE_ACCOUNT to upload automatically. Download **case-manager-android-${ANDROID_VERSION_CODE}** above and upload it in Play Console."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks" android/app/google-services.json
