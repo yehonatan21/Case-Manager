@@ -25,7 +25,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: "#4338ca", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, d } = await getDict();
@@ -34,11 +42,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={dirOf(locale)} suppressHydrationWarning>
       <body className="min-h-dvh">
-        <a href="#main" className="sr-only z-[100] rounded-md bg-white px-3 py-2 text-sm font-medium text-brand-800 shadow focus:not-sr-only focus:fixed focus:start-3 focus:top-3">
+        <a href="#main" className="sr-only z-[100] rounded-md bg-card px-3 py-2 text-sm font-medium text-brand-800 shadow focus:not-sr-only focus:fixed focus:start-3 focus:top-3">
           {d.nav.skipToContent}
         </a>
         {env.demoMode && (
-          <div role="note" className="bg-amber-400 px-4 py-1.5 text-center text-xs font-semibold text-amber-950">
+          <div role="note" className="bg-[#fbbf24] px-4 py-1.5 text-center text-xs font-semibold text-[#451a03]">
             {d.common.demoBanner}
           </div>
         )}

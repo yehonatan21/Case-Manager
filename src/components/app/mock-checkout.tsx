@@ -31,12 +31,12 @@ export function MockCheckout(p: { paymentId: string; caseId: string; status: str
   };
 
   return (
-    <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-      <div className="flex items-center justify-between bg-slate-900 px-6 py-4 text-white">
+    <div className="w-full max-w-md overflow-hidden rounded-card bg-card shadow-card shadow-xl">
+      <div className="flex items-center justify-between bg-inverse px-6 py-4 text-white">
         <p className="flex items-center gap-2 font-semibold">
           <Lock className="size-4" aria-hidden /> {d.mockPay.title}
         </p>
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-amber-950">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#fbbf24] px-2 py-0.5 text-[11px] font-bold text-[#451a03]">
           <FlaskConical className="size-3" aria-hidden /> TEST
         </span>
       </div>

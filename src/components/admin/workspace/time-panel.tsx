@@ -155,7 +155,7 @@ export function TimePanel({ caseId, currentUserId, canEdit, currency }: { caseId
         {s.entries.filter((e) => e.minutes != null).length === 0 ? (
           <p className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">{t.empty}</p>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-card">
             {s.entries
               .filter((e) => e.minutes != null)
               .map((e) => (
@@ -194,7 +194,7 @@ export function TimePanel({ caseId, currentUserId, canEdit, currency }: { caseId
         {s.expenses.length === 0 ? (
           <p className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">{t.expensesEmpty}</p>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-card">
             {s.expenses.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
                 <span className="min-w-0 flex-1">

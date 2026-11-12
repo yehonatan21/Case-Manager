@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 export async function PublicHeader() {
   const [{ d }, user] = await Promise.all([getDict(), getCurrentUser()]);
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-card/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Logo name={d.common.appName} />
         <nav aria-label={d.nav.accountMenu} className="flex items-center gap-2">
@@ -31,7 +31,7 @@ export async function PublicHeader() {
 export async function PublicFooter() {
   const { d } = await getDict();
   return (
-    <footer className="border-t border-slate-200 bg-white">
+    <footer className="border-t border-slate-200 bg-card">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-slate-500">
         <p>
           © {new Date().getFullYear()} {d.common.appName}. {d.home.footer}

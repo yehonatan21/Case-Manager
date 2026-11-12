@@ -48,13 +48,13 @@ export function ErrorsList({ errors }: { errors: ErrorItem[] }) {
       </div>
       <p className="mb-3 text-sm text-slate-600">{t.hint}</p>
       {errors.length === 0 ? (
-        <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p className="flex items-center gap-2 rounded-card bg-card shadow-card p-4 text-sm text-slate-700">
           <CheckCircle2 className="size-4 text-emerald-600" aria-hidden /> {t.none}
         </p>
       ) : (
         <ul className="space-y-2">
           {errors.map((e) => (
-            <li key={e.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <li key={e.id} className="rounded-card bg-card shadow-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="break-words font-mono text-sm text-slate-900" dir="ltr">

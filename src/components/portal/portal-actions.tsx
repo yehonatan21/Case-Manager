@@ -11,7 +11,7 @@ export function PortalActions({ items }: { items: { caseId: string; caseTitle: s
   const actionText = useActionText();
   if (items.length === 0) {
     return (
-      <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
+      <p className="flex items-center gap-2 rounded-card bg-card shadow-card px-5 py-4 text-sm text-slate-600">
         <CheckCircle2 className="size-5 text-emerald-600" aria-hidden />
         {d.portal.noActions}
       </p>

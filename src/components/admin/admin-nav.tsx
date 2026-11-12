@@ -31,7 +31,7 @@ function NavLinks({ role, badges, devMailbox, collapsed = false, onNavigate, onT
           {collapsed ? (
             gi > 0 && <div aria-hidden className="mx-3 mb-3 border-t border-slate-200" />
           ) : (
-            <p id={`nav-group-${group}`} className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <p id={`nav-group-${group}`} className="mb-1 px-3 text-xs font-semibold text-slate-500">
               {d.navGroups[group]}
             </p>
           )}
@@ -62,20 +62,20 @@ function NavLink({ item, label, count, countLabel, active, collapsed, onNavigate
         onMouseLeave={onHide}
         onBlur={onHide}
         className={cn(
-          "relative flex h-10 items-center rounded-lg text-sm font-medium outline-offset-2 transition-colors",
+          "relative flex h-10 items-center rounded-xl text-sm font-medium outline-offset-2 transition-colors",
           collapsed ? "justify-center px-0" : "gap-3 px-3",
-          active ? "bg-brand-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+          active ? "bg-brand-100/70 text-brand-800 dark:bg-brand-100" : "text-slate-700 hover:bg-slate-900/5 hover:text-slate-900",
         )}
       >
         <Icon className="size-5 shrink-0" aria-hidden />
         <span className={collapsed ? "sr-only" : "flex-1 truncate"}>{label}</span>
         {count > 0 &&
           (collapsed ? (
-            <span aria-hidden className={cn("absolute end-1 top-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4", active ? "bg-white text-brand-800" : "bg-brand-700 text-white")}>
+            <span aria-hidden className={cn("absolute end-1 top-1 min-w-4 rounded-full px-1 text-center text-[10px] font-bold leading-4", "bg-slate-800 text-card")}>
               {count > 99 ? "99+" : count}
             </span>
           ) : (
-            <span aria-hidden className={cn("rounded-full px-1.5 text-[11px] font-bold", active ? "bg-white/20 text-white" : "bg-brand-100 text-brand-800")}>
+            <span aria-hidden className={cn("rounded-full px-1.5 text-[11px] font-bold", "bg-slate-200 text-slate-800")}>
               {count > 99 ? "99+" : count}
             </span>
           ))}
@@ -105,7 +105,7 @@ export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header
   return (
     <div style={{ "--nav-w": `${width}px` } as React.CSSProperties}>
       <aside
-        className="fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col border-e border-slate-200 bg-white motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
+        className="glass fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col border-e border-slate-900/10 motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
         data-collapsed={collapsed ? "true" : "false"}
       >
         <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>{collapsed ? props.compactHeader : props.header}</div>
@@ -130,7 +130,7 @@ export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header
         <div
           role="presentation"
           aria-hidden
-          className="pointer-events-none fixed z-40 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white shadow-lg lg:block"
+          className="pointer-events-none fixed z-40 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-inverse px-2.5 py-1 text-xs font-medium text-white shadow-lg lg:block"
           style={{ top: tip.top, insetInlineStart: SIDEBAR_WIDTH.collapsed + 6 }}
         >
           {tip.label}
@@ -181,7 +181,7 @@ export function AdminMobileMenu(props: NavProps & { header: React.ReactNode; foo
         onClick={(e) => {
           if (e.target === ref.current) setOpen(false); // click on the backdrop
         }}
-        className="fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-white p-0 shadow-xl backdrop:bg-slate-900/40"
+        className="fixed inset-y-0 start-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-card p-0 shadow-xl backdrop:bg-black/40"
       >
         {open && (
           <div className="flex h-full flex-col">

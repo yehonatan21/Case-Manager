@@ -73,14 +73,14 @@ export function QuickCreate({ role }: { role: UserRole }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={listId}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-700 px-2.5 text-sm font-medium text-white hover:bg-brand-800 sm:px-3"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-sm font-medium text-white hover:bg-accent-strong sm:px-3"
       >
         <Plus className="size-4" aria-hidden />
         <span className="sr-only sm:not-sr-only">{t.button}</span>
         <span className="sr-only">: {t.label}</span>
       </button>
       {open && (
-        <div id={listId} className="absolute end-0 top-full z-40 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl" onKeyDown={onListKey}>
+        <div id={listId} className="absolute end-0 top-full z-40 mt-2 w-60 rounded-card bg-card shadow-card p-1.5 shadow-xl" onKeyDown={onListKey}>
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500" aria-hidden>
             {t.label}
           </p>

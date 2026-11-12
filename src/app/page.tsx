@@ -22,7 +22,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="border-t border-slate-200 bg-white">
+        <section className="border-t border-slate-200 bg-card">
           <div className="mx-auto max-w-6xl px-4 py-14">
             <h2 className="text-2xl font-bold tracking-tight">{d.home.howTitle}</h2>
             <ol className="mt-8 grid gap-5 sm:grid-cols-3">
@@ -31,7 +31,7 @@ export default async function HomePage() {
                 return (
                   <li key={s.title} className="rounded-xl border border-slate-200 bg-surface p-5">
                     <div className="flex items-center gap-3">
-                      <span className="flex size-10 items-center justify-center rounded-lg bg-brand-700 text-white">
+                      <span className="flex size-10 items-center justify-center rounded-lg bg-accent text-white">
                         <Icon className="size-5" aria-hidden />
                       </span>
                       <span className="text-sm font-semibold text-brand-700">{i + 1}</span>
@@ -46,7 +46,7 @@ export default async function HomePage() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-14">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="rounded-card bg-card shadow-card p-6 sm:p-8">
             <div className="flex items-center gap-3">
               <ShieldCheck className="size-6 text-emerald-600" aria-hidden />
               <h2 className="text-xl font-bold">{d.home.trustTitle}</h2>

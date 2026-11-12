@@ -86,7 +86,7 @@ export function ReplyTemplates({ templates, canEdit }: { templates: T[]; canEdit
       {templates.length === 0 ? (
         <EmptyState title={t.empty} />
       ) : (
-        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-100 rounded-card bg-card shadow-card">
           {templates.map((x) => (
             <li key={x.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">

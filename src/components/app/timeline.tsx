@@ -97,7 +97,7 @@ export function Timeline({ events, audience, empty }: { events: TimelineEvent[];
         const who = e.actorKind === "system" ? d.common.system : e.actorKind === "ai" ? "AI" : e.actorName;
         return (
           <li key={e.id} className="relative">
-            <span className="absolute -start-[2.05rem] top-0.5 flex size-6 items-center justify-center rounded-full bg-white ring-1 ring-slate-200">
+            <span className="absolute -start-[2.05rem] top-0.5 flex size-6 items-center justify-center rounded-full bg-card ring-1 ring-slate-200">
               <Icon className="size-3.5 text-brand-700" aria-hidden />
             </span>
             <p className="text-sm font-medium text-slate-800">

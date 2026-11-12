@@ -68,7 +68,7 @@ export function UsersSettings({ staff, currentUserId }: { staff: StaffMember[]; 
           </Button>
         </CardContent>
       </Card>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-card bg-card shadow-card">
         <table className="w-full min-w-[40rem] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
             <tr>

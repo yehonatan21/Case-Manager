@@ -9,7 +9,7 @@ export function OpenAppLink({ href, label }: { href: string; label: string }) {
     return () => clearTimeout(t);
   }, [href]);
   return (
-    <a href={href} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-700 px-6 text-base font-semibold text-white hover:bg-brand-800">
+    <a href={href} className="mt-2 inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-6 text-base font-semibold text-white hover:bg-accent-strong">
       {label}
     </a>
   );

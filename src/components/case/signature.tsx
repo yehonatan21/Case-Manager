@@ -205,7 +205,7 @@ export function SignDialog({
             target="_blank"
             rel="noopener"
             onClick={() => setOpened(true)}
-            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex h-9 w-fit items-center gap-1.5 rounded-lg border border-slate-300 bg-card px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <ExternalLink className="size-4" aria-hidden />
             {d.signatures.openDocument}

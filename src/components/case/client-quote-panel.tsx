@@ -98,7 +98,7 @@ export function ClientQuotePanel({
       {open && checkout.canPay === false && <Notice tone="info">{d.company.cantPay}</Notice>}
       {open && checkout.canPay !== false && (
         <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-5">
-          <section aria-labelledby="quote-sign-title" className="mb-4 grid gap-3 rounded-lg bg-white p-4 ring-1 ring-brand-100">
+          <section aria-labelledby="quote-sign-title" className="mb-4 grid gap-3 rounded-lg bg-card p-4 ring-1 ring-brand-100">
             <h3 id="quote-sign-title" className="flex items-center gap-1.5 text-sm font-semibold">
               <PenLine className="size-4 text-brand-700" aria-hidden />
               {d.signatures.quoteTitle}
@@ -139,7 +139,7 @@ export function ClientQuotePanel({
       {current.status === "declined" && current.declinedAt && <Notice tone="warning" title={fmt(d.quote.declinedOn, { date: formatDate(current.declinedAt, locale) })} />}
 
       {current.status === "approved" && caseStatus === "awaiting_payment" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-card shadow-card p-5">
           <div>
             <p className="font-semibold">{d.caseView.actionPay}</p>
             <p className="text-sm text-slate-600">{formatMoney(current.totalCents, current.currency, locale)}</p>
@@ -160,7 +160,7 @@ export function ClientQuotePanel({
         {payments.length === 0 ? (
           <p className="text-sm text-slate-500">{d.quote.noPayments}</p>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-card">
             {payments.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <span className="flex items-center gap-2">

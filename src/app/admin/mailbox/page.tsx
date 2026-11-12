@@ -23,7 +23,7 @@ export default async function MailboxPage() {
       ) : (
         <ul className="space-y-2">
           {rows.map((n) => (
-            <li key={n.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <li key={n.id} className="rounded-card bg-card shadow-card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold" dir="ltr">
                   {n.toEmail}

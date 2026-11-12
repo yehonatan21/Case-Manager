@@ -89,7 +89,7 @@ export function MeetingsPanel({
   const row = (m: MeetingItem, active: boolean) => {
     const Icon = MODE_ICON[m.mode];
     return (
-      <li key={m.id} className={cn("rounded-lg border border-slate-200 bg-white p-4", !active && "opacity-80")}>
+      <li key={m.id} className={cn("rounded-lg border border-slate-200 bg-card p-4", !active && "opacity-80")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
             <Icon className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden />
@@ -113,12 +113,12 @@ export function MeetingsPanel({
           {active && (
             <div className="flex flex-wrap items-center gap-2">
               {m.mode === "video" && m.meetUrl && (
-                <a href={m.meetUrl} target="_blank" rel="noopener" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-sm font-medium text-white hover:bg-brand-800">
+                <a href={m.meetUrl} target="_blank" rel="noopener" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-medium text-white hover:bg-accent-strong">
                   <Video className="size-4" aria-hidden /> {t.join}
                   <span className="sr-only"> ({d.signatures.opensInNewTab})</span>
                 </a>
               )}
-              <a href={`/api/meetings/${m.id}/ics`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <a href={`/api/meetings/${m.id}/ics`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-card px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
                 <Download className="size-4" aria-hidden /> {t.addToCalendar}
               </a>
               {canBook && (
@@ -349,7 +349,7 @@ function BookDialog({
                     const v = `${s.start}|${s.staffId}`;
                     const many = new Set(daySlots.map((x) => x.staffId)).size > 1;
                     return (
-                      <label key={v} className={cn("cursor-pointer rounded-lg border px-3 py-1.5 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-600", picked === v ? "border-brand-700 bg-brand-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50")}>
+                      <label key={v} className={cn("cursor-pointer rounded-lg border px-3 py-1.5 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-600", picked === v ? "border-brand-700 bg-accent text-white" : "border-slate-300 bg-card text-slate-800 hover:bg-slate-50")}>
                         <input type="radio" name="slot" value={v} checked={picked === v} onChange={() => setPicked(v)} className="sr-only" />
                         <span dir="ltr">{timeLabel(s.start, locale)}</span>
                         {many && <span className="ms-1 text-xs opacity-80">· {s.staffName}</span>}

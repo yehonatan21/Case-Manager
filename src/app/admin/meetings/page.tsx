@@ -79,7 +79,7 @@ export default async function MeetingsPage({
               <ul className="space-y-2">
                 {rows.map((r) => (
                   <li key={r.m.id}>
-                    <Link href={`/admin/cases/${r.m.caseId}?tab=meetings`} className="block rounded-xl border border-slate-200 bg-white px-4 py-3 hover:border-brand-200">
+                    <Link href={`/admin/cases/${r.m.caseId}?tab=meetings`} className="block rounded-card bg-card shadow-card px-4 py-3 hover:border-brand-200">
                       <p className="font-medium text-slate-900">
                         {formatDateTime(r.m.startAt, locale)} · {t.modes[r.m.mode]}
                         {showAll && <span className="text-slate-500"> · {r.staffName}</span>}

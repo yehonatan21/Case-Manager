@@ -49,7 +49,7 @@ export function TemplatesSettings({ templates }: { templates: Template[] }) {
     <div className="grid gap-5 lg:grid-cols-[1fr_24rem]">
       <ul className="space-y-3">
         {templates.map((t) => (
-          <li key={t.id} className="rounded-xl border border-slate-200 bg-white p-4">
+          <li key={t.id} className="rounded-card bg-card shadow-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="bidi-auto font-semibold">{t.name}</p>

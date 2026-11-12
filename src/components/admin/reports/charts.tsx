@@ -16,7 +16,7 @@ const BAR = "#4f46e5";
 
 function Tooltip({ d, id }: { d: BarDatum; id: string }) {
   return (
-    <span id={id} role="tooltip" className="pointer-events-none absolute bottom-full start-0 z-10 mb-1.5 w-max max-w-[16rem] rounded-md bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
+    <span id={id} role="tooltip" className="pointer-events-none absolute bottom-full start-0 z-10 mb-1.5 w-max max-w-[16rem] rounded-md bg-inverse px-2.5 py-1.5 text-xs text-white shadow-lg">
       <span className="block font-medium">{d.label}</span>
       <span className="block tabular-nums">{d.display}</span>
       {d.detail && <span className="block text-slate-300">{d.detail}</span>}
@@ -141,7 +141,7 @@ export function ColumnChart({ data, labelHeader, valueHeader, empty }: { data: B
 /** A headline number. */
 export function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-card bg-card shadow-card p-4">
       <p className="text-xs font-medium text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{value}</p>
       {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}

@@ -135,7 +135,7 @@ export function CommandSearch({ role, devMailbox }: { role: UserRole; devMailbox
         type="button"
         onClick={() => setOpen(true)}
         aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-600 hover:bg-slate-50 sm:w-56 lg:w-64"
+        className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-300 bg-card px-2.5 text-sm text-slate-600 hover:bg-slate-50 sm:w-56 lg:w-64"
       >
         <Search className="size-4 shrink-0" aria-hidden />
         <span className="sr-only sm:not-sr-only sm:flex-1 sm:text-start">{t.button}</span>

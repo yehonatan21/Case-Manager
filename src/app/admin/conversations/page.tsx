@@ -39,7 +39,7 @@ export default async function ConversationsPage({ searchParams }: { searchParams
             key={f}
             href={href(f)}
             aria-current={active === f ? "page" : undefined}
-            className={cn("flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium", active === f ? "bg-brand-700 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50")}
+            className={cn("flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium", active === f ? "bg-accent text-white" : "bg-card text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50")}
           >
             {f === "replies" ? d.replies.tab : t.filters[f]}
             {f !== "replies" && <span className={cn("rounded-full px-1.5 text-[11px] font-bold tabular-nums", active === f ? "bg-white/20" : "bg-slate-100 text-slate-700")}>{counts[f]}</span>}

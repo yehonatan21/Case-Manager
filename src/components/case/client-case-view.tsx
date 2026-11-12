@@ -162,7 +162,7 @@ export function ClientCaseView({ c, userId, initialTab, submitted, payment, maxM
                     return (
                       <li key={m.id} className="flex items-start gap-3">
                         <span
-                          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${state === "done" ? "bg-emerald-600 text-white" : state === "current" ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600"}`}
+                          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${state === "done" ? "bg-success text-white" : state === "current" ? "bg-accent text-white" : "bg-slate-100 text-slate-600"}`}
                           aria-hidden
                         >
                           {state === "done" ? "✓" : i + 1}

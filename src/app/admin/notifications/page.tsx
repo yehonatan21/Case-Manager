@@ -22,11 +22,11 @@ export default async function NotificationsPage() {
   return (
     <>
       <PageHeader title={d.notificationsUi.title} actions={items.some((n) => !n.readAt) ? <MarkAllRead /> : null} />
-      <PushToggle className="mb-4 rounded-xl border border-slate-200 bg-white p-4" />
+      <PushToggle className="mb-4 rounded-card bg-card shadow-card p-4" />
       {items.length === 0 ? (
         <EmptyState icon={<Bell className="size-10" />} title={d.notificationsUi.empty} />
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-card bg-card shadow-card">
           {items.map((n) => (
             <li key={n.id} className={cn(!n.readAt && "bg-brand-50/50")}>
               <Link href={n.link ?? "#"} className="block px-5 py-4 hover:bg-slate-50">

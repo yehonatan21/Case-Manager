@@ -28,11 +28,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // Admins see when an integration or the scheduled jobs stop working, without opening the health page.
   const broken = user.role === "admin" ? (await getSystemHealth(db, user).catch(() => null))?.level === "error" : false;
   const tiles = [
-    { label: d.admin.metrics.newRequests, hint: d.admin.metrics.newRequestsHint, value: m.newRequests, href: "/admin/inbox", icon: Inbox, tone: "text-brand-700 bg-brand-50" },
-    { label: d.admin.metrics.awaitingQuote, hint: d.admin.metrics.awaitingQuoteHint, value: m.awaitingQuote, href: "/admin/cases?status=quote_preparation", icon: FileClock, tone: "text-sky-700 bg-sky-50" },
-    { label: d.admin.metrics.quotesPending, hint: d.admin.metrics.quotesPendingHint, value: m.quotesPending, href: "/admin/quotes", icon: Receipt, tone: "text-violet-700 bg-violet-50" },
-    { label: d.admin.metrics.activeCases, hint: d.admin.metrics.activeCasesHint, value: m.activeCases, href: "/admin/cases?status=active", icon: FolderKanban, tone: "text-emerald-700 bg-emerald-50" },
-    { label: d.admin.metrics.awaitingClient, hint: d.admin.metrics.awaitingClientHint, value: m.awaitingClient, href: "/admin/cases?status=awaiting_client", icon: UserRoundX, tone: "text-amber-700 bg-amber-50" },
+    { label: d.admin.metrics.newRequests, hint: d.admin.metrics.newRequestsHint, value: m.newRequests, href: "/admin/inbox", icon: Inbox, tone: "text-slate-600 bg-slate-100" },
+    { label: d.admin.metrics.awaitingQuote, hint: d.admin.metrics.awaitingQuoteHint, value: m.awaitingQuote, href: "/admin/cases?status=quote_preparation", icon: FileClock, tone: "text-slate-600 bg-slate-100" },
+    { label: d.admin.metrics.quotesPending, hint: d.admin.metrics.quotesPendingHint, value: m.quotesPending, href: "/admin/quotes", icon: Receipt, tone: "text-slate-600 bg-slate-100" },
+    { label: d.admin.metrics.activeCases, hint: d.admin.metrics.activeCasesHint, value: m.activeCases, href: "/admin/cases?status=active", icon: FolderKanban, tone: "text-slate-600 bg-slate-100" },
+    { label: d.admin.metrics.awaitingClient, hint: d.admin.metrics.awaitingClientHint, value: m.awaitingClient, href: "/admin/cases?status=awaiting_client", icon: UserRoundX, tone: m.awaitingClient ? "text-amber-800 bg-amber-100" : "text-slate-600 bg-slate-100" },
     { label: d.admin.metrics.overdueTasks, hint: d.admin.metrics.overdueTasksHint, value: m.overdueTasks, href: "/admin/tasks?overdue=1", icon: AlertTriangle, tone: m.overdueTasks ? "text-red-700 bg-red-50" : "text-slate-600 bg-slate-100" },
   ];
   return (
@@ -49,7 +49,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       )}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {tiles.map((t) => (
-          <Link key={t.label} href={t.href} className="group rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition hover:border-brand-200 hover:shadow-sm">
+          <Link key={t.label} href={t.href} className="group rounded-card bg-card shadow-card p-4 transition hover:shadow-float">
             <div className="flex items-center justify-between">
               <span className={cn("flex size-9 items-center justify-center rounded-lg", t.tone)}>
                 <t.icon className="size-4.5" aria-hidden />
@@ -65,14 +65,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <section className="mt-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{d.admin.attentionTitle}</h2>
-          <nav aria-label={`${d.admin.attentionTitle}: ${d.admin.attentionScope}`} className="flex rounded-lg border border-slate-300 bg-white p-0.5 text-sm">
+          <nav aria-label={`${d.admin.attentionTitle}: ${d.admin.attentionScope}`} className="flex rounded-full bg-slate-200/60 p-1 text-sm">
             {(["mine", "all"] as const).map((v) => (
               <Link
                 key={v}
                 href={v === "mine" ? "/admin" : "/admin?attention=all"}
                 scroll={false}
                 aria-current={scope === v ? "page" : undefined}
-                className={cn("rounded-md px-3 py-1", scope === v ? "bg-brand-700 font-medium text-white" : "text-slate-700 hover:bg-slate-100")}
+                className={cn("rounded-full px-3.5 py-1.5 font-medium", scope === v ? "bg-card text-slate-900 shadow-card dark:bg-slate-300" : "text-slate-600 hover:text-slate-900")}
               >
                 {v === "mine" ? d.admin.attentionMine : d.admin.attentionAll}
               </Link>
@@ -80,9 +80,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </nav>
         </div>
         {items.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">{scope === "mine" ? d.admin.attentionMineEmpty : d.admin.attentionEmpty}</p>
+          <p className="rounded-card bg-card shadow-card px-5 py-6 text-sm text-slate-600">{scope === "mine" ? d.admin.attentionMineEmpty : d.admin.attentionEmpty}</p>
         ) : (
-          <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 overflow-hidden rounded-card bg-card shadow-card">
             {items.map((it) => (
               <li key={it.key}>
                 <Link href={it.href} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 hover:bg-slate-50">

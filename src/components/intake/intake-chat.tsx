@@ -104,7 +104,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-0 sm:px-4 lg:py-6">
-      <section className="flex min-h-[calc(100dvh-4rem)] flex-1 flex-col bg-white sm:rounded-2xl sm:border sm:border-slate-200 lg:min-h-[calc(100dvh-7rem)]" aria-label={d.intake.title}>
+      <section className="flex min-h-[calc(100dvh-4rem)] flex-1 flex-col bg-card sm:rounded-2xl sm:border sm:border-slate-200 lg:min-h-[calc(100dvh-7rem)]" aria-label={d.intake.title}>
         {/* Header */}
         <div className="border-b border-slate-100 px-4 py-3 sm:px-6">
           <div className="flex items-start justify-between gap-3">
@@ -135,7 +135,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
               aria-valuenow={session.readyForReview ? session.questionLimit : session.questionCount}
               aria-valuetext={session.readyForReview ? d.intake.progressDone : fmt(d.intake.progress, { n: Math.max(1, session.questionCount), total: session.questionLimit })}
             >
-              <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${(session.readyForReview ? 1 : progress) * 100}%` }} />
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(session.readyForReview ? 1 : progress) * 100}%` }} />
             </div>
             <span className="shrink-0 text-xs text-slate-500">
               {session.readyForReview ? d.intake.progressDone : fmt(d.intake.progress, { n: Math.max(1, session.questionCount), total: session.questionLimit })}
@@ -160,7 +160,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
               <div
                 className={cn(
                   "bidi-auto max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
-                  m.role === "user" ? "rounded-ee-sm bg-brand-700 text-white" : "rounded-ss-sm bg-slate-100 text-slate-800",
+                  m.role === "user" ? "rounded-ee-sm bg-accent text-white" : "rounded-ss-sm bg-slate-100 text-slate-800",
                   m.skipped && "italic opacity-80",
                 )}
               >
@@ -175,7 +175,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
           ))}
           {pending && (
             <div className="flex justify-end">
-              <div className="bidi-auto max-w-[85%] whitespace-pre-line rounded-2xl rounded-ee-sm bg-brand-700/80 px-4 py-2.5 text-[15px] text-white">{pending}</div>
+              <div className="bidi-auto max-w-[85%] whitespace-pre-line rounded-2xl rounded-ee-sm bg-accent/80 px-4 py-2.5 text-[15px] text-white">{pending}</div>
             </div>
           )}
           {busy && (
@@ -230,7 +230,7 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
         </div>
 
         {/* Composer */}
-        <div className="sticky bottom-0 border-t border-slate-100 bg-white px-3 pb-3 pt-2 sm:rounded-b-2xl sm:px-5">
+        <div className="sticky bottom-0 border-t border-slate-100 bg-card px-3 pb-3 pt-2 sm:rounded-b-2xl sm:px-5">
           {error && (
             <Notice tone="danger" className="mb-2">
               {error}
@@ -239,16 +239,16 @@ export function IntakeChat({ initial }: { initial: PublicIntake }) {
           {lastIsAssistant && !busy && !session.aiFailed && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {(lastAssistant?.quickReplies ?? []).map((q) => (
-                <button key={q} type="button" onClick={() => send(q)} className="rounded-full border border-brand-200 bg-white px-3 py-1 text-sm text-brand-800 hover:bg-brand-50">
+                <button key={q} type="button" onClick={() => send(q)} className="rounded-full border border-brand-200 bg-card px-3 py-1 text-sm text-brand-800 hover:bg-brand-50">
                   {q}
                 </button>
               ))}
               {!session.readyForReview && (
                 <>
-                  <button type="button" onClick={() => send(d.intake.dontKnow, true)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 hover:bg-slate-50">
+                  <button type="button" onClick={() => send(d.intake.dontKnow, true)} className="rounded-full border border-slate-200 bg-card px-3 py-1 text-sm text-slate-600 hover:bg-slate-50">
                     {d.intake.dontKnow}
                   </button>
-                  <button type="button" onClick={() => send(d.intake.skip, true)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-600 hover:bg-slate-50">
+                  <button type="button" onClick={() => send(d.intake.skip, true)} className="rounded-full border border-slate-200 bg-card px-3 py-1 text-sm text-slate-600 hover:bg-slate-50">
                     {d.intake.skip}
                   </button>
                 </>

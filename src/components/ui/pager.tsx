@@ -14,7 +14,7 @@ export function Pager({ d, page, pages, hasNext, basePath, params }: { d: Dict; 
     const qs = sp.toString();
     return qs ? `${basePath}?${qs}` : basePath;
   };
-  const link = "inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
+  const link = "inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-card px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50";
   return (
     <nav aria-label={d.admin.pagination} className="mt-4 flex items-center justify-between gap-3">
       {page > 1 ? (

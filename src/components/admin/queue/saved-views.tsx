@@ -49,7 +49,7 @@ export function SavedViews({ views, currentQuery }: { views: { id: string; name:
       {views.length > 0 && (
         <ul aria-label={t.savedViews} className="flex flex-wrap gap-1.5">
           {views.map((v) => (
-            <li key={v.id} className={`flex items-center rounded-full border text-xs ${v.query === currentQuery ? "border-brand-300 bg-brand-50 text-brand-900" : "border-slate-200 bg-white text-slate-700"}`}>
+            <li key={v.id} className={`flex items-center rounded-full border text-xs ${v.query === currentQuery ? "border-brand-300 bg-brand-50 text-brand-900" : "border-slate-200 bg-card text-slate-700"}`}>
               <Link href={`/admin/queue?${v.query}`} className="flex items-center gap-1 py-1 ps-2.5 pe-1 font-medium hover:underline" aria-current={v.query === currentQuery ? "page" : undefined}>
                 <Bookmark className="size-3" aria-hidden />
                 <span className="bidi-auto">{v.name}</span>

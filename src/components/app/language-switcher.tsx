@@ -24,7 +24,7 @@ export function LanguageSwitcher({ className, compact }: { className?: string; c
         })
       }
       className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60",
+        "inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-card px-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60",
         className,
       )}
       disabled={pending}

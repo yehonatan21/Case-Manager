@@ -27,7 +27,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             role={t.tone === "error" ? "alert" : "status"}
             className={cn(
               "pointer-events-auto flex max-w-md items-center gap-2 rounded-lg px-4 py-2.5 text-sm text-white shadow-lg",
-              t.tone === "success" ? "bg-slate-900" : "bg-red-700",
+              t.tone === "success" ? "bg-inverse" : "bg-danger-strong",
             )}
           >
             {t.tone === "success" ? <CheckCircle2 className="size-4 shrink-0" /> : <XCircle className="size-4 shrink-0" />}

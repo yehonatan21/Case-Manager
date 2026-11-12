@@ -70,7 +70,7 @@ export async function AuthPage({ tab, sp }: { tab: "login" | "register"; sp: Aut
             <>
               <p className="mt-4 text-sm text-slate-500">{d.login.staffHint}</p>
               {demo && (
-                <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-sm">
+                <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-card p-4 text-sm">
                   <p className="font-semibold text-slate-800">{d.login.demoTitle}</p>
                   <p className="mt-1 text-slate-500">{d.login.demoText}</p>
                   <ul className="mt-2 space-y-1 text-xs" dir="ltr">
