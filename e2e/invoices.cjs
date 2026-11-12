@@ -95,7 +95,7 @@ async function axe(page, label) {
     watch(admin);
     await admin.goto(BASE + "/admin/settings?tab=integrations");
     await settle(admin);
-    const card = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "קבלות וחשבוניות" }) }).first();
+    const card = admin.locator("div.rounded-card", { has: admin.getByRole("heading", { name: "קבלות וחשבוניות" }) }).first();
     await card.getByText("לא מחובר", { exact: true }).waitFor();
     await card.locator("button:has-text('חיבור שירות חשבוניות')").click();
     await card.getByLabel("מזהה מפתח (API key ID)").fill(KEY.id);

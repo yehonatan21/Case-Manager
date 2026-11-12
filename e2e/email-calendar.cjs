@@ -122,7 +122,7 @@ async function axe(page, label) {
     watch(admin);
     await admin.goto(BASE + "/admin/settings?tab=integrations");
     await settle(admin);
-    const card = admin.locator("div.rounded-xl", { has: admin.getByRole("heading", { name: "דוא״ל", exact: true }) }).first();
+    const card = admin.locator("div.rounded-card", { has: admin.getByRole("heading", { name: "דוא״ל", exact: true }) }).first();
     await card.getByText("לא נשלח", { exact: true }).waitFor();
     await card.locator("button:has-text('חיבור דוא״ל')").click();
     await card.getByLabel("שירות").selectOption("resend");
