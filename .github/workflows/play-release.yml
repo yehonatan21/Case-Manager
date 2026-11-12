@@ -120,4 +120,5 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Remove the key
         if: always()
-        run: rm -f "$RUNNER_TEMP/upload.jks" android/app/google-services.json
+        working-directory: .
+        run: rm -f "$RUNNER_TEMP/upload.jks" mobile/android/app/google-services.json
