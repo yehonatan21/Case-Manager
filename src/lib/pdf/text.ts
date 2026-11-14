@@ -1,7 +1,7 @@
 /**
  * Text for PDFs in Hebrew and English. pdf-lib draws glyphs left to right and has no bidi support, so text is
  * reordered to visual order here (Unicode Bidirectional Algorithm via bidi-js, with bracket mirroring), and each
- * run is drawn with the font that has its glyphs (Heebo's Hebrew and Latin subsets are separate files).
+ * run is drawn with the font that has its glyphs (Rubik's Hebrew and Latin subsets are separate files).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -24,10 +24,10 @@ export async function embedFonts(doc: PDFDocument): Promise<Fonts> {
   doc.registerFontkit(fontkit);
   const load = (f: string) => doc.embedFont(fontFile(f), { subset: true });
   const [hr, lr, hb, lb] = await Promise.all([
-    load("heebo-hebrew-400-normal.woff"),
-    load("heebo-latin-400-normal.woff"),
-    load("heebo-hebrew-700-normal.woff"),
-    load("heebo-latin-700-normal.woff"),
+    load("rubik-hebrew-400-normal.woff"),
+    load("rubik-latin-400-normal.woff"),
+    load("rubik-hebrew-700-normal.woff"),
+    load("rubik-latin-700-normal.woff"),
   ]);
   return { regular: { hebrew: hr, latin: lr }, bold: { hebrew: hb, latin: lb } };
 }

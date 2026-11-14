@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronsLeft, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/app/logo";
 import type { UserRole } from "@/lib/db/schema";
 import { isActive, navForRole, SIDEBAR_COOKIE, SIDEBAR_WIDTH, type NavBadge, type NavItem } from "@/config/admin-navigation";
 
@@ -89,7 +90,7 @@ function NavLink({ item, label, count, countLabel, active, collapsed, onNavigate
  * The staff area's frame on large screens: the sidebar (expanded or collapsed, remembered in a cookie so the first
  * render is already right) and the page beside it, offset by the same width.
  */
-export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header: React.ReactNode; compactHeader: React.ReactNode; footer: React.ReactNode; compactFooter: React.ReactNode; children: React.ReactNode }) {
+export function AdminFrame(props: NavProps & { initialCollapsed: boolean; footer: React.ReactNode; compactFooter: React.ReactNode; children: React.ReactNode }) {
   const { d } = useI18n();
   const [collapsed, setCollapsed] = useState(props.initialCollapsed);
   const [tip, setTip] = useState<Tip>(null);
@@ -108,21 +109,29 @@ export function AdminFrame(props: NavProps & { initialCollapsed: boolean; header
         className="theme-ink fixed inset-y-0 start-0 z-30 hidden w-(--nav-w) flex-col bg-surface motion-safe:transition-[width] motion-safe:duration-200 lg:flex"
         data-collapsed={collapsed ? "true" : "false"}
       >
-        <div className={cn("flex h-16 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>{collapsed ? props.compactHeader : props.header}</div>
-        <nav id="admin-sidebar-nav" aria-label={d.nav.staffMenu} className={cn("flex-1 overflow-y-auto py-2", collapsed ? "px-3" : "px-3")} onScroll={() => setTip(null)}>
-          <NavLinks role={props.role} badges={props.badges} devMailbox={props.devMailbox} collapsed={collapsed} onTip={setTip} />
-        </nav>
-        <div className="shrink-0 border-t border-slate-100 p-3">
+        {/* The logo mark collapses and expands the menu; the name beside it leads to the dashboard. */}
+        <div className={cn("flex h-16 shrink-0 items-center gap-2.5", collapsed ? "justify-center" : "px-5")}>
           <button
             type="button"
             onClick={toggle}
             aria-expanded={!collapsed}
             aria-controls="admin-sidebar-nav"
-            className={cn("mb-2 flex h-9 w-full items-center gap-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900", collapsed ? "justify-center" : "px-3")}
+            aria-label={collapsed ? d.nav.expand : d.nav.collapse}
+            title={collapsed ? d.nav.expand : d.nav.collapse}
+            className="rounded-lg outline-offset-2 hover:opacity-85"
           >
-            <ChevronsLeft className={cn("size-4.5 shrink-0 motion-safe:transition-transform", collapsed ? "ltr:rotate-180" : "rtl:rotate-180")} aria-hidden />
-            <span className={collapsed ? "sr-only" : ""}>{collapsed ? d.nav.expand : d.nav.collapse}</span>
+            <LogoMark />
           </button>
+          {!collapsed && (
+            <Link href="/admin" className="whitespace-nowrap font-display text-[1.1875rem] font-bold leading-none tracking-tight text-slate-900">
+              {d.common.appName}
+            </Link>
+          )}
+        </div>
+        <nav id="admin-sidebar-nav" aria-label={d.nav.staffMenu} className="no-scrollbar flex-1 overflow-y-auto px-3 py-2" onScroll={() => setTip(null)}>
+          <NavLinks role={props.role} badges={props.badges} devMailbox={props.devMailbox} collapsed={collapsed} onTip={setTip} />
+        </nav>
+        <div className="shrink-0 border-t border-slate-100 p-3">
           {collapsed ? props.compactFooter : props.footer}
         </div>
       </aside>
@@ -191,7 +200,7 @@ export function AdminMobileMenu(props: NavProps & { header: React.ReactNode; foo
                 <X className="size-5" aria-hidden />
               </button>
             </div>
-            <nav aria-label={d.nav.staffMenu} className="flex-1 overflow-y-auto px-3 py-2">
+            <nav aria-label={d.nav.staffMenu} className="no-scrollbar flex-1 overflow-y-auto px-3 py-2">
               <NavLinks role={props.role} badges={props.badges} devMailbox={props.devMailbox} onNavigate={() => setOpen(false)} />
             </nav>
             <div className="border-t border-slate-100 p-3">{props.footer}</div>
