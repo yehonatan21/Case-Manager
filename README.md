@@ -288,7 +288,7 @@ The app then saves a new version of the document: the original, unchanged except
 
 **Legal standing.** This is an *electronic signature* under Israel's Electronic Signature Law, 5761-2001: the signer is identified by their sign-in (a one-time code to their email or Google), and the evidence above is kept. It is not a *certified* electronic signature (which needs a certification authority and a smart card or similar). For documents that legally require one, use a certified provider.
 
-PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with the Unicode bidirectional algorithm ([bidi-js](https://github.com/lojjic/bidi-js)) in the [Heebo](https://github.com/OdedEzer/heebo) font (SIL Open Font License, in [`assets/fonts`](assets/fonts)). Code: [`src/lib/services/signatures.ts`](src/lib/services/signatures.ts) and [`src/lib/pdf/`](src/lib/pdf/).
+PDFs are built with [pdf-lib](https://pdf-lib.js.org); Hebrew is laid out with the Unicode bidirectional algorithm ([bidi-js](https://github.com/lojjic/bidi-js)) in the [Rubik](https://github.com/googlefonts/rubik) font (SIL Open Font License, in [`assets/fonts`](assets/fonts)). Code: [`src/lib/services/signatures.ts`](src/lib/services/signatures.ts) and [`src/lib/pdf/`](src/lib/pdf/).
 
 ## Receipts and invoices
 

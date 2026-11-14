@@ -1,23 +1,18 @@
 @import "tailwindcss";
-@import "@fontsource/frank-ruhl-libre/700.css";
-@import "@fontsource/frank-ruhl-libre/800.css";
-@import "@fontsource/ibm-plex-sans-hebrew/400.css";
-@import "@fontsource/ibm-plex-sans-hebrew/500.css";
-@import "@fontsource/ibm-plex-sans-hebrew/600.css";
-@import "@fontsource/ibm-plex-sans-hebrew/700.css";
+@import "@fontsource-variable/rubik/wght.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 
 /*
  * Design tokens: "Calm professional" (from the CaseFlow Manager design). Warm paper surfaces, deep ink text,
- * petrol teal for actions and selection, terracotta for what needs the client's attention. Display type: Frank Ruhl
- * Libre; body: IBM Plex Sans Hebrew; case numbers: IBM Plex Mono. Every colour has a dark value
+ * petrol teal for actions and selection, terracotta for what needs the client's attention. Type: Rubik for
+ * headings and body; case numbers: IBM Plex Mono. Every colour has a dark value
  * (prefers-color-scheme), and `.theme-ink` applies the dark values inside one area (the staff sidebar).
  * Contrast is checked against WCAG AA: text 4.5:1 or more on its surface.
  */
 @theme {
-  --font-sans: "IBM Plex Sans Hebrew", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  --font-display: "Frank Ruhl Libre", "IBM Plex Sans Hebrew", Georgia, serif;
+  --font-sans: "Rubik Variable", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-display: "Rubik Variable", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Petrol teal. 700 is the main colour: white text on it 6.7:1; as text on paper 6.3:1. */
