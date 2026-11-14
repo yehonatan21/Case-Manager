@@ -61,8 +61,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <AdminFrame
         {...nav}
         initialCollapsed={jar.get(SIDEBAR_COOKIE)?.value === "1"}
-        header={header}
-        compactHeader={<Logo href="/admin" name={d.common.appName} compact />}
         footer={footer}
         compactFooter={compactFooter}
       >

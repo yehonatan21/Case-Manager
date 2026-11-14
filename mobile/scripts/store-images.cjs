@@ -15,10 +15,10 @@ const LANGS = { "iw-IL": "he", "en-US": "en" };
 const BRAND = "#4338CA";
 const log = (...a) => console.log("•", ...a);
 const glyph = fs.readFileSync(path.join(__dirname, "..", "assets", "glyph.svg"), "utf8");
-const font = (f) => `data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, "node_modules/@fontsource-variable/heebo/files", f)).toString("base64")}`;
+const font = (f) => `data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, "node_modules/@fontsource-variable/rubik/files", f)).toString("base64")}`;
 const FONTS = `
-  @font-face { font-family: Heebo; src: url(${font("heebo-hebrew-wght-normal.woff2")}) format("woff2"); font-weight: 100 900; unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
-  @font-face { font-family: Heebo; src: url(${font("heebo-latin-wght-normal.woff2")}) format("woff2"); font-weight: 100 900; }`;
+  @font-face { font-family: Rubik; src: url(${font("rubik-hebrew-wght-normal.woff2")}) format("woff2"); font-weight: 100 900; unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: Rubik; src: url(${font("rubik-latin-wght-normal.woff2")}) format("woff2"); font-weight: 100 900; }`;
 
 const CAPTIONS = {
   home: { he: "מתארים מה צריך – במילים שלכם", en: "Describe what you need, in your own words" },
@@ -66,7 +66,7 @@ async function shot(page, url) {
 async function compose(browser, png, caption, dir) {
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 } });
   await page.setContent(`<!doctype html><html dir="${dir}"><head><style>${FONTS}
-    html,body{margin:0;width:1080px;height:1920px;background:${BRAND};font-family:Heebo,sans-serif;}
+    html,body{margin:0;width:1080px;height:1920px;background:${BRAND};font-family:Rubik,sans-serif;}
     h1{margin:0;position:absolute;top:96px;inset-inline:80px;text-align:center;color:#fff;font-size:76px;line-height:1.2;font-weight:800;}
     .phone{position:absolute;top:400px;left:130px;width:820px;height:1600px;border-radius:64px;background:#0f172a;padding:20px;box-sizing:border-box;box-shadow:0 30px 80px rgba(0,0,0,.35);}
     .phone img{display:block;width:780px;height:1560px;object-fit:cover;object-position:top;border-radius:46px;}
@@ -81,7 +81,7 @@ async function featureGraphic(browser, lang, screen) {
   const he = lang === "he";
   const page = await browser.newPage({ viewport: { width: 1024, height: 500 } });
   await page.setContent(`<!doctype html><html dir="${he ? "rtl" : "ltr"}"><head><style>${FONTS}
-    html,body{margin:0;width:1024px;height:500px;overflow:hidden;background:linear-gradient(135deg,${BRAND},#312e81);font-family:Heebo,sans-serif;color:#fff;}
+    html,body{margin:0;width:1024px;height:500px;overflow:hidden;background:linear-gradient(135deg,${BRAND},#312e81);font-family:Rubik,sans-serif;color:#fff;}
     .mark{position:absolute;top:70px;inset-inline-start:64px;width:96px;height:96px;border-radius:24px;background:rgba(255,255,255,.14);}
     .mark svg{width:96px;height:96px}
     h1{position:absolute;top:186px;inset-inline-start:64px;margin:0;font-size:58px;font-weight:800;letter-spacing:-.5px}
