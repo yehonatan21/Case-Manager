@@ -29,6 +29,9 @@ async function signIn(browser, email, viewport = { width: 1280, height: 900 }) {
 async function axe(page, label) {
   // Next.js streams the <title> in just after the page loads; check once it's there, as a visitor would.
   await page.waitForFunction(() => document.title.length > 0, null, { timeout: 10000 }).catch(() => {});
+  // A control that just changed state (a button enabled by a checkbox) fades between its colours; mid-fade it can
+  // read as low contrast. Check once colour transitions have finished, as a person would see it.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((x) => x instanceof CSSTransition).map((x) => x.finished.catch(() => {}))));
   await page.addScriptTag({ content: AXE });
   const run = () => page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(" ")).slice(0, 2).join(", ")}`));
   let v = await run();
