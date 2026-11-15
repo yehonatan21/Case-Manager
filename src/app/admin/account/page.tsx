@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { ACCOUNT_PATH, requirePageStaff } from "@/lib/auth/session";
 import { getTwoFactorStatus } from "@/lib/services/two-factor";
 import { PageHeader } from "@/components/ui/misc";
+import { ThemeSwitcher } from "@/components/app/theme-switcher";
 import { SecurityCard } from "@/components/account/security-card";
 
 export async function generateMetadata() {
@@ -20,6 +21,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     <div className="max-w-2xl">
       <PageHeader title={d.twoFactor.accountTitle} subtitle={d.twoFactor.accountSub} />
       <SecurityCard status={{ ...status, enabledAt: status.enabledAt ? status.enabledAt.toISOString() : null }} mustSetUp={setup === "1"} />
+      <ThemeSwitcher className="mt-6 rounded-card bg-card p-5 shadow-card" />
     </div>
   );
 }

@@ -10,6 +10,18 @@
  * (prefers-color-scheme), and `.theme-ink` applies the dark values inside one area (the staff sidebar).
  * Contrast is checked against WCAG AA: text 4.5:1 or more on its surface.
  */
+/* `dark:` follows the same rule as the tokens: the system setting, or the person's own choice. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-theme="dark"] *) {
+    @slot;
+  }
+}
+
 @theme {
   --font-sans: "Rubik Variable", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-display: "Rubik Variable", "Rubik", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
@@ -64,9 +76,9 @@
   }
 }
 
-/* Dark appearance (follows the system setting), and the same values inside `.theme-ink`. */
+/* Dark appearance: follows the system setting unless the person chose "Light" (data-theme="light" on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-surface: #0c121a;
     --color-card: #131b26;
     --color-accent: #0f7c7a; /* white text 5.0:1 */
@@ -153,9 +165,9 @@
     --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.08);
   }
 }
+/* The same dark values when the person chose "Dark" (data-theme on <html>), and inside `.theme-ink`. */
+:root[data-theme="dark"],
 .theme-ink {
-  --color-surface: #0e1825;
-  --color-card: #1b2737;
     --color-accent: #0f7c7a; /* white text 5.0:1 */
     --color-accent-strong: #0b6664;
     --color-signal: #b85a22; /* white text 4.6:1 */
@@ -238,6 +250,18 @@
     --color-violet-950: oklch(95% 0.040 290);
     --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.08);
     --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+:root[data-theme="dark"] {
+  --color-surface: #0c121a;
+  --color-card: #131b26;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+.theme-ink {
+  --color-surface: #0e1825;
+  --color-card: #1b2737;
   color: var(--color-slate-900);
 }
 

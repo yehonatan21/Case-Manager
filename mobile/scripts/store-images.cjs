@@ -12,7 +12,7 @@ const BASE = process.env.BASE || "http://localhost:3000";
 const STORE = path.join(__dirname, "..", "store", "google-play");
 const ROOT = path.join(__dirname, "..", "..");
 const LANGS = { "iw-IL": "he", "en-US": "en" };
-const BRAND = "#4338CA";
+const BRAND = "#006667";
 const log = (...a) => console.log("•", ...a);
 const glyph = fs.readFileSync(path.join(__dirname, "..", "assets", "glyph.svg"), "utf8");
 const font = (f) => `data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, "node_modules/@fontsource-variable/rubik/files", f)).toString("base64")}`;
@@ -81,7 +81,7 @@ async function featureGraphic(browser, lang, screen) {
   const he = lang === "he";
   const page = await browser.newPage({ viewport: { width: 1024, height: 500 } });
   await page.setContent(`<!doctype html><html dir="${he ? "rtl" : "ltr"}"><head><style>${FONTS}
-    html,body{margin:0;width:1024px;height:500px;overflow:hidden;background:linear-gradient(135deg,${BRAND},#312e81);font-family:Rubik,sans-serif;color:#fff;}
+    html,body{margin:0;width:1024px;height:500px;overflow:hidden;background:linear-gradient(135deg,${BRAND},#0e1825);font-family:Rubik,sans-serif;color:#fff;}
     .mark{position:absolute;top:70px;inset-inline-start:64px;width:96px;height:96px;border-radius:24px;background:rgba(255,255,255,.14);}
     .mark svg{width:96px;height:96px}
     h1{position:absolute;top:186px;inset-inline-start:64px;margin:0;font-size:58px;font-weight:800;letter-spacing:-.5px}

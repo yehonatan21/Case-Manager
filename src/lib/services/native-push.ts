@@ -119,7 +119,7 @@ async function sendFcm(token: string, payload: PushPayload) {
         token,
         notification: { title: payload.title, body: payload.body },
         data: { url: payload.url, tag: payload.tag },
-        android: { priority: "high", notification: { tag: payload.tag, icon: "ic_stat_notify", color: "#4338CA", default_sound: true } },
+        android: { priority: "high", notification: { tag: payload.tag, icon: "ic_stat_notify", color: "#006667", default_sound: true } },
       },
     }),
     signal: AbortSignal.timeout(10_000),

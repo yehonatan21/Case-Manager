@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const sharp = createRequire(join(root, "..", "package.json"))("sharp");
-const BRAND = "#4338CA";
+const BRAND = "#006667";
 const glyph = readFileSync(join(root, "assets/glyph.svg"), "utf8");
 const inner = glyph.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 
