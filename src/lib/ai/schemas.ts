@@ -93,4 +93,4 @@ export const DocAnalysisSchema = z.object({
 });
 export type DocAnalysis = z.infer<typeof DocAnalysisSchema>;
 
-export type TextTool = "clarify_questions" | "professional" | "shorten" | "translate" | "summarize_thread" | "status_update";
+export type TextTool = "clarify_questions" | "professional" | "shorten" | "translate" | "summarize_thread" | "status_update" | "reply";

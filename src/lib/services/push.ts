@@ -10,7 +10,7 @@
  * encrypted in the settings table, so push works without any setup.
  */
 import { after } from "next/server";
-import webpush from "web-push";
+import * as webpush from "web-push";
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb, type Database, type DbOrTx } from "../db";
 import { nativePushTokens, notifications, pushSubscriptions, settings, type User } from "../db/schema";

@@ -11,7 +11,7 @@ export const POST = route(async (req) => {
     req,
     z.object({
       caseId: z.uuid(),
-      tool: z.enum(["clarify_questions", "professional", "shorten", "translate", "summarize_thread", "status_update"]),
+      tool: z.enum(["clarify_questions", "professional", "shorten", "translate", "summarize_thread", "status_update", "reply"]),
       input: z.string().max(10000).default(""),
       targetLang: z.enum(["he", "en"]).optional(),
     }),

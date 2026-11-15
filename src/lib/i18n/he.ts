@@ -783,6 +783,8 @@ export const he = {
     infoRequestHint: "הסטטוס יעודכן ל\"ממתינים ללקוח\" והלקוח יקבל התראה.",
     infoRequestBadge: "בקשת מידע",
     aiDrafted: "נוסח בעזרת AI ואושר על ידי {name}",
+    aiReply: "טיוטת תשובה ב-AI",
+    aiReplyHint: "מנסח תשובה להודעה האחרונה של הלקוח, בשפה שלו. מה שכבר כתבת משמש כהנחיה. הטיוטה לא נשלחת עד שתאשרו.",
     reviewBeforeSend: "יש לעבור על הטיוטה לפני השליחה",
   },
   checklist: {
@@ -1090,6 +1092,16 @@ export const he = {
     zeroTotal: "לא ניתן לשלוח הצעה בסכום אפס",
     locked: "ההצעה נשלחה ואינה ניתנת לעריכה. אפשר ליצור גרסה חדשה.",
     backToCase: "חזרה לתיק",
+  },
+  aiBrief: {
+    title: "סיכום AI",
+    wants: "מה הלקוח רוצה",
+    next: "הצעד המומלץ",
+    generate: "יצירת סיכום",
+    refresh: "רענון",
+    stale: "התיק השתנה מאז הסיכום",
+    none: "עדיין אין סיכום לתיק הזה.",
+    generating: "מסכם את התיק…",
   },
   copilot: {
     title: "AI Copilot",

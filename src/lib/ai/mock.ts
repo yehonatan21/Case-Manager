@@ -427,7 +427,7 @@ export function mockTextTool(opts: {
   customerName?: string;
   missing?: string[];
   status?: string;
-  thread?: { from: string; body: string }[];
+  thread?: { from: string; body: string; fromClient?: boolean }[];
   openTasks?: string[];
 }): string {
   const l = opts.locale;
@@ -450,6 +450,17 @@ export function mockTextTool(opts: {
       return (l === "he" ? "[תרגום אוטומטי זמין רק עם ספק AI מוגדר]\n" : "[Automatic translation requires a configured AI provider]\n") + opts.input;
     case "summarize_thread":
       return (opts.thread ?? []).slice(-8).map((m) => `• ${m.from}: ${m.body.replace(/\s+/g, " ").slice(0, 120)}`).join("\n") || (l === "he" ? "אין הודעות לסכם." : "No messages to summarise.");
+    case "reply": {
+      // Offline: no model to answer with, so the draft acknowledges the client's last message and carries the
+      // team's notes, for a person to finish.
+      const last = [...(opts.thread ?? [])].reverse().find((m) => m.fromClient);
+      const notes = opts.input.trim();
+      const quoted = last ? last.body.replace(/\s+/g, " ").slice(0, 140) : "";
+      if (l === "he") {
+        return `שלום ${name},\n${quoted ? `תודה על הודעתך ("${quoted}").` : "תודה על פנייתך."}\n${notes || "קיבלנו את הדברים ונחזור אליך עם תשובה מסודרת בהקדם."}\n\nבברכה,\nהצוות`;
+      }
+      return `Hello ${name},\n${quoted ? `Thank you for your message ("${quoted}").` : "Thank you for getting in touch."}\n${notes || "We've received it and will get back to you with a full answer shortly."}\n\nBest regards,\nThe team`;
+    }
     case "status_update": {
       const statusLabel = opts.status ? dictionaries[l].status.client[opts.status as keyof (typeof dictionaries)["he"]["status"]["client"]] ?? opts.status : "";
       const tasks = (opts.openTasks ?? []).slice(0, 3);

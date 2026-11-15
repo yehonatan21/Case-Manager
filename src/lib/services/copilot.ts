@@ -1,9 +1,11 @@
+import { after } from "next/server";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { Database, DbOrTx } from "../db";
+import { getDb, type Database, type DbOrTx } from "../db";
 import { cases, customers, documents, messages, priceListItems, quotes, serviceTemplates, tasks, users, type CaseAiSummary, type User } from "../db/schema";
 import { AppError } from "../errors";
 import { aiCaseSummary, aiDocAnalysis, aiProviderName, aiQuoteDraft, aiTaskPlan, aiTextTool, type CaseContext } from "../ai";
 import type { TextTool } from "../ai/schemas";
+import { getAiProvider } from "../ai/providers";
 import { caseWithAccess, getCaseRow, type CaseBundle } from "./cases";
 import { addEvent } from "./events";
 import { rateLimit } from "./rate-limit";
@@ -173,14 +175,16 @@ export async function copilotText(db: Database, actor: User, caseId: string, too
   return { text: output.text, runId, provider };
 }
 
-export async function copilotAnalyzeDocument(db: Database, actor: User, documentId: string, locale: Locale) {
+export async function copilotAnalyzeDocument(db: Database, actor: User | null, documentId: string, locale: Locale) {
   const [d] = await db.select().from(documents).where(eq(documents.id, documentId));
   if (!d?.caseId) throw new AppError("not_found");
-  await guard(db, actor, d.caseId);
+  // With no person asking (right after an upload) the client's consent is still required.
+  if (actor) await guard(db, actor, d.caseId);
+  else if (!(await customerAiConsent(db, d.caseId))) throw new AppError("forbidden");
   const f = await latestFile(db, d.id);
   if (!f) throw new AppError("not_found");
   const data = await storage().get(f.storageKey);
-  const { output, provider } = await aiDocAnalysis(db, { caseId: d.caseId, locale, userId: actor.id, title: d.title, mimeType: f.mimeType, data });
+  const { output, provider } = await aiDocAnalysis(db, { caseId: d.caseId, locale, userId: actor?.id ?? null, title: d.title, mimeType: f.mimeType, data });
   const analysis = { ...output, fileId: f.id, version: f.version, provider, generated_at: new Date().toISOString() };
   await db.update(documents).set({ aiAnalysis: analysis }).where(eq(documents.id, d.id));
   return analysis;
@@ -209,7 +213,7 @@ export function aiIsMock() {
  * details are filled; details a person already saved are left alone. Returns the details, or null when the AI
  * couldn't read anything (no AI service that reads files, an unreadable scan...).
  */
-export async function fillDocumentDetailsFromAi(db: Database, actor: User, documentId: string, locale: Locale) {
+export async function fillDocumentDetailsFromAi(db: Database, actor: User | null, documentId: string, locale: Locale) {
   const analysis = await copilotAnalyzeDocument(db, actor, documentId, locale);
   const a = analysis.details;
   const suggested = a
@@ -220,4 +224,40 @@ export async function fillDocumentDetailsFromAi(db: Database, actor: User, docum
   if (d?.details?.source === "staff") return d.details;
   await db.update(documents).set({ details: suggested, detailsConfirmedById: null, detailsConfirmedAt: null }).where(eq(documents.id, documentId));
   return suggested;
+}
+
+const READABLE = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"];
+/** Automatic readings per case per hour: a client uploading many files can't run up the AI bill. */
+const AUTO_READS_PER_HOUR = 20;
+
+/**
+ * Right after an upload: reads the file and pre-fills the document's details as a suggestion for staff to confirm,
+ * so nobody has to press "Fill with AI". Only with an AI service that reads files, the client's consent, a file
+ * type it can read, and details a person hasn't already saved. Never throws.
+ */
+export async function readUploadedDocument(db: Database, documentId: string, locale: Locale): Promise<"filled" | "skipped"> {
+  try {
+    if (!getAiProvider()?.supportsFiles) return "skipped";
+    const [d] = await db.select({ caseId: documents.caseId, details: documents.details }).from(documents).where(eq(documents.id, documentId));
+    if (!d?.caseId || d.details?.source === "staff") return "skipped";
+    const f = await latestFile(db, documentId);
+    if (!f || !READABLE.includes(f.mimeType) || f.sizeBytes > 10 * 1024 * 1024) return "skipped";
+    if (!(await customerAiConsent(db, d.caseId))) return "skipped";
+    await rateLimit(db, `ai:auto-doc:${d.caseId}`, AUTO_READS_PER_HOUR, 3600);
+    return (await fillDocumentDetailsFromAi(db, null, documentId, locale)) ? "filled" : "skipped";
+  } catch (err) {
+    if (!(err instanceof AppError)) console.error("[documents] automatic reading failed", err);
+    return "skipped";
+  }
+}
+
+/** Runs the automatic reading after the response has been sent (or now, outside a request). Skipped in unit tests. */
+export function scheduleDocumentReading(documentId: string, locale: Locale) {
+  if (env.isTest) return;
+  const run = async () => void (await readUploadedDocument(await getDb(), documentId, locale));
+  try {
+    after(run);
+  } catch {
+    void run();
+  }
 }
