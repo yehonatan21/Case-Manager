@@ -76,6 +76,13 @@ export const en: typeof he = {
     he: "עברית",
     en: "English",
   },
+  theme: {
+    title: "Appearance",
+    hint: "Light, dark, or the same as your device. The choice is remembered in this browser.",
+    system: "Device",
+    light: "Light",
+    dark: "Dark",
+  },
   navGroups: { workspace: "Workspace", operations: "Operations", business: "Business", system: "System" },
   navBadges: { inbox: "{n} new", queue: "{n} overdue", tasks: "{n} overdue", conversations: "{n} awaiting a reply" },
   datePicker: {

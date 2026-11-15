@@ -102,17 +102,17 @@ export function renderEmail(opts: {
     .filter((l) => l !== undefined)
     .join("\n");
   const dir = dirOf(opts.locale);
-  const html = `<!doctype html><html lang="${opts.locale}" dir="${dir}"><body style="margin:0;background:#f4f5fb;font-family:Arial,Helvetica,sans-serif;color:#1e1b4b">
+  const html = `<!doctype html><html lang="${opts.locale}" dir="${dir}"><body style="margin:0;background:#f9f6f2;font-family:Rubik,Arial,Helvetica,sans-serif;color:#131e2b">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e2e4f0;border-radius:12px">
-<tr><td style="padding:20px 28px;border-bottom:1px solid #eef0f7;font-weight:bold;color:#3730a3">${escapeHtml(env.appName)}</td></tr>
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fffefb;border:1px solid #e6e0d6;border-radius:16px">
+<tr><td style="padding:20px 28px;border-bottom:1px solid #efeae2;font-weight:bold;font-size:17px;color:#004245">${escapeHtml(env.appName)}</td></tr>
 <tr><td style="padding:28px;text-align:${dir === "rtl" ? "right" : "left"};line-height:1.6">
 <p style="margin:0 0 12px">${escapeHtml(opts.greeting)}</p>
 <h1 style="font-size:18px;margin:0 0 8px">${escapeHtml(opts.title)}</h1>
 <p style="margin:0 0 20px;white-space:pre-line">${escapeHtml(opts.body)}</p>
-${url ? `<a href="${escapeHtml(url)}" style="display:inline-block;background:#4338ca;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px">${escapeHtml(opts.linkLabel ?? "")}</a>` : ""}
+${url ? `<a href="${escapeHtml(url)}" style="display:inline-block;background:#006667;color:#fff;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:12px">${escapeHtml(opts.linkLabel ?? "")}</a>` : ""}
 </td></tr>
-<tr><td style="padding:16px 28px;font-size:12px;color:#6b7280;border-top:1px solid #eef0f7">${escapeHtml(opts.footer)}</td></tr>
+<tr><td style="padding:16px 28px;font-size:12px;color:#5b6470;border-top:1px solid #efeae2">${escapeHtml(opts.footer)}</td></tr>
 </table></td></tr></table></body></html>`;
   return { text, html };
 }

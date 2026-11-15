@@ -74,6 +74,13 @@ export const he = {
     he: "עברית",
     en: "English",
   },
+  theme: {
+    title: "מראה",
+    hint: "בהיר, כהה, או לפי הגדרת המכשיר. הבחירה נשמרת בדפדפן הזה.",
+    system: "לפי המכשיר",
+    light: "בהיר",
+    dark: "כהה",
+  },
   navGroups: { workspace: "סביבת עבודה", operations: "תפעול", business: "ניהול העסק", system: "מערכת" },
   /** What each menu counter means, for screen readers and the collapsed menu's tooltip. */
   navBadges: { inbox: "{n} חדשות", queue: "{n} באיחור", tasks: "{n} באיחור", conversations: "{n} ממתינות לתשובה" },
