@@ -232,7 +232,7 @@ export async function aiTextTool(
   opts: { ctx: CaseContext; locale: L; userId?: string | null; tool: TextTool; input: string; targetLang?: L },
 ): Promise<{ output: { text: string }; runId: string; provider: string }> {
   const { ctx, locale, tool } = opts;
-  const needsContext = tool === "clarify_questions" || tool === "summarize_thread" || tool === "status_update";
+  const needsContext = tool === "clarify_questions" || tool === "summarize_thread" || tool === "status_update" || tool === "reply";
   const content = needsContext
     ? `${caseContextText(ctx)}${opts.input ? `\n\nStaff notes:\n${wrap("case_content", opts.input)}` : ""}`
     : wrap("case_content", opts.input);
@@ -248,14 +248,14 @@ export async function aiTextTool(
       }),
     () => ({
       text: mock.mockTextTool({
-        locale: tool === "translate" && opts.targetLang ? opts.targetLang : locale,
+        locale: (tool === "translate" || tool === "reply") && opts.targetLang ? opts.targetLang : locale,
         tool,
         input: opts.input,
         targetLang: opts.targetLang,
         customerName: ctx.customerName,
         missing: ctx.intake?.missing_information,
         status: ctx.status,
-        thread: ctx.messages.filter((m) => !m.internal).map((m) => ({ from: m.author, body: m.body })),
+        thread: ctx.messages.filter((m) => !m.internal).map((m) => ({ from: m.author, body: m.body, fromClient: m.fromClient })),
         openTasks: ctx.openTasks,
       }),
     }),

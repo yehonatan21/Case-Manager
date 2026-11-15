@@ -786,6 +786,8 @@ export const en: typeof he = {
     infoRequestHint: "Status will change to \"awaiting client\" and the client will be notified.",
     infoRequestBadge: "Info request",
     aiDrafted: "Drafted with AI and approved by {name}",
+    aiReply: "Draft a reply with AI",
+    aiReplyHint: "Drafts a reply to the client's latest message, in their language. Anything you've typed is used as guidance. Nothing is sent until you approve it.",
     reviewBeforeSend: "Review the draft before sending",
   },
   checklist: {
@@ -1093,6 +1095,16 @@ export const en: typeof he = {
     zeroTotal: "A quote with a zero total can't be sent",
     locked: "This quote was sent and can't be edited. You can create a new version.",
     backToCase: "Back to case",
+  },
+  aiBrief: {
+    title: "AI summary",
+    wants: "What the client wants",
+    next: "Suggested next step",
+    generate: "Generate summary",
+    refresh: "Refresh",
+    stale: "The case changed since this summary",
+    none: "No summary for this case yet.",
+    generating: "Summarising the case…",
   },
   copilot: {
     title: "AI Copilot",

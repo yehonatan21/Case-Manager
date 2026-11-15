@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Lock, MessageCircle, Send } from "lucide-react";
+import { Bot, Lock, MessageCircle, Send, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { fmt } from "@/lib/i18n/config";
 import { formatDateTime } from "@/lib/i18n/format";
@@ -36,6 +36,7 @@ export function MessageThread({
   canPost,
   staffComposer,
   replyVars,
+  aiReply,
   draft,
   onDraftConsumed,
   emptyText,
@@ -48,6 +49,8 @@ export function MessageThread({
   staffComposer?: boolean;
   /** Enables saved replies in the staff composer (client name, case number, client language). */
   replyVars?: { client: string; number: string; locale: string };
+  /** Offers "Draft a reply with AI" in the staff composer (the client agreed to AI, and the viewer may use it). */
+  aiReply?: boolean;
   /** Text injected from the AI copilot; must be reviewed and sent by a person. */
   draft?: { text: string; runId: string } | null;
   onDraftConsumed?: () => void;
@@ -59,6 +62,7 @@ export function MessageThread({
   const [infoRequest, setInfoRequest] = useState(false);
   const [aiRunId, setAiRunId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const list = messages.filter((m) => m.kind === kind);
@@ -89,6 +93,23 @@ export function MessageThread({
       setError(errorText(e, d));
     } finally {
       setBusy(false);
+    }
+  };
+
+  // A reply to the client's latest message, in the client's language. What's already typed is used as the team's
+  // notes for it. The draft lands in the composer; a person reviews and sends it.
+  const draftReply = async () => {
+    setDrafting(true);
+    setError(null);
+    try {
+      const lang = replyVars?.locale === "en" ? "en" : replyVars?.locale === "he" ? "he" : undefined;
+      const r = await api<{ text: string; runId: string }>("/api/ai/text", { body: { caseId, tool: "reply", input: body, targetLang: lang } });
+      setBody(r.text);
+      setAiRunId(r.runId);
+    } catch (e) {
+      setError(`${d.copilot.failed} (${errorText(e, d)})`);
+    } finally {
+      setDrafting(false);
     }
   };
 
@@ -175,6 +196,12 @@ export function MessageThread({
                   <Checkbox label={d.messages.infoRequest} checked={infoRequest} onChange={(e) => setInfoRequest(e.target.checked)} />
                   {infoRequest && <p className="ms-6 mt-0.5 text-xs text-slate-500">{d.messages.infoRequestHint}</p>}
                 </div>
+                {aiReply && (
+                  <Button variant="secondary" size="sm" onClick={draftReply} loading={drafting} title={d.messages.aiReplyHint}>
+                    <Sparkles className="size-4" aria-hidden />
+                    {d.messages.aiReply}
+                  </Button>
+                )}
                 {replyVars && <ReplyPicker vars={replyVars} onPick={(text) => setBody((b) => (b.trim() ? `${b.trimEnd()}\n\n${text}` : text))} />}
               </div>
             ) : (

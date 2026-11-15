@@ -6,6 +6,9 @@ import { requestDocument, uploadCaseDocument } from "@/lib/services/documents";
 import { MAX_ITEMS_PER_REQUEST, requestDocuments, requestTemplateDocuments } from "@/lib/services/checklists";
 import { AppError } from "@/lib/errors";
 import { isStaffRole } from "@/lib/domain";
+import { scheduleDocumentReading } from "@/lib/services/copilot";
+import { getLocale } from "@/lib/i18n/server";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 
 const Item = z.object({ title: z.string().min(1).max(200), note: z.string().max(2000).nullish(), required: z.boolean().optional() });
 const RequestBody = z.union([
@@ -40,5 +43,7 @@ export const POST = route<{ id: string }>(async (req, { id }) => {
     title: (form.get("title") as string) || null,
     visibility,
   });
+  // Read the file in the background and suggest its details (name, number, dates) for the team to confirm.
+  scheduleDocumentReading(res.document.id, isStaffRole(user.role) ? await getLocale() : DEFAULT_LOCALE);
   return ok({ documentId: res.document.id, fileId: res.file.id });
 });
