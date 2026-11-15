@@ -4,7 +4,7 @@ export const PROMPT_VERSIONS = {
   caseSummary: "case-summary-v1",
   quoteDraft: "quote-draft-v1",
   taskPlan: "task-plan-v1",
-  textTool: "text-tool-v1",
+  textTool: "text-tool-v2",
   docAnalysis: "doc-analysis-v2",
 } as const;
 
@@ -81,7 +81,7 @@ ${SECURITY}`;
 }
 
 export function textToolSystemPrompt(locale: "he" | "en", tool: string, targetLang?: "he" | "en") {
-  const lang = tool === "translate" && targetLang ? languageName(targetLang) : languageName(locale);
+  const lang = (tool === "translate" || tool === "reply") && targetLang ? languageName(targetLang) : languageName(locale);
   const tasks: Record<string, string> = {
     clarify_questions:
       "Draft a short, polite message to the client asking only the most important clarifying questions (max 3) needed to review the request and prepare a quote. Plain text, no subject line.",
@@ -90,6 +90,8 @@ export function textToolSystemPrompt(locale: "he" | "en", tool: string, targetLa
     translate: `Translate the given text into ${lang}. Preserve meaning and tone.`,
     summarize_thread: "Summarise the message thread for an internal reader: key points, open questions and what each side is waiting for. Use short bullet lines.",
     status_update: "Draft a brief, clear status update to the client based on the case state: what was done, what's next and whether anything is needed from them. Do not promise dates that are not in the input.",
+    reply:
+      "Draft the team's reply to the client's most recent message or messages in the thread. Answer what they asked using only facts found in the case content; where the case doesn't hold the answer, say the team will check and get back to them. If staff notes are given, they are what the reply should say: write them up properly. Do not promise outcomes, dates or prices that are not in the input, and give no legal, immigration or financial conclusions. Open with a short greeting by the client's first name and close with a brief sign-off from the team. Plain text, no subject line.",
   };
   return `You are a writing assistant for a professional services team. ${tasks[tool] ?? tasks.professional}
 Write in ${lang}. Return only the drafted text. The team reviews everything before it is sent.

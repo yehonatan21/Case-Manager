@@ -20,6 +20,8 @@ let scanned = 0;
 async function axe(page, label) {
   // Next.js streams the <title> in just after the page loads; check once it's there, as a visitor would.
   await page.waitForFunction(() => document.title.length > 0, null, { timeout: 10000 }).catch(() => {});
+  // A control that just changed state fades between its colours; check once that has finished.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((x) => x instanceof CSSTransition).map((x) => x.finished.catch(() => {}))));
   await page.addScriptTag({ content: AXE });
   const r = await page.evaluate(async (tags) => (await window.axe.run(document, { runOnly: { type: "tag", values: tags } })).violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.target.join(" ")).slice(0, 3) })), TAGS);
   scanned++;

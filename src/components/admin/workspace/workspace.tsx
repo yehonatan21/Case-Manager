@@ -25,6 +25,7 @@ import { TasksPanel } from "./tasks-panel";
 import { CopilotPane } from "./copilot-pane";
 import { WORKSPACE_PANELS_COOKIE, type StaffOption, type TemplateOption, type WorkspaceData, type WorkspacePanel } from "./types";
 import { cn } from "@/lib/utils";
+import { AiBrief } from "./ai-brief";
 import { SummaryBar } from "./summary-bar";
 import { TimePanel } from "./time-panel";
 
@@ -195,6 +196,7 @@ export function CaseWorkspace({
 
       {!a.internal && <Notice tone="info" className="mb-4">{d.workspace.financeView}</Notice>}
       {a.internal && <SummaryBar c={c} staff={staff} onOpenTasks={available.includes("tasks") ? () => go("tasks") : undefined} />}
+      {a.internal && <AiBrief c={c} />}
 
       {/* On small screens the three areas become switchable panes. */}
       <div className="mb-4 grid grid-cols-3 gap-0.5 rounded-full bg-slate-200/60 p-1 xl:hidden" role="tablist" aria-label={d.workspace.work}>
@@ -257,7 +259,7 @@ export function CaseWorkspace({
               />
               <div className="py-4">
                 <TabPanel id="messages" active={tab === "messages"}>
-                  <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="thread" canPost={a.messages} staffComposer replyVars={c.customer ? { client: c.customer.name, number: c.number, locale: c.customer.locale } : undefined} draft={draft} onDraftConsumed={consumeDraft} />
+                  <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="thread" canPost={a.messages} staffComposer replyVars={c.customer ? { client: c.customer.name, number: c.number, locale: c.customer.locale } : undefined} aiReply={a.internal && c.customer?.aiConsent !== false} draft={draft} onDraftConsumed={consumeDraft} />
                 </TabPanel>
                 <TabPanel id="notes" active={tab === "notes"}>
                   <MessageThread caseId={c.id} messages={c.messages} currentUserId={currentUserId} kind="internal_note" canPost={a.internal} staffComposer />

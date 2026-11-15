@@ -12,6 +12,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 - **The phone's tab bar has four tabs**; "New request" is a button in the top bar (a tab bar is for moving between sections, not for actions).
 
 ### Added
+- **AI help where the work happens** (Release N). "Draft a reply with AI" in the message box writes a reply to the client's latest message in the client's language, using anything already typed as guidance; a person reviews and sends it. An AI summary strip above the case shows what the client wants and the suggested next step, with a refresh when the case has changed. Uploaded PDFs and images are read automatically (when the client agreed to AI and the AI service reads files) and their details are suggested for the team to confirm; at most 20 files an hour per case.
 - **Appearance switch**: Light, Dark or the same as the device, in Profile (clients) and My account (team). Remembered in the browser; the first paint is already in the chosen appearance.
 - **Dark mode**, following the device's setting. The accessibility test now also runs in dark mode.
 - The **ui-ux-pro-max** Claude Code skill (MIT) in `.claude/skills/ui-ux-pro-max`, replacing the apple-design skill's session-start download.
