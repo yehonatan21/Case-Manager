@@ -5,14 +5,14 @@ import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 /**
- * Report charts: one series each, in a single hue (the brand's indigo, validated against the card surface), so the
+ * Report charts: one series each, in a single hue (the brand's teal, validated against the card surface), so the
  * title names the series and there's no legend. Bars are thin with a 4px rounded data-end, grow from one baseline,
  * and carry their value as text in ink colors (never the bar color). Every bar is focusable with a tooltip, and
  * every chart has a table view.
  */
 export type BarDatum = { key: string; label: string; value: number; display: string; detail?: string };
 
-const BAR = "#4f46e5";
+const BAR = "var(--color-brand-600)";
 
 function Tooltip({ d, id }: { d: BarDatum; id: string }) {
   return (

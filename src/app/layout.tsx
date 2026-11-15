@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { getDict } from "@/lib/i18n/server";
 import { dirOf } from "@/lib/i18n/config";
@@ -11,6 +12,7 @@ import { CategoriesProvider } from "@/components/app/categories";
 import { getDb } from "@/lib/db";
 import { listServiceCategories } from "@/lib/services/categories";
 import { aiMayKeepData } from "@/lib/ai/providers";
+import { parseTheme, THEME_COLOR, THEME_COOKIE } from "@/lib/theme";
 import { NativeBridge } from "@/components/native/native-bridge";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,22 +27,28 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
-  ],
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+/** The browser bar matches the page: the device's appearance, or the one the person chose. */
+export async function generateViewport(): Promise<Viewport> {
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: theme === "dark" ? THEME_COLOR.dark : THEME_COLOR.light },
+      { media: "(prefers-color-scheme: dark)", color: theme === "light" ? THEME_COLOR.light : THEME_COLOR.dark },
+    ],
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, d } = await getDict();
+  // The appearance the person chose (none = follow the device), set on <html> so the first paint is already right.
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   // Service types for labels and pickers everywhere (custom ones live in the database).
   const categories = await listServiceCategories(await getDb()).catch(() => []);
   return (
-    <html lang={locale} dir={dirOf(locale)} suppressHydrationWarning>
+    <html lang={locale} dir={dirOf(locale)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
       <body className="min-h-dvh">
         <a href="#main" className="sr-only z-[100] rounded-md bg-card px-3 py-2 text-sm font-medium text-brand-800 shadow focus:not-sr-only focus:fixed focus:start-3 focus:top-3">
           {d.nav.skipToContent}
