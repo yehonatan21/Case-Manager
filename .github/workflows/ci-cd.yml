@@ -1,8 +1,8 @@
 # CI/CD
 #   Every push / PR: type check, tests (PGlite + PostgreSQL 16), production build, browser walkthrough,
 #   Docker image build; on pushes to main the image goes to GitHub Container Registry (ghcr.io/<owner>/<repo>).
-#   Vercel deploys through its own Git integration: a preview for every branch (with the Preview, i.e. dev,
-#   settings), production for main.
+#   Vercel deploys through its own Git integration, only main (production) and dev (Preview settings); other
+#   branches and docs/tests/CI/mobile-only pushes are not built (vercel.json, scripts/vercel-ignore-build.cjs).
 name: CI/CD
 
 on:
