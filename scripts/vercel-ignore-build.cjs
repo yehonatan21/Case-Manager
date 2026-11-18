@@ -3,31 +3,21 @@
 // full deployment for every push to every branch. So:
 //   - only main (production) and dev (the dev site, Preview) are built; work, Dependabot and pull-request branches are
 //     not (vercel.json also turns off automatic deployments for the usual ones: git.deploymentEnabled);
-//   - a push that changes only documentation, tests, CI or the mobile app is not built.
-// A redeploy (same commit, e.g. after changing a variable) and anything this script cannot tell are always built.
+// Every deployment of main and dev is built (a redeploy to apply new variables must never be skipped).
 // Plain CommonJS: it runs before `npm install`, so it cannot use tsx or any package.
 "use strict";
 const { execFileSync } = require("node:child_process");
 
 const BUILT_BRANCHES = ["main", "dev"];
 
-// Files that are not part of the web app: a push that changes only these needs no new deployment.
-const NOT_DEPLOYED = [
-  /^docs\//, /^tests\//, /^e2e\//, /^mobile\//, /^\.github\//, /^\.claude\//, /^docker\//,
-  /^[^/]+\.md$/i, // README, CHANGELOG, SECURITY, AGENTS… at the top level
-  /^Dockerfile$/, /^docker-compose\.ya?ml$/, /^render\.yaml$/, /^vitest\.config\.mts$/, /^\.env\.example$/, /^\.dockerignore$/,
-];
-const isDeployed = (file) => !NOT_DEPLOYED.some((re) => re.test(file));
 
 /** changedFiles: the files changed since the branch's last deployment, or null when unknown. */
 function decide(env, changedFiles) {
   const branch = env.VERCEL_GIT_COMMIT_REF || "";
   if (!branch) return { build: true, reason: "not a git push (deployed through the API or CLI)" };
   if (!BUILT_BRANCHES.includes(branch)) return { build: false, reason: `only main and dev are deployed, not ${branch}` };
-  if (changedFiles && changedFiles.length && !changedFiles.some(isDeployed)) {
-    const shown = changedFiles.slice(0, 3).join(", ") + (changedFiles.length > 3 ? "…" : "");
-    return { build: false, reason: `only docs, tests, CI or the mobile app changed (${shown})` };
-  }
+  // Every deployment of main and dev is built, docs-only ones too: Vercel cannot tell this script whether a deployment
+  // is a push or a redeploy to apply changed variables, and a skipped redeploy silently keeps the old variables.
   return { build: true, reason: changedFiles && changedFiles.length ? "the app changed" : "a new branch, a redeploy, or the changes are unknown" };
 }
 
@@ -44,7 +34,7 @@ function changedSinceLastDeployment(env) {
   }
 }
 
-module.exports = { decide, changedSinceLastDeployment, isDeployed, BUILT_BRANCHES };
+module.exports = { decide, changedSinceLastDeployment, BUILT_BRANCHES };
 
 if (require.main === module) {
   const d = decide(process.env, changedSinceLastDeployment(process.env));

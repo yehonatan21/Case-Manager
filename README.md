@@ -481,9 +481,9 @@ npm run build && APP_SECRET=ci-only-secret-0123456789abcdef0123456789 DEMO_MODE=
 | **Browser walkthrough** | Production server in demo mode, then the HTTP tests, all browser scripts and the performance budgets. Screenshots and the numbers are kept as an artifact. |
 | **Docker image** | Builds the image; on `main` pushes it to `ghcr.io/<owner>/case-manager`. |
 
-Vercel deploys through its Git integration, but only `main` (production) and `dev` (the dev site, with the Preview settings: the dev database and address). Every deployment Vercel keeps counts toward the plan's storage, so other branches (work, Dependabot and pull-request branches) are not deployed, and neither is a push that changes only documentation, tests, CI or the mobile app; CI still tests all of them. Two settings do this:
+Vercel deploys through its Git integration, but only `main` (production) and `dev` (the dev site, with the Preview settings: the dev database and address). Every deployment Vercel keeps counts toward the plan's storage, so other branches (work, Dependabot and pull-request branches) are not deployed; CI still tests all of them. Two settings do this:
 - `vercel.json` → `git.deploymentEnabled` turns off automatic deployments for `claude/**`, `dependabot/**`, `fix/**` and `feature/**`.
-- `vercel.json` → `ignoreCommand` runs [`scripts/vercel-ignore-build.cjs`](scripts/vercel-ignore-build.cjs). It skips any other branch, and a push whose changes are all docs, tests, CI or `mobile/`. A redeploy, the first deployment of a branch and anything it cannot tell are always built.
+- `vercel.json` → `ignoreCommand` runs [`scripts/vercel-ignore-build.cjs`](scripts/vercel-ignore-build.cjs). It skips any other branch. Every deployment of `main` and `dev` is built, also when only docs changed: a redeploy to apply new variables must never be skipped.
 
 To get previews of pull requests back, remove those two settings.
 

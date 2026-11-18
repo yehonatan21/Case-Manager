@@ -20,13 +20,9 @@ describe("Vercel build filter", () => {
     expect(build("dependabot/npm_and_yarn/dev/web-push-4.0.0", ["package.json"])).toBe(false);
   });
 
-  it("skips pushes that change only docs, tests, CI or the mobile app", () => {
-    expect(build("main", ["README.md", "CHANGELOG.md", "docs/setup.md", "tests/flow.test.ts", "e2e/a11y.cjs"])).toBe(false);
-    expect(build("dev", ["mobile/app.json", ".github/workflows/mobile.yml"])).toBe(false);
-    expect(build("main", ["CHANGELOG.md", "src/lib/env.ts"])).toBe(true);
-    expect(build("main", ["drizzle/0042_add_column.sql"])).toBe(true);
-    expect(build("main", ["package-lock.json"])).toBe(true);
-    expect(build("main", ["public/sw.js"])).toBe(true);
+  it("builds main and dev even when only docs, tests, CI or the mobile app changed (a redeploy for new variables)", () => {
+    expect(build("main", ["README.md", "CHANGELOG.md", "docs/setup.md", "tests/flow.test.ts"])).toBe(true);
+    expect(build("dev", ["mobile/app.json", ".github/workflows/mobile.yml"])).toBe(true);
   });
 
   it("always builds a redeploy, a new branch, unknown changes, and deployments made through the API", () => {
