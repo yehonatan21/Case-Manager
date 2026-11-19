@@ -2,3 +2,6 @@
 mobile/
 # The Chief of Staff agent runs on your machine, not in the app (see agents/chief-of-staff/README.md).
 agents/
+# Tests run in CI, not on Vercel; tests/chief-of-staff.test.ts also imports the agent above, which isn't uploaded,
+# and `next build` type-checks every .ts file it's given.
+tests/
