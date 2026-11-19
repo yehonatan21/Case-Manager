@@ -12,4 +12,3 @@ tests
 .env.*
 !.env.example
 mobile
-agents

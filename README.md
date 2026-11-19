@@ -28,7 +28,6 @@ Staff can also open requests on a client's behalf.
 - [Roles and permissions](#roles-and-permissions)
 - [Configuration](#configuration)
 - [AI providers](#ai-providers)
-- [Chief of Staff agent](#chief-of-staff-agent)
 - [Payments: Grow, Stripe, test checkout](#payments)
 - [Push notifications](#push-notifications)
 - [iPhone and Android app](#iphone-and-android-app)
@@ -215,17 +214,6 @@ The default OpenRouter model is free (`nvidia/nemotron-3.5-super-vl:free`, with 
 - Uploaded documents go only to providers that declare they read files.
 - Every run is logged in `ai_runs` (provider, model, prompt version, output, latency, tokens).
 - On failure, the app falls back to the manual flow without losing data.
-
-## Chief of Staff agent
-
-[`agents/chief-of-staff`](agents/chief-of-staff/README.md) is an AI chief of staff for the business owner, built on the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk) from Anthropic's cookbook [The chief of staff agent](https://platform.claude.com/cookbook/claude-agent-sdk-01-the-chief-of-staff-agent). It answers questions about revenue, runway, capacity, response times and hiring from the app's own data. Its scripts read the database read-only and return aggregates, never client details. It delegates to a financial-analyst and an operations-analyst subagent, has executive and technical output styles, a plan mode, slash commands (`/weekly-brief`, `/budget-impact`, `/capacity-scan`, `/strategic-brief`) and audit hooks. It runs on your machine, not in the web app:
-
-```bash
-npm --prefix agents/chief-of-staff install   # once: the Agent SDK
-npm run agent -- "/weekly-brief"
-```
-
-Needs `ANTHROPIC_API_KEY`. Setup, the tool policy and the business-profile file are in [`agents/chief-of-staff/README.md`](agents/chief-of-staff/README.md).
 
 ## Payments
 
@@ -571,7 +559,6 @@ To report a security problem, see [SECURITY.md](SECURITY.md). Dependabot opens w
 | `npm run db:seed -- --demo` | Insert demo data |
 | `npm run db:remove-demo` | Preview removing the demo accounts and sample requests; add `-- --apply` to remove them (one transaction; real data kept) |
 | `npm run jobs:run` | Run maintenance once: expire quotes, send document reminders, send pending emails, pushes and WhatsApp messages, prune old push and WhatsApp rows |
-| `npm run agent -- "<question>"` | Ask the [Chief of Staff agent](#chief-of-staff-agent) (after `npm --prefix agents/chief-of-staff install`) |
 
 ## Out of scope
 
