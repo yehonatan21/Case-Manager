@@ -1,0 +1,6 @@
+node_modules/
+# What the agent produces, and the owner's private numbers: kept on the machine, not in git.
+audit/
+output_reports/
+plans/
+data/business-profile.json

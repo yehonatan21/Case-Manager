@@ -1,2 +1,4 @@
 # The iPhone/Android app project is built separately (see mobile/README.md).
 mobile/
+# The Chief of Staff agent runs on your machine, not in the app (see agents/chief-of-staff/README.md).
+agents/

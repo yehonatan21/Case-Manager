@@ -4,6 +4,9 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## [Unreleased]
 
+### Added
+- **Chief of Staff agent** (`agents/chief-of-staff`): Anthropic's cookbook "chief of staff" agent, rebuilt on the Claude Agent SDK in TypeScript for this business. Ask about revenue, runway, capacity, response times or hiring (`npm run agent -- "…"`) and it answers from the app's data. Its scripts read the database in a read-only transaction and return aggregates only, with no client details. It has a financial-analyst and an operations-analyst subagent, executive and technical output styles, a plan mode that saves plans for review, slash commands (`/weekly-brief`, `/budget-impact`, `/capacity-scan`, `/strategic-brief`) and hooks that log script runs and report writes. A tool policy, checked on every call (subagents included), limits it to its own scripts and folder. The Agent SDK is installed separately (`npm --prefix agents/chief-of-staff install`), so the app's installs and deploys don't include it.
+
 ### Changed
 - **Rubik everywhere**: all app text, generated PDFs and the store images. The staff sidebar's logo mark collapses and expands the menu, and the menu scrolls without a visible scrollbar.
 - **One brand colour**: emails, the browser-tab and home-screen icons, the app icons and launch screens, the offline page, notification accents, report charts and the Play feature graphic are petrol teal (they were still indigo).
