@@ -1,5 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["fra1"],
+  "ignoreCommand": "node scripts/vercel-ignore-build.cjs",
+  "git": {
+    "deploymentEnabled": {
+      "dependabot/**": false,
+      "claude/**": false,
+      "fix/**": false,
+      "feature/**": false
+    }
+  },
   "crons": [{ "path": "/api/jobs/run", "schedule": "17 4 * * *" }]
 }
